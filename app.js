@@ -2,6 +2,21 @@
    DODO Family Space Javascript
    ========================================================================== */
 
+// Firebase Configuration
+const firebaseConfig = {
+  projectId: "dodo-family-space-lck",
+  appId: "1:540819252997:web:2f6350f3a84461944df96c",
+  storageBucket: "dodo-family-space-lck.firebasestorage.app",
+  apiKey: "AIzaSyCT6eXu_rJqsKdxa8jr7OGKOWk6GH_fxkk",
+  authDomain: "dodo-family-space-lck.firebaseapp.com",
+  messagingSenderId: "540819252997",
+  projectNumber: "540819252997"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
 document.addEventListener('DOMContentLoaded', () => {
     // ----------------------------------------------------
     // 1. 테마 스위처 (다크/라이트 모드)
@@ -228,8 +243,18 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let activeSelectedDateStr = ''; // YYYY-MM-DD 포맷 저장용
 
-    // 로컬스토리지 일정 로드 ({ '2026-05-24': [{title: '캠핑', color: '#6c5ce7'}] })
-    let familyEvents = JSON.parse(localStorage.getItem('dodo-events')) || {};
+    // Firestore 실시간 일정 로드 및 동기화
+    let familyEvents = {};
+    db.collection('events').onSnapshot((snapshot) => {
+        familyEvents = {};
+        snapshot.forEach((doc) => {
+            familyEvents[doc.id] = doc.data().events || [];
+        });
+        renderCalendar();
+        if (calendarModal.classList.contains('show') && activeSelectedDateStr) {
+            renderModalEventList();
+        }
+    });
 
     function renderCalendar() {
         calendarGrid.innerHTML = '';
@@ -394,32 +419,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!title) return;
 
-        if (!familyEvents[activeSelectedDateStr]) {
-            familyEvents[activeSelectedDateStr] = [];
-        }
+        const currentEvents = familyEvents[activeSelectedDateStr] || [];
+        const newEvents = [...currentEvents, { title, color }];
 
-        familyEvents[activeSelectedDateStr].push({ title, color });
-        localStorage.setItem('dodo-events', JSON.stringify(familyEvents));
-
-        eventTitleInput.value = ''; // 작성폼 초기화
-        
-        renderModalEventList();
-        renderCalendar();
+        db.collection('events').doc(activeSelectedDateStr).set({
+            events: newEvents
+        }).then(() => {
+            eventTitleInput.value = ''; // 작성폼 초기화
+        }).catch(err => console.error("Error adding event: ", err));
     });
 
     // 일정 삭제 처리
     function deleteEvent(index) {
         if (confirm('이 일정을 삭제하시겠습니까?')) {
-            familyEvents[activeSelectedDateStr].splice(index, 1);
-            
-            // 더 이상 일정이 없으면 빈 배열 키 삭제
-            if (familyEvents[activeSelectedDateStr].length === 0) {
-                delete familyEvents[activeSelectedDateStr];
-            }
+            const currentEvents = familyEvents[activeSelectedDateStr] || [];
+            currentEvents.splice(index, 1);
 
-            localStorage.setItem('dodo-events', JSON.stringify(familyEvents));
-            renderModalEventList();
-            renderCalendar();
+            if (currentEvents.length === 0) {
+                db.collection('events').doc(activeSelectedDateStr).delete()
+                    .catch(err => console.error("Error deleting events: ", err));
+            } else {
+                db.collection('events').doc(activeSelectedDateStr).set({
+                    events: currentEvents
+                }).catch(err => console.error("Error updating events: ", err));
+            }
         }
     }
 
@@ -542,8 +565,18 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsDataURL(file);
     });
 
-    // 로컬스토리지 게시글 배열 읽어오기
-    let boardPosts = JSON.parse(localStorage.getItem('dodo-board-posts')) || [];
+    // Firestore 실시간 게시글 동기화
+    let boardPosts = [];
+    db.collection('board_posts').orderBy('date', 'desc').onSnapshot((snapshot) => {
+        boardPosts = [];
+        snapshot.forEach((doc) => {
+            boardPosts.push({
+                id: doc.id,
+                ...doc.data()
+            });
+        });
+        renderBoardPosts();
+    });
 
     // 게시글 목록 렌더링 함수
     function renderBoardPosts() {
@@ -558,7 +591,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        boardPosts.forEach((post, index) => {
+        boardPosts.forEach((post) => {
             const postCard = document.createElement('div');
             postCard.className = 'board-post-card glass-card';
 
@@ -585,7 +618,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <p class="post-text">${escapeHTML(post.content).replace(/\n/g, '<br>')}</p>
                     </div>
                     <div class="post-footer">
-                        <button class="delete-btn board-post-del-btn" data-index="${index}" title="게시글 삭제">
+                        <button class="delete-btn board-post-del-btn" data-id="${post.id}" title="게시글 삭제">
                             <i class="fa-regular fa-trash-can"></i> 삭제하기
                         </button>
                     </div>
@@ -597,8 +630,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // 게시판 삭제 이벤트 위임
         boardPostsGrid.querySelectorAll('.board-post-del-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const index = parseInt(btn.getAttribute('data-index'));
-                deleteBoardPost(index);
+                const id = btn.getAttribute('data-id');
+                deleteBoardPost(id);
             });
         });
     }
@@ -621,24 +654,20 @@ document.addEventListener('DOMContentLoaded', () => {
             date: new Date().getTime()
         };
 
-        boardPosts.unshift(newPost); // 최신글을 리스트 맨 앞에 배치
-        localStorage.setItem('dodo-board-posts', JSON.stringify(boardPosts));
-
-        // 폼 리셋 및 썸네일 박스 감추기
-        boardForm.reset();
-        boardImgPreview.style.display = 'none';
-        boardImgPreview.innerHTML = '';
-        compressedImageBase64 = '';
-
-        renderBoardPosts();
+        db.collection('board_posts').add(newPost).then(() => {
+            // 폼 리셋 및 썸네일 박스 감추기
+            boardForm.reset();
+            boardImgPreview.style.display = 'none';
+            boardImgPreview.innerHTML = '';
+            compressedImageBase64 = '';
+        }).catch(err => console.error("Error adding post: ", err));
     });
 
     // 게시글 삭제
-    function deleteBoardPost(index) {
+    function deleteBoardPost(id) {
         if (confirm('이 게시글을 정말로 삭제할까요?')) {
-            boardPosts.splice(index, 1);
-            localStorage.setItem('dodo-board-posts', JSON.stringify(boardPosts));
-            renderBoardPosts();
+            db.collection('board_posts').doc(id).delete()
+                .catch(err => console.error("Error deleting post: ", err));
         }
     }
 
@@ -677,7 +706,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageInput = document.getElementById('message-input');
     const guestbookList = document.getElementById('guestbook-list');
 
-    let messages = JSON.parse(localStorage.getItem('dodo-messages')) || [];
+    // Firestore 실시간 방명록 동기화
+    let messages = [];
+    db.collection('messages').orderBy('date', 'desc').onSnapshot((snapshot) => {
+        messages = [];
+        const likedMessages = JSON.parse(localStorage.getItem('dodo-liked-messages')) || [];
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            const msgId = doc.id;
+            messages.push({
+                id: msgId,
+                author: data.author,
+                message: data.message,
+                sticker: data.sticker,
+                date: data.date,
+                likes: data.likes || 0,
+                liked: likedMessages.includes(msgId)
+            });
+        });
+        renderMessages();
+    });
 
     function renderMessages() {
         guestbookList.innerHTML = '';
@@ -691,7 +739,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        messages.forEach((msg, index) => {
+        messages.forEach((msg) => {
             const card = document.createElement('div');
             card.className = 'guest-card glass-card';
 
@@ -710,12 +758,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <p class="guest-text">${escapeHTML(msg.message).replace(/\n/g, '<br>')}</p>
                 <div class="guest-card-footer">
-                    <button class="heart-btn ${msg.liked ? 'liked' : ''}" data-index="${index}">
+                    <button class="heart-btn ${msg.liked ? 'liked' : ''}" data-id="${msg.id}">
                         <i class="fa-${msg.liked ? 'solid' : 'regular'} fa-heart"></i> 
                         <span class="like-count">${msg.likes || 0}</span>
                     </button>
                     <span class="guest-sticker">${msg.sticker}</span>
-                    <button class="delete-btn" data-index="${index}" title="메시지 삭제">
+                    <button class="delete-btn" data-id="${msg.id}" title="메시지 삭제">
                         <i class="fa-regular fa-trash-can"></i>
                     </button>
                 </div>
@@ -725,15 +773,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.querySelectorAll('.heart-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                const index = parseInt(btn.getAttribute('data-index'));
-                toggleLike(index);
+                const id = btn.getAttribute('data-id');
+                toggleLike(id);
             });
         });
 
         document.querySelectorAll('.delete-btn:not(.board-post-del-btn)').forEach(btn => {
             btn.addEventListener('click', () => {
-                const index = parseInt(btn.getAttribute('data-index'));
-                deleteMessage(index);
+                const id = btn.getAttribute('data-id');
+                deleteMessage(id);
             });
         });
     }
@@ -764,39 +812,53 @@ document.addEventListener('DOMContentLoaded', () => {
             message,
             sticker: selectedSticker,
             date: new Date().getTime(),
-            likes: 0,
-            liked: false
+            likes: 0
         };
 
-        messages.unshift(newMessage);
-        saveAndRender();
-
-        authorInput.value = '';
-        messageInput.value = '';
-        document.getElementById('st-heart').checked = true;
+        db.collection('messages').add(newMessage).then(() => {
+            authorInput.value = '';
+            messageInput.value = '';
+            document.getElementById('st-heart').checked = true;
+        }).catch(err => console.error("Error adding message: ", err));
     });
 
-    function toggleLike(index) {
-        if (messages[index].liked) {
-            messages[index].likes -= 1;
-            messages[index].liked = false;
-        } else {
-            messages[index].likes += 1;
-            messages[index].liked = true;
-        }
-        saveAndRender();
+    function toggleLike(id) {
+        const likedMessages = JSON.parse(localStorage.getItem('dodo-liked-messages')) || [];
+        const msgRef = db.collection('messages').doc(id);
+
+        db.runTransaction((transaction) => {
+            return transaction.get(msgRef).then((sfDoc) => {
+                if (!sfDoc.exists) {
+                    throw "Document does not exist!";
+                }
+
+                const currentLikes = sfDoc.data().likes || 0;
+                let newLikes = currentLikes;
+                let newLikedList = [...likedMessages];
+
+                if (likedMessages.includes(id)) {
+                    newLikes = Math.max(0, currentLikes - 1);
+                    newLikedList = newLikedList.filter(item => item !== id);
+                } else {
+                    newLikes = currentLikes + 1;
+                    newLikedList.push(id);
+                }
+
+                transaction.update(msgRef, { likes: newLikes });
+                return newLikedList;
+            });
+        }).then((newLikedList) => {
+            localStorage.setItem('dodo-liked-messages', JSON.stringify(newLikedList));
+        }).catch((err) => {
+            console.error("Transaction failed: ", err);
+        });
     }
 
-    function deleteMessage(index) {
+    function deleteMessage(id) {
         if (confirm('이 방명록 글을 정말 삭제할까요?')) {
-            messages.splice(index, 1);
-            saveAndRender();
+            db.collection('messages').doc(id).delete()
+                .catch(err => console.error("Error deleting message: ", err));
         }
-    }
-
-    function saveAndRender() {
-        localStorage.setItem('dodo-messages', JSON.stringify(messages));
-        renderMessages();
     }
 
     renderMessages();
