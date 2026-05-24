@@ -1554,6 +1554,35 @@ body.light-theme .calendar-day {
 
 /* 14. 미디어 쿼리 (반응형 대응) 및 신규 기능 스타일 */
 
+/* 프로필 드롭다운 메뉴 스타일 */
+.profile-dropdown-content {
+    background: var(--card-bg);
+    backdrop-filter: blur(15px) saturate(180%);
+    -webkit-backdrop-filter: blur(15px) saturate(180%);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px var(--card-shadow);
+    transition: var(--transition-quick);
+}
+.profile-dropdown-content.hidden {
+    display: none !important;
+}
+.dropdown-item-btn:hover {
+    background: rgba(108, 92, 231, 0.1) !important;
+    color: var(--primary-color) !important;
+}
+.dropdown-item-btn.logout-color:hover {
+    background: rgba(255, 118, 117, 0.15) !important;
+    color: #ff7675 !important;
+}
+.auth-close-btn {
+    transition: var(--transition-quick);
+}
+.auth-close-btn:hover {
+    color: #ff7675 !important;
+    transform: scale(1.1);
+}
+
 /* 로그인 / 회원가입 스타일 */
 .auth-wrapper {
     position: fixed;

@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnGoLogin = document.getElementById('btn-go-login');
     const btnGoSignup = document.getElementById('btn-go-signup');
     const backBtns = document.querySelectorAll('.auth-back-btn');
+    const authCloseBtn = document.getElementById('auth-close-btn');
     
     const linkToSignup = document.getElementById('link-to-signup');
     const linkToLogin = document.getElementById('link-to-login');
@@ -38,12 +39,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('login-form');
     const signupForm = document.getElementById('signup-form');
     const authErrorMsg = document.getElementById('auth-error-msg');
-    const userInfoDisplay = document.getElementById('user-info-display');
-    const logoutBtn = document.getElementById('logout-btn');
+
+    // 헤더 프로필 메뉴 요소
+    const authMenuBtn = document.getElementById('auth-menu-btn');
+    const profileDropdown = document.getElementById('profile-dropdown');
+    const dropdownLoginBtn = document.getElementById('dropdown-login-btn');
+    const dropdownSignupBtn = document.getElementById('dropdown-signup-btn');
+    const dropdownLogoutBtn = document.getElementById('dropdown-logout-btn');
 
     let currentUserInfo = null;
     let activeBoardFilter = 'all';
-    let isListenersInitialized = false;
 
     // 화면 전환 함수들
     function showWelcomeScreen() {
@@ -67,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
         authErrorMsg.classList.add('hidden');
     }
 
-    // 이벤트 리스너 바인딩
+    // 웰컴화면 이벤트 바인딩
     btnGoLogin.addEventListener('click', showLoginScreen);
     btnGoSignup.addEventListener('click', showSignupScreen);
     
@@ -85,10 +90,56 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoginScreen();
     });
 
+    // 모달 닫기
+    authCloseBtn.addEventListener('click', () => {
+        authContainer.classList.add('hidden');
+    });
+
+    // 헤더 프로필/로그인 제어 버튼 바인딩
+    authMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!currentUserInfo) {
+            showLoginScreen();
+            authContainer.classList.remove('hidden');
+        } else {
+            profileDropdown.classList.toggle('hidden');
+        }
+    });
+
+    dropdownLoginBtn.addEventListener('click', () => {
+        showLoginScreen();
+        authContainer.classList.remove('hidden');
+        profileDropdown.classList.add('hidden');
+    });
+
+    dropdownSignupBtn.addEventListener('click', () => {
+        showSignupScreen();
+        authContainer.classList.remove('hidden');
+        profileDropdown.classList.add('hidden');
+    });
+
+    // 바깥 클릭 시 드롭다운 자동으로 닫기
+    document.addEventListener('click', () => {
+        if (profileDropdown) {
+            profileDropdown.classList.add('hidden');
+        }
+    });
+
     // 에러 표시 헬퍼
     function showAuthError(msg) {
         authErrorMsg.textContent = msg;
         authErrorMsg.classList.remove('hidden');
+    }
+
+    // 권한 검증 헬퍼
+    function checkAuth() {
+        if (!currentUserInfo) {
+            alert("가족 공간 로그인이 필요한 서비스입니다! 로그인해 주세요. 🔐");
+            showLoginScreen();
+            authContainer.classList.remove('hidden');
+            return false;
+        }
+        return true;
     }
 
     // 로그인 처리
@@ -154,14 +205,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 로그아웃 처리
-    logoutBtn.addEventListener('click', () => {
+    dropdownLogoutBtn.addEventListener('click', () => {
         if (confirm("로그아웃 하시겠습니까?")) {
             auth.signOut();
+            profileDropdown.classList.add('hidden');
         }
     });
 
     // 인증 상태 감시자
     auth.onAuthStateChanged((user) => {
+        const headerUserName = document.getElementById('header-user-name');
+        const dropdownLoggedOut = document.getElementById('dropdown-logged-out');
+        const dropdownLoggedIn = document.getElementById('dropdown-logged-in');
+        const dropdownUserNickname = document.getElementById('dropdown-user-nickname');
+        const dropdownUserRole = document.getElementById('dropdown-user-role');
+
         if (user) {
             db.collection('users').doc(user.uid).get()
                 .then((doc) => {
@@ -180,14 +238,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         };
                     }
 
-                    userInfoDisplay.innerHTML = `<i class="fa-solid fa-user-tag"></i> ${currentUserInfo.nickname} (${currentUserInfo.role})`;
-                    authContainer.classList.add('hidden');
-                    appContent.classList.remove('hidden');
+                    headerUserName.textContent = currentUserInfo.nickname;
+                    dropdownUserNickname.textContent = currentUserInfo.nickname;
+                    dropdownUserRole.textContent = currentUserInfo.role;
 
-                    if (!isListenersInitialized) {
-                        initRealtimeDbListeners();
-                        isListenersInitialized = true;
-                    }
+                    dropdownLoggedOut.classList.add('hidden');
+                    dropdownLoggedIn.classList.remove('hidden');
+                    authContainer.classList.add('hidden');
                 })
                 .catch((err) => {
                     console.error("사용자 정보를 불러오는 도중 오류 발생:", err);
@@ -195,10 +252,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
         } else {
             currentUserInfo = null;
-            userInfoDisplay.textContent = "";
-            showWelcomeScreen();
-            authContainer.classList.remove('hidden');
-            appContent.classList.add('hidden');
+            headerUserName.textContent = "로그인";
+            dropdownLoggedOut.classList.remove('hidden');
+            dropdownLoggedIn.classList.add('hidden');
         }
     });
 
@@ -605,6 +661,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 일정 추가 등록 처리
     eventForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        if (!checkAuth()) return;
         const title = eventTitleInput.value.trim();
         const color = eventColorSelect.value;
 
@@ -622,6 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 일정 삭제 처리
     function deleteEvent(index) {
+        if (!checkAuth()) return;
         if (confirm('이 일정을 삭제하시겠습니까?')) {
             const currentEvents = familyEvents[activeSelectedDateStr] || [];
             currentEvents.splice(index, 1);
@@ -847,8 +905,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 게시글 등록
     boardForm.addEventListener('submit', (e) => {
         e.preventDefault();
-
-        if (!currentUserInfo) return;
+        if (!checkAuth()) return;
 
         const author = currentUserInfo.nickname;
         const role = currentUserInfo.role;
@@ -877,6 +934,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 게시글 삭제
     function deleteBoardPost(id) {
+        if (!checkAuth()) return;
         if (confirm('이 게시글을 정말로 삭제할까요?')) {
             db.collection('board_posts').doc(id).delete()
                 .catch(err => console.error("Error deleting post: ", err));
@@ -1015,8 +1073,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     guestbookForm.addEventListener('submit', (e) => {
         e.preventDefault();
-
-        if (!currentUserInfo) return;
+        if (!checkAuth()) return;
 
         const author = currentUserInfo.nickname;
         const role = currentUserInfo.role;
@@ -1041,6 +1098,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function toggleLike(id) {
+        if (!checkAuth()) return;
         const likedMessages = JSON.parse(localStorage.getItem('dodo-liked-messages')) || [];
         const msgRef = db.collection('messages').doc(id);
 
@@ -1073,6 +1131,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function deleteMessage(id) {
+        if (!checkAuth()) return;
         if (confirm('이 방명록 글을 정말 삭제할까요?')) {
             db.collection('messages').doc(id).delete()
                 .catch(err => console.error("Error deleting message: ", err));

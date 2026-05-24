@@ -36,8 +36,9 @@
     <canvas id="particle-canvas"></canvas>
 
     <!-- 로그인 / 회원가입 화면 -->
-    <div id="auth-container" class="auth-wrapper">
-        <div class="auth-card glass-card">
+    <div id="auth-container" class="auth-wrapper hidden">
+        <div class="auth-card glass-card" style="position: relative;">
+            <button id="auth-close-btn" class="auth-close-btn" style="position: absolute; top: 15px; right: 20px; background: transparent; border: none; font-size: 2rem; font-weight: 700; color: var(--text-muted); cursor: pointer; transition: var(--transition-quick);">&times;</button>
             <div class="auth-header">
                 <h2>DODO<span>.family</span></h2>
                 <p>우리 가족만의 실시간 소통 아지트</p>
@@ -114,8 +115,8 @@
         </div>
     </div>
 
-    <!-- 메인 앱 콘텐츠 (로그인 시 보임) -->
-    <div id="app-content" class="hidden">
+    <!-- 메인 앱 콘텐츠 -->
+    <div id="app-content">
 
     <!-- 네비게이션 바 -->
     <header id="main-header">
@@ -131,8 +132,30 @@
                 <a href="#guestbook" class="nav-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
             </nav>
             <div class="header-actions">
-                <span id="user-info-display" class="user-info-text"></span>
-                <button id="logout-btn" class="logout-btn-header" title="로그아웃"><i class="fa-solid fa-right-from-bracket"></i></button>
+                <!-- 로그인 상태 표시 및 제어용 사용자 프로필 버튼 -->
+                <div class="user-profile-menu" style="position: relative; display: inline-block;">
+                    <button id="auth-menu-btn" class="profile-menu-btn" title="로그인 상태" style="background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-color); cursor: pointer; padding: 0.5rem 1rem; border-radius: 20px; display: flex; align-items: center; gap: 0.5rem; font-family: inherit; font-size: 0.85rem; font-weight: 700; transition: var(--transition-quick);">
+                        <i class="fa-solid fa-circle-user" style="font-size: 1.1rem; color: var(--primary-color);"></i>
+                        <span id="header-user-name" class="header-user-name-text">로그인</span>
+                    </button>
+                    <div id="profile-dropdown" class="profile-dropdown-content hidden" style="position: absolute; right: 0; top: 110%; width: 200px; padding: 10px; z-index: 1010;">
+                        <!-- 로그인 전 -->
+                        <div id="dropdown-logged-out">
+                            <button id="dropdown-login-btn" class="dropdown-item-btn" style="width: 100%; text-align: left; padding: 0.6rem 0.8rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; transition: var(--transition-quick);"><i class="fa-solid fa-right-to-bracket"></i> 로그인</button>
+                            <button id="dropdown-signup-btn" class="dropdown-item-btn" style="width: 100%; text-align: left; padding: 0.6rem 0.8rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; transition: var(--transition-quick);"><i class="fa-solid fa-user-plus"></i> 회원가입</button>
+                        </div>
+                        <!-- 로그인 후 -->
+                        <div id="dropdown-logged-in" class="hidden">
+                            <div class="user-profile-summary" style="padding: 0.5rem 0.8rem; display: flex; flex-direction: column; gap: 4px;">
+                                <span class="user-name-text" id="dropdown-user-nickname" style="font-weight: 700; font-size: 0.95rem; color: var(--text-color);">가족</span>
+                                <span class="user-role-badge" id="dropdown-user-role" style="font-size: 0.75rem; color: var(--primary-color); font-weight: 600;">역할</span>
+                            </div>
+                            <div class="dropdown-divider" style="height: 1px; background: var(--card-border); margin: 6px 0;"></div>
+                            <button id="dropdown-logout-btn" class="dropdown-item-btn logout-color" style="width: 100%; text-align: left; padding: 0.6rem 0.8rem; background: transparent; border: none; color: #ff7675; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; transition: var(--transition-quick);"><i class="fa-solid fa-right-from-bracket"></i> 로그아웃</button>
+                        </div>
+                    </div>
+                </div>
+
                 <button id="theme-toggle" aria-label="테마 전환" class="theme-btn">
                     <i class="fa-solid fa-sun"></i>
                     <i class="fa-solid fa-moon"></i>
