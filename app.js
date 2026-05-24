@@ -155,10 +155,13 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .catch((error) => {
                 let errorMsg = "로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.";
-                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                console.error("로그인 에러 코드:", error.code, error.message);
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
                     errorMsg = "이메일 또는 비밀번호가 잘못되었습니다.";
                 } else if (error.code === 'auth/invalid-email') {
                     errorMsg = "유효하지 않은 이메일 형식입니다.";
+                } else if (error.code === 'auth/too-many-requests') {
+                    errorMsg = "로그인 시도가 일시적으로 차단되었습니다. 잠시 후 다시 시도해 주세요.";
                 }
                 showAuthError(errorMsg);
             });
