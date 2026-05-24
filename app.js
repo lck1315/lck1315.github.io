@@ -21,8 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
             body.classList.replace('light-theme', 'dark-theme');
             localStorage.setItem('dodo-theme', 'dark-theme');
         }
-        // 테마 바뀔 때 파티클 색상 갱신을 위해 파티클 설정 변경
-        initParticles();
+        initParticles(); // 테마 전환 시 파티클 컬러 갱신
     });
 
 
@@ -74,7 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
         radius: 120
     };
 
-    // 마우스 움직임 트래킹
     window.addEventListener('mousemove', (event) => {
         mouse.x = event.x;
         mouse.y = event.y;
@@ -85,14 +83,12 @@ document.addEventListener('DOMContentLoaded', () => {
         mouse.y = null;
     });
 
-    // 캔버스 크기 반응형 리사이징
     window.addEventListener('resize', () => {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
         initParticles();
     });
 
-    // 파티클 생성 모델
     class Particle {
         constructor(x, y, directionX, directionY, size, color) {
             this.x = x;
@@ -103,7 +99,6 @@ document.addEventListener('DOMContentLoaded', () => {
             this.color = color;
         }
 
-        // 파티클 그리기
         draw() {
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
@@ -111,9 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.fill();
         }
 
-        // 파티클 상태 업데이트 (움직임 및 마우스 충돌 감지)
         update() {
-            // 경계선 체크
             if (this.x > canvas.width || this.x < 0) {
                 this.directionX = -this.directionX;
             }
@@ -121,7 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.directionY = -this.directionY;
             }
 
-            // 마우스 충돌 효과 (부드럽게 밀려나는 로직)
             let dx = mouse.x - this.x;
             let dy = mouse.y - this.y;
             let distance = Math.sqrt(dx * dx + dy * dy);
@@ -140,30 +132,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // 이동
             this.x += this.directionX;
             this.y += this.directionY;
             this.draw();
         }
     }
 
-    // 파티클 초기화
     function initParticles() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
         particlesArray = [];
 
-        // 테마별 파티클 색상 매핑
         const isLight = body.classList.contains('light-theme');
         const colors = isLight 
             ? ['rgba(108, 92, 231, 0.15)', 'rgba(253, 121, 168, 0.15)', 'rgba(225, 112, 85, 0.15)'] 
             : ['rgba(162, 155, 254, 0.12)', 'rgba(0, 206, 201, 0.1)', 'rgba(253, 121, 168, 0.1)'];
 
         for (let i = 0; i < numberOfParticles; i++) {
-            let size = (Math.random() * 8) + 4; // 크기 4~12px
+            let size = (Math.random() * 8) + 4;
             let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2);
             let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2);
-            let directionX = (Math.random() * 0.4) - 0.2; // 부드럽게 흐르도록 속도 조절
+            let directionX = (Math.random() * 0.4) - 0.2;
             let directionY = (Math.random() * 0.4) - 0.2;
             let color = colors[Math.floor(Math.random() * colors.length)];
 
@@ -171,7 +160,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 파티클 애니메이션 루프
     function animateParticles() {
         requestAnimationFrame(animateParticles);
         ctx.clearRect(0, 0, innerWidth, innerHeight);
@@ -182,7 +170,6 @@ document.addEventListener('DOMContentLoaded', () => {
         connectParticles();
     }
 
-    // 인접한 파티클끼리 가느다란 실선 연결 효과
     function connectParticles() {
         const isLight = body.classList.contains('light-theme');
         const lineColor = isLight ? 'rgba(108, 92, 231, 0.04)' : 'rgba(255, 255, 255, 0.03)';
@@ -211,26 +198,242 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ----------------------------------------------------
-    // 4. 가족 프로필 카드 3D 뒤집기 (모바일 터치 이벤트 보완)
+    // 4. 가족 프로필 카드 3D 뒤집기
     // ----------------------------------------------------
     const memberCards = document.querySelectorAll('.member-card-wrapper');
     memberCards.forEach(card => {
-        card.addEventListener('click', (e) => {
-            // 모바일에서 클릭 시 플립 고정 토글
+        card.addEventListener('click', () => {
             card.classList.toggle('flipped');
         });
     });
 
 
     // ----------------------------------------------------
-    // 5. 추억 갤러리 카테고리 필터링 & 라이트박스(모달)
+    // 5. 구글 스타일 가족 캘린더 엔진 (신규 추가)
+    // ----------------------------------------------------
+    let currentCalDate = new Date();
+    const monthYearText = document.getElementById('calendar-month-year');
+    const calendarGrid = document.getElementById('calendar-grid');
+    const prevMonthBtn = document.getElementById('prev-month-btn');
+    const nextMonthBtn = document.getElementById('next-month-btn');
+
+    // 모달 엘리먼트
+    const calendarModal = document.getElementById('calendar-modal');
+    const modalDateTitle = document.getElementById('modal-date-title');
+    const eventForm = document.getElementById('event-form');
+    const eventTitleInput = document.getElementById('event-title-input');
+    const eventColorSelect = document.getElementById('event-color-select');
+    const modalEventList = document.getElementById('modal-event-list');
+    const modalCloseBtn = document.querySelector('.calendar-modal-close');
+    
+    let activeSelectedDateStr = ''; // YYYY-MM-DD 포맷 저장용
+
+    // 로컬스토리지 일정 로드 ({ '2026-05-24': [{title: '캠핑', color: '#6c5ce7'}] })
+    let familyEvents = JSON.parse(localStorage.getItem('dodo-events')) || {};
+
+    function renderCalendar() {
+        calendarGrid.innerHTML = '';
+        const year = currentCalDate.getFullYear();
+        const month = currentCalDate.getMonth();
+
+        // 헤더 텍스트 설정
+        monthYearText.textContent = `${year}년 ${month + 1}월`;
+
+        // 이번 달의 1일 요일 및 마지막 날짜 구하기
+        const firstDayIndex = new Date(year, month, 1).getDay();
+        const lastDayDate = new Date(year, month + 1, 0).getDate();
+        
+        // 이전 달의 마지막 일자 구하기 (앞부분 공백을 채우기 위함)
+        const prevLastDayDate = new Date(year, month, 0).getDate();
+
+        // 1. 이전 달 날짜들 렌더링
+        for (let i = firstDayIndex; i > 0; i--) {
+            const dayNum = prevLastDayDate - i + 1;
+            const prevMonthDate = new Date(year, month - 1, dayNum);
+            createDayCell(prevMonthDate, false);
+        }
+
+        // 2. 이번 달 날짜들 렌더링
+        for (let i = 1; i <= lastDayDate; i++) {
+            const currentDayDate = new Date(year, month, i);
+            createDayCell(currentDayDate, true);
+        }
+
+        // 3. 다음 달 날짜들 렌더링 (그리드가 7 * 6 = 42 칸을 채우도록 함)
+        const totalCells = 42;
+        const currentCellsCount = firstDayIndex + lastDayDate;
+        const nextMonthDaysCount = totalCells - currentCellsCount;
+
+        for (let i = 1; i <= nextMonthDaysCount; i++) {
+            const nextMonthDate = new Date(year, month + 1, i);
+            createDayCell(nextMonthDate, false);
+        }
+    }
+
+    // 날짜 셀 생성 헬퍼
+    function createDayCell(dateObj, isCurrentMonth) {
+        const dayCell = document.createElement('div');
+        dayCell.className = 'calendar-day';
+        
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const date = String(dateObj.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${date}`;
+
+        if (!isCurrentMonth) {
+            dayCell.classList.add('other-month');
+        }
+
+        // 요일 구분
+        const dayOfWeek = dateObj.getDay();
+        if (dayOfWeek === 0) dayCell.classList.add('sun');
+        if (dayOfWeek === 6) dayCell.classList.add('sat');
+
+        // 오늘 날짜 하이라이트
+        const today = new Date();
+        if (dateObj.getFullYear() === today.getFullYear() &&
+            dateObj.getMonth() === today.getMonth() &&
+            dateObj.getDate() === today.getDate()) {
+            dayCell.classList.add('today');
+        }
+
+        // 일자 텍스트 생성
+        dayCell.innerHTML = `<span class="day-number">${dateObj.getDate()}</span>`;
+
+        // 이 날짜에 등록된 일정 닷 배지 추가
+        if (familyEvents[dateStr] && familyEvents[dateStr].length > 0) {
+            const dotsWrapper = document.createElement('div');
+            dotsWrapper.className = 'day-dots';
+            
+            familyEvents[dateStr].forEach(event => {
+                const dot = document.createElement('span');
+                dot.className = 'day-dot';
+                dot.style.backgroundColor = event.color;
+                dotsWrapper.appendChild(dot);
+            });
+            dayCell.appendChild(dotsWrapper);
+        }
+
+        // 셀 클릭 시 일정 모달 활성화
+        dayCell.addEventListener('click', () => {
+            openEventModal(dateStr);
+        });
+
+        calendarGrid.appendChild(dayCell);
+    }
+
+    // 이전 달, 다음 달 이동
+    prevMonthBtn.addEventListener('click', () => {
+        currentCalDate.setMonth(currentCalDate.getMonth() - 1);
+        renderCalendar();
+    });
+
+    nextMonthBtn.addEventListener('click', () => {
+        currentCalDate.setMonth(currentCalDate.getMonth() + 1);
+        renderCalendar();
+    });
+
+    // 일정 관리 모달 열기
+    function openEventModal(dateStr) {
+        activeSelectedDateStr = dateStr;
+        
+        // 모달 타이틀 가독성 있게 변환 (예: 2026년 05월 24일 일정)
+        const parts = dateStr.split('-');
+        modalDateTitle.textContent = `${parts[0]}년 ${parts[1]}월 ${parts[2]}일 일정 🗓️`;
+        
+        renderModalEventList();
+        calendarModal.classList.add('show');
+    }
+
+    // 모달 닫기
+    modalCloseBtn.addEventListener('click', () => {
+        calendarModal.classList.remove('show');
+    });
+
+    calendarModal.addEventListener('click', (e) => {
+        if (e.target === calendarModal) {
+            calendarModal.classList.remove('show');
+        }
+    });
+
+    // 모달 내부 일정 리스트 출력
+    function renderModalEventList() {
+        modalEventList.innerHTML = '';
+        const dayEvents = familyEvents[activeSelectedDateStr] || [];
+
+        if (dayEvents.length === 0) {
+            modalEventList.innerHTML = '<p class="no-messages" style="padding:1rem;">등록된 일정이 없습니다.</p>';
+            return;
+        }
+
+        dayEvents.forEach((evt, idx) => {
+            const item = document.createElement('div');
+            item.className = 'event-item';
+            item.style.borderLeftColor = evt.color;
+            item.innerHTML = `
+                <span class="event-item-title">${escapeHTML(evt.title)}</span>
+                <button class="event-del-btn" data-index="${idx}"><i class="fa-regular fa-trash-can"></i></button>
+            `;
+            modalEventList.appendChild(item);
+        });
+
+        // 삭제 이벤트 연결
+        modalEventList.querySelectorAll('.event-del-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const index = parseInt(btn.getAttribute('data-index'));
+                deleteEvent(index);
+            });
+        });
+    }
+
+    // 일정 추가 등록 처리
+    eventForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const title = eventTitleInput.value.trim();
+        const color = eventColorSelect.value;
+
+        if (!title) return;
+
+        if (!familyEvents[activeSelectedDateStr]) {
+            familyEvents[activeSelectedDateStr] = [];
+        }
+
+        familyEvents[activeSelectedDateStr].push({ title, color });
+        localStorage.setItem('dodo-events', JSON.stringify(familyEvents));
+
+        eventTitleInput.value = ''; // 작성폼 초기화
+        
+        renderModalEventList();
+        renderCalendar();
+    });
+
+    // 일정 삭제 처리
+    function deleteEvent(index) {
+        if (confirm('이 일정을 삭제하시겠습니까?')) {
+            familyEvents[activeSelectedDateStr].splice(index, 1);
+            
+            // 더 이상 일정이 없으면 빈 배열 키 삭제
+            if (familyEvents[activeSelectedDateStr].length === 0) {
+                delete familyEvents[activeSelectedDateStr];
+            }
+
+            localStorage.setItem('dodo-events', JSON.stringify(familyEvents));
+            renderModalEventList();
+            renderCalendar();
+        }
+    }
+
+    renderCalendar();
+
+
+    // ----------------------------------------------------
+    // 6. 추억 갤러리 필터링 & 라이트박스
     // ----------------------------------------------------
     const filterButtons = document.querySelectorAll('.filter-btn');
     const galleryItems = document.querySelectorAll('.gallery-item');
 
     filterButtons.forEach(btn => {
         btn.addEventListener('click', () => {
-            // 액티브 클래스 전환
             filterButtons.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
 
@@ -238,8 +441,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             galleryItems.forEach(item => {
                 const category = item.getAttribute('data-category');
-                
-                // 필터링 애니메이션 처리
                 if (filterValue === 'all' || category === filterValue) {
                     item.classList.remove('hide');
                     setTimeout(() => {
@@ -257,7 +458,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 라이트박스 오픈 로직
     const lightboxModal = document.getElementById('lightbox-modal');
     const lightboxImg = document.getElementById('lightbox-img');
     const lightboxCaption = document.getElementById('lightbox-caption');
@@ -275,7 +475,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 라이트박스 닫기
     closeBtn.addEventListener('click', () => {
         lightboxModal.classList.remove('show');
     });
@@ -288,7 +487,167 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ----------------------------------------------------
-    // 6. 스크롤 트리거 타임라인 애니메이션 (Intersection Observer)
+    // 7. 사진 업로드형 가족 게시판 로직 (Canvas 압축 & 저장)
+    // ----------------------------------------------------
+    const boardForm = document.getElementById('board-form');
+    const boardAuthor = document.getElementById('board-author');
+    const boardTitle = document.getElementById('board-title');
+    const boardFile = document.getElementById('board-file');
+    const boardContent = document.getElementById('board-content');
+    const boardImgPreview = document.getElementById('board-img-preview');
+    const boardPostsGrid = document.getElementById('board-posts-grid');
+
+    let compressedImageBase64 = ''; // 압축된 이미지 캐시 변수
+
+    // 이미지 파일을 읽고 Canvas를 이용해 다운스케일링 압축하는 헬퍼 함수
+    boardFile.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) {
+            boardImgPreview.style.display = 'none';
+            boardImgPreview.innerHTML = '';
+            compressedImageBase64 = '';
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const img = new Image();
+            img.onload = function() {
+                // 이미지 리사이징 (최대 너비 600px 기준 종횡비 계산)
+                const max_width = 600;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > max_width) {
+                    height = Math.round((height * max_width) / width);
+                    width = max_width;
+                }
+
+                // 메모리에 캔버스를 임시 생성하여 리사이즈 드로잉
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(img, 0, 0, width, height);
+
+                // JPEG 포맷에 70% 퀄리티로 압축하여 base64 획득
+                compressedImageBase64 = tempCanvas.toDataURL('image/jpeg', 0.7);
+
+                // 화면에 미리보기 업데이트
+                boardImgPreview.innerHTML = `<img src="${compressedImageBase64}" alt="업로드 이미지 미리보기">`;
+                boardImgPreview.style.display = 'block';
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // 로컬스토리지 게시글 배열 읽어오기
+    let boardPosts = JSON.parse(localStorage.getItem('dodo-board-posts')) || [];
+
+    // 게시글 목록 렌더링 함수
+    function renderBoardPosts() {
+        boardPostsGrid.innerHTML = '';
+
+        if (boardPosts.length === 0) {
+            boardPostsGrid.innerHTML = `
+                <div class="no-posts">
+                    <p><i class="fa-regular fa-folder-open"></i> 아직 등록된 게시글이 없어요. 사진과 글을 올려보세요!</p>
+                </div>
+            `;
+            return;
+        }
+
+        boardPosts.forEach((post, index) => {
+            const postCard = document.createElement('div');
+            postCard.className = 'board-post-card glass-card';
+
+            const dateStr = new Date(post.date).toLocaleDateString('ko-KR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+
+            // 이미지가 존재하는 경우 상단 배너 추가, 없는 경우 기본 심볼 추가
+            const imgHeaderHTML = post.image 
+                ? `<div class="post-img-header"><img src="${post.image}" alt="게시글 대표 사진"></div>`
+                : `<div class="post-img-header"><div class="post-no-img"><i class="fa-regular fa-image"></i></div></div>`;
+
+            postCard.innerHTML = `
+                ${imgHeaderHTML}
+                <div class="post-body">
+                    <div>
+                        <div class="post-meta">
+                            <span class="post-author"><i class="fa-solid fa-user-pen"></i> ${escapeHTML(post.author)}</span>
+                            <span class="post-date"><i class="fa-regular fa-clock"></i> ${dateStr}</span>
+                        </div>
+                        <h4 class="post-title">${escapeHTML(post.title)}</h4>
+                        <p class="post-text">${escapeHTML(post.content).replace(/\n/g, '<br>')}</p>
+                    </div>
+                    <div class="post-footer">
+                        <button class="delete-btn board-post-del-btn" data-index="${index}" title="게시글 삭제">
+                            <i class="fa-regular fa-trash-can"></i> 삭제하기
+                        </button>
+                    </div>
+                </div>
+            `;
+            boardPostsGrid.appendChild(postCard);
+        });
+
+        // 게시판 삭제 이벤트 위임
+        boardPostsGrid.querySelectorAll('.board-post-del-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const index = parseInt(btn.getAttribute('data-index'));
+                deleteBoardPost(index);
+            });
+        });
+    }
+
+    // 게시글 등록
+    boardForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        const author = boardAuthor.value.trim();
+        const title = boardTitle.value.trim();
+        const content = boardContent.value.trim();
+
+        if (!author || !title || !content) return;
+
+        const newPost = {
+            author,
+            title,
+            content,
+            image: compressedImageBase64, // 압축된 이미지 (없으면 빈 문자열)
+            date: new Date().getTime()
+        };
+
+        boardPosts.unshift(newPost); // 최신글을 리스트 맨 앞에 배치
+        localStorage.setItem('dodo-board-posts', JSON.stringify(boardPosts));
+
+        // 폼 리셋 및 썸네일 박스 감추기
+        boardForm.reset();
+        boardImgPreview.style.display = 'none';
+        boardImgPreview.innerHTML = '';
+        compressedImageBase64 = '';
+
+        renderBoardPosts();
+    });
+
+    // 게시글 삭제
+    function deleteBoardPost(index) {
+        if (confirm('이 게시글을 정말로 삭제할까요?')) {
+            boardPosts.splice(index, 1);
+            localStorage.setItem('dodo-board-posts', JSON.stringify(boardPosts));
+            renderBoardPosts();
+        }
+    }
+
+    // 초기 게시판 출력
+    renderBoardPosts();
+
+
+    // ----------------------------------------------------
+    // 8. 스크롤 트리거 타임라인 애니메이션 (Intersection Observer)
     // ----------------------------------------------------
     const timelineItems = document.querySelectorAll('.timeline-item');
     const observerOptions = {
@@ -300,7 +659,6 @@ document.addEventListener('DOMContentLoaded', () => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 entry.target.classList.add('show');
-                // 한번 등장한 후 관찰 중단
                 observer.unobserve(entry.target);
             }
         });
@@ -312,17 +670,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ----------------------------------------------------
-    // 7. 가상 방명록 로직 (localStorage 연동)
+    // 9. 가상 방명록 로직
     // ----------------------------------------------------
     const guestbookForm = document.getElementById('guestbook-form');
     const authorInput = document.getElementById('author-input');
     const messageInput = document.getElementById('message-input');
     const guestbookList = document.getElementById('guestbook-list');
 
-    // 로컬스토리지에서 기존 메시지들 로드
     let messages = JSON.parse(localStorage.getItem('dodo-messages')) || [];
 
-    // 메시지 목록 렌더링 함수
     function renderMessages() {
         guestbookList.innerHTML = '';
 
@@ -339,7 +695,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.className = 'guest-card glass-card';
 
-            // 날짜 포맷팅
             const dateStr = new Date(msg.date).toLocaleDateString('ko-KR', {
                 year: 'numeric',
                 month: '2-digit',
@@ -368,16 +723,14 @@ document.addEventListener('DOMContentLoaded', () => {
             guestbookList.appendChild(card);
         });
 
-        // 좋아요 버튼 이벤트 등록
         document.querySelectorAll('.heart-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', () => {
                 const index = parseInt(btn.getAttribute('data-index'));
                 toggleLike(index);
             });
         });
 
-        // 삭제 버튼 이벤트 등록
-        document.querySelectorAll('.delete-btn').forEach(btn => {
+        document.querySelectorAll('.delete-btn:not(.board-post-del-btn)').forEach(btn => {
             btn.addEventListener('click', () => {
                 const index = parseInt(btn.getAttribute('data-index'));
                 deleteMessage(index);
@@ -385,7 +738,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // XSS 방지를 위한 HTML 이스케이프
     function escapeHTML(str) {
         return str.replace(/[&<>'"]/g, 
             tag => ({
@@ -398,7 +750,6 @@ document.addEventListener('DOMContentLoaded', () => {
         );
     }
 
-    // 새 방명록 메시지 추가
     guestbookForm.addEventListener('submit', (e) => {
         e.preventDefault();
 
@@ -417,17 +768,14 @@ document.addEventListener('DOMContentLoaded', () => {
             liked: false
         };
 
-        messages.unshift(newMessage); // 최근 메시지가 항상 위로 오도록 배열 맨 앞에 삽입
+        messages.unshift(newMessage);
         saveAndRender();
 
-        // 폼 리셋
         authorInput.value = '';
         messageInput.value = '';
-        // 첫 번째 라디오(💖)로 기본 선택값 리셋
         document.getElementById('st-heart').checked = true;
     });
 
-    // 좋아요 토글
     function toggleLike(index) {
         if (messages[index].liked) {
             messages[index].likes -= 1;
@@ -439,7 +787,6 @@ document.addEventListener('DOMContentLoaded', () => {
         saveAndRender();
     }
 
-    // 메시지 삭제
     function deleteMessage(index) {
         if (confirm('이 방명록 글을 정말 삭제할까요?')) {
             messages.splice(index, 1);
@@ -447,12 +794,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 로컬스토리지에 저장하고 렌더링 갱신
     function saveAndRender() {
         localStorage.setItem('dodo-messages', JSON.stringify(messages));
         renderMessages();
     }
 
-    // 초기 방명록 렌더링
     renderMessages();
 });
