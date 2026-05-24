@@ -1,4 +1,358 @@
-ㅇㄴㄹㄹ
-ㄴㅇㄹㄴㅇ
-ㄴㅇㄹㅇㄴㄹ
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DODO Family Space | 따뜻한 우리 가족의 이야기</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="최신 트렌드와 화려한 비주얼로 담아낸 DODO 가족의 소중한 일상, 여행 정보 및 방명록이 있는 우리들만의 프리미엄 공간입니다.">
+    <meta name="keywords" content="DODO, 가족홈페이지, DODO가족, 가족앨범, 방명록, 인터랙티브홈페이지">
+    <meta name="author" content="DODO Family">
+    
+    <!-- Open Graph (SNS 공유용) -->
+    <meta property="og:title" content="DODO Family Space">
+    <meta property="og:description" content="따뜻한 추억과 화려한 이미지가 함께하는 DODO 가족의 홈페이지에 놀러오세요!">
+    <meta property="og:image" content="./assets/dodo_hero.png">
+    <meta property="og:type" content="website">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="dark-theme">
+    <!-- 스크롤 진행 바 -->
+    <div id="scroll-progress-container">
+        <div id="scroll-progress-bar"></div>
+    </div>
 
+    <!-- 배경 Canvas 파티클 -->
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- 네비게이션 바 -->
+    <header id="main-header">
+        <div class="header-container">
+            <a href="#" class="logo">DODO<span>.family</span></a>
+            <nav class="nav-links">
+                <a href="#hero" class="nav-item active"><i class="fa-solid fa-house"></i> Home</a>
+                <a href="#family" class="nav-item"><i class="fa-solid fa-users"></i> Family</a>
+                <a href="#gallery" class="nav-item"><i class="fa-solid fa-images"></i> Gallery</a>
+                <a href="#timeline" class="nav-item"><i class="fa-solid fa-timeline"></i> Timeline</a>
+                <a href="#guestbook" class="nav-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
+            </nav>
+            <div class="header-actions">
+                <button id="theme-toggle" aria-label="테마 전환" class="theme-btn">
+                    <i class="fa-solid fa-sun"></i>
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- 1. 히어로 섹션 -->
+        <section id="hero" class="section">
+            <div class="hero-container">
+                <div class="hero-text-content">
+                    <span class="hero-badge"><i class="fa-solid fa-sparkles"></i> Welcome to Our Space</span>
+                    <h1 class="hero-title">소소하지만 특별한<br>DODO 가족의 이야기</h1>
+                    <p class="hero-desc">서로 다른 색깔을 가진 우리가 모여 가장 아름다운 무지개를 만듭니다. 매일매일 행복이 꽃피는 DODO의 홈 스페이스에 오신 것을 환영합니다.</p>
+                    <div class="hero-buttons">
+                        <a href="#guestbook" class="btn btn-primary">방명록 남기기 <i class="fa-solid fa-arrow-right"></i></a>
+                        <a href="#gallery" class="btn btn-secondary">추억 앨범 보기</a>
+                    </div>
+                </div>
+                <div class="hero-visual-content">
+                    <div class="glass-frame">
+                        <img src="./assets/dodo_hero.png" alt="DODO 가족 일러스트" class="hero-img">
+                    </div>
+                </div>
+            </div>
+            <div class="scroll-down-indicator">
+                <p>Scroll Down</p>
+                <div class="mouse-icon">
+                    <div class="wheel"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. 가족 소개 섹션 -->
+        <section id="family" class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">가족 구성원 소개</h2>
+                    <p class="section-subtitle">DODO 패밀리의 든든하고 사랑스러운 멤버들을 소개합니다.</p>
+                </div>
+                <div class="family-grid">
+                    <!-- 아빠 카드 -->
+                    <div class="member-card-wrapper">
+                        <div class="member-card">
+                            <div class="card-front glass-card">
+                                <div class="member-icon bg-blue">
+                                    <i class="fa-solid fa-user-tie"></i>
+                                </div>
+                                <h3 class="member-name">아빠 (DODO-Daddy)</h3>
+                                <p class="member-role">든든한 울타리 & IT 마스터</p>
+                                <span class="card-flip-hint">클릭해서 더 알아보기 <i class="fa-solid fa-rotate"></i></span>
+                            </div>
+                            <div class="card-back glass-card">
+                                <h3>아빠의 관심사</h3>
+                                <ul class="member-details">
+                                    <li><i class="fa-solid fa-heart text-pink"></i> 취미: 캠핑, 전자기기 수집</li>
+                                    <li><i class="fa-solid fa-comment-dots text-blue"></i> 한마디: "오늘보다 더 나은 내일을 위해!"</li>
+                                    <li><i class="fa-solid fa-mug-hot text-brown"></i> 좋아하는 것: 진한 에스프레소</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 엄마 카드 -->
+                    <div class="member-card-wrapper">
+                        <div class="member-card">
+                            <div class="card-front glass-card">
+                                <div class="member-icon bg-pink">
+                                    <i class="fa-solid fa-user-shaved"></i>
+                                    <i class="fa-solid fa-spa"></i>
+                                </div>
+                                <h3 class="member-name">엄마 (DODO-Mommy)</h3>
+                                <p class="member-role">따뜻한 등대 & 요리 여왕</p>
+                                <span class="card-flip-hint">클릭해서 더 알아보기 <i class="fa-solid fa-rotate"></i></span>
+                            </div>
+                            <div class="card-back glass-card">
+                                <h3>엄마의 관심사</h3>
+                                <ul class="member-details">
+                                    <li><i class="fa-solid fa-heart text-pink"></i> 취미: 홈가드닝, 베이킹</li>
+                                    <li><i class="fa-solid fa-comment-dots text-blue"></i> 한마디: "매 순간을 온전히 감사하며 사랑하기"</li>
+                                    <li><i class="fa-solid fa-seedling text-green"></i> 좋아하는 것: 로즈마리 향기</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 첫째 카드 -->
+                    <div class="member-card-wrapper">
+                        <div class="member-card">
+                            <div class="card-front glass-card">
+                                <div class="member-icon bg-orange">
+                                    <i class="fa-solid fa-graduation-cap"></i>
+                                </div>
+                                <h3 class="member-name">첫째 (DODO-Junior)</h3>
+                                <p class="member-role">호기심 많은 모험가 & 그림 작가</p>
+                                <span class="card-flip-hint">클릭해서 더 알아보기 <i class="fa-solid fa-rotate"></i></span>
+                            </div>
+                            <div class="card-back glass-card">
+                                <h3>첫째의 관심사</h3>
+                                <ul class="member-details">
+                                    <li><i class="fa-solid fa-heart text-pink"></i> 취미: 드로잉, 자전거 라이딩</li>
+                                    <li><i class="fa-solid fa-comment-dots text-blue"></i> 한마디: "세상은 신나는 탐험으로 가득 차 있어!"</li>
+                                    <li><i class="fa-solid fa-palette text-orange"></i> 좋아하는 것: 디지털 드로잉</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 반려묘/막내 카드 -->
+                    <div class="member-card-wrapper">
+                        <div class="member-card">
+                            <div class="card-front glass-card">
+                                <div class="member-icon bg-purple">
+                                    <i class="fa-solid fa-cat"></i>
+                                </div>
+                                <h3 class="member-name">막둥이 도도 (DODO)</h3>
+                                <p class="member-role">가족의 비타민 & 잠자는 냥이</p>
+                                <span class="card-flip-hint">클릭해서 더 알아보기 <i class="fa-solid fa-rotate"></i></span>
+                            </div>
+                            <div class="card-back glass-card">
+                                <h3>도도의 관심사</h3>
+                                <ul class="member-details">
+                                    <li><i class="fa-solid fa-heart text-pink"></i> 취미: 캣타워 올라가기, 츄르 먹기</li>
+                                    <li><i class="fa-solid fa-comment-dots text-blue"></i> 한마디: "야옹~ (츄르 더 줘라냥)"</li>
+                                    <li><i class="fa-solid fa-fish text-purple"></i> 좋아하는 것: 햇볕이 드는 따뜻한 바닥</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 추억 갤러리 섹션 -->
+        <section id="gallery" class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">추억 갤러리</h2>
+                    <p class="section-subtitle">가족이 함께 나누었던 소중한 발자취와 따뜻한 순간들입니다.</p>
+                </div>
+                
+                <div class="gallery-filter-buttons">
+                    <button class="filter-btn active" data-filter="all">전체보기</button>
+                    <button class="filter-btn" data-filter="travel">가족 여행</button>
+                    <button class="filter-btn" data-filter="daily">소소한 일상</button>
+                </div>
+
+                <div class="gallery-grid">
+                    <!-- 아이템 1 -->
+                    <div class="gallery-item glass-card" data-category="travel">
+                        <div class="gallery-img-container">
+                            <img src="./assets/dodo_gallery_1.png" alt="숲속 숲길 여행">
+                            <div class="gallery-overlay">
+                                <i class="fa-solid fa-magnifying-glass-plus"></i>
+                            </div>
+                        </div>
+                        <div class="gallery-content">
+                            <span class="gallery-tag">가족 여행</span>
+                            <h3 class="gallery-item-title">가을 숲속 오두막 힐링 여행</h3>
+                            <p class="gallery-item-desc">바쁜 일상을 잠시 내려두고 맑은 호수와 붉은 단풍이 가득한 오두막에서 보낸 주말.</p>
+                        </div>
+                    </div>
+
+                    <!-- 아이템 2 -->
+                    <div class="gallery-item glass-card" data-category="daily">
+                        <div class="gallery-img-container">
+                            <img src="./assets/dodo_gallery_2.png" alt="맛있는 저녁 식사">
+                            <div class="gallery-overlay">
+                                <i class="fa-solid fa-magnifying-glass-plus"></i>
+                            </div>
+                        </div>
+                        <div class="gallery-content">
+                            <span class="gallery-tag">소소한 일상</span>
+                            <h3 class="gallery-item-title">주말 저녁의 따뜻한 만찬</h3>
+                            <p class="gallery-item-desc">벽난로 온기 속에 모여 앉아 서로의 하루를 나누며 웃음 지었던 주말 식사 시간.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. 타임라인 섹션 -->
+        <section id="timeline" class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">가족 타임라인</h2>
+                    <p class="section-subtitle">DODO 가족이 걸어온 반짝이는 여정들을 되짚어봅니다.</p>
+                </div>
+
+                <div class="timeline-container">
+                    <div class="timeline-line"></div>
+
+                    <!-- 타임라인 아이템 1 -->
+                    <div class="timeline-item left-item">
+                        <div class="timeline-dot bg-blue"></div>
+                        <div class="timeline-card glass-card">
+                            <span class="timeline-date">2026. 05. 24</span>
+                            <h3 class="timeline-title">DODO 패밀리 온라인 홈 개설! 🎉</h3>
+                            <p>가족의 소중한 순간들을 기록하고 공유할 수 있는 특별한 홈 스페이스가 정식으로 탄생했습니다!</p>
+                        </div>
+                    </div>
+
+                    <!-- 타임라인 아이템 2 -->
+                    <div class="timeline-item right-item">
+                        <div class="timeline-dot bg-pink"></div>
+                        <div class="timeline-card glass-card">
+                            <span class="timeline-date">2026. 02. 15</span>
+                            <h3 class="timeline-title">막둥이 도도와의 첫 만남 🐱</h3>
+                            <p>추운 겨울날, 우리 가족의 새로운 마스코트 고양이 '도도'가 집안에 온기를 더해주게 되었습니다.</p>
+                        </div>
+                    </div>
+
+                    <!-- 타임라인 아이템 3 -->
+                    <div class="timeline-item left-item">
+                        <div class="timeline-dot bg-orange"></div>
+                        <div class="timeline-card glass-card">
+                            <span class="timeline-date">2025. 10. 10</span>
+                            <h3 class="timeline-title">단풍 숲속 캠핑의 추억 🍁</h3>
+                            <p>숲속 오두막으로 다 같이 캠핑을 떠나 모닥불 앞에서 밤새 도란도란 이야기를 나누었습니다.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. 방명록 섹션 -->
+        <section id="guestbook" class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">가족 방명록</h2>
+                    <p class="section-subtitle">우리 가족 또는 찾아와주신 분들의 따뜻한 말 한마디를 남겨주세요.</p>
+                </div>
+
+                <div class="guestbook-wrapper">
+                    <!-- 입력 폼 (글래스모피즘 카드) -->
+                    <div class="guestbook-form-container glass-card">
+                        <h3>메시지 작성하기</h3>
+                        <form id="guestbook-form">
+                            <div class="form-group">
+                                <label for="author-input"><i class="fa-solid fa-user"></i> 이름</label>
+                                <input type="text" id="author-input" placeholder="작성자 이름" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="message-input"><i class="fa-solid fa-comment-alt"></i> 메시지</label>
+                                <textarea id="message-input" rows="4" placeholder="가족에게 남기고 싶은 따뜻한 한마디..." required></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fa-solid fa-smile"></i> 스티커 선택</label>
+                                <div class="sticker-selector">
+                                    <input type="radio" name="sticker" id="st-heart" value="💖" checked>
+                                    <label for="st-heart" class="sticker-label">💖</label>
+                                    
+                                    <input type="radio" name="sticker" id="st-smile" value="😊">
+                                    <label for="st-smile" class="sticker-label">😊</label>
+                                    
+                                    <input type="radio" name="sticker" id="st-star" value="⭐">
+                                    <label for="st-star" class="sticker-label">⭐</label>
+                                    
+                                    <input type="radio" name="sticker" id="st-cat" value="🐱">
+                                    <label for="st-cat" class="sticker-label">🐱</label>
+                                    
+                                    <input type="radio" name="sticker" id="st-cake" value="🎂">
+                                    <label for="st-cake" class="sticker-label">🎂</label>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">등록하기 <i class="fa-solid fa-paper-plane"></i></button>
+                        </form>
+                    </div>
+
+                    <!-- 방명록 리스트 보드 -->
+                    <div class="guestbook-board-container">
+                        <h3>모두의 메시지 💌</h3>
+                        <div id="guestbook-list" class="guestbook-list">
+                            <!-- JS를 통해 로컬스토리지 데이터가 이곳에 렌더링됩니다. -->
+                            <div class="no-messages">
+                                <p><i class="fa-regular fa-comment-dots"></i> 아직 남겨진 메시지가 없어요. 첫 번째 메시지를 남겨보세요!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 갤러리 라이트박스 모달 -->
+    <div id="lightbox-modal" class="lightbox">
+        <span class="close-btn">&times;</span>
+        <div class="lightbox-content-wrapper">
+            <img class="lightbox-content" id="lightbox-img">
+            <div id="lightbox-caption"></div>
+        </div>
+    </div>
+
+    <!-- 푸터 -->
+    <footer id="main-footer">
+        <div class="footer-container">
+            <p>&copy; 2026 DODO Family. All Rights Reserved. Crafted with <i class="fa-solid fa-heart text-pink"></i></p>
+            <div class="social-links">
+                <a href="#" aria-label="Family Cloud"><i class="fa-solid fa-cloud"></i></a>
+                <a href="#" aria-label="Family Photos"><i class="fa-solid fa-camera-retro"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
