@@ -250,8 +250,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     authContainer.classList.add('hidden');
 
                     // 로그인 상태에 맞춘 가족 구성원 카드 수정 아이콘 활성화를 위해 렌더링 갱신
-                    if (typeof initFamilyMembers === 'function') {
-                        initFamilyMembers();
+                    if (cachedFamilySnapshot) {
+                        renderFamilyCards(cachedFamilySnapshot);
                     }
                 })
                 .catch((err) => {
@@ -269,8 +269,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     dropdownLoggedIn.classList.remove('hidden');
                     authContainer.classList.add('hidden');
 
-                    if (typeof initFamilyMembers === 'function') {
-                        initFamilyMembers();
+                    if (cachedFamilySnapshot) {
+                        renderFamilyCards(cachedFamilySnapshot);
                     }
                 });
         } else {
@@ -280,8 +280,8 @@ document.addEventListener('DOMContentLoaded', () => {
             dropdownLoggedIn.classList.add('hidden');
 
             // 로그아웃 상태에 맞춘 가족 구성원 카드 수정 아이콘 제거를 위해 렌더링 갱신
-            if (typeof initFamilyMembers === 'function') {
-                initFamilyMembers();
+            if (cachedFamilySnapshot) {
+                renderFamilyCards(cachedFamilySnapshot);
             }
         }
     });
@@ -1271,6 +1271,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     ];
 
+    let cachedFamilySnapshot = null;
+
+    function renderFamilyCards(snapshot) {
+        if (!familyGrid) return;
+        familyGrid.innerHTML = '';
+        
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const memberCard = createMemberCardHTML(doc.id, data);
+            familyGrid.appendChild(memberCard);
+        });
+
+        // 카드 클릭 시 뒤집기 기능 바인딩
+        bindCardFlipInteractions();
+    }
+
     window.initFamilyMembers = function() {
         const membersRef = db.collection('family_members');
 
@@ -1288,19 +1304,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // 2. 받아온 실시간 데이터로 카드 렌더링
-            if (familyGrid) {
-                familyGrid.innerHTML = '';
-                
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const memberCard = createMemberCardHTML(doc.id, data);
-                    familyGrid.appendChild(memberCard);
-                });
+            // 스냅샷 캐시 저장
+            cachedFamilySnapshot = snapshot;
 
-                // 3. 카드 클릭 시 뒤집기 기능 바인딩 (수정 단추 클릭은 e.stopPropagation 처리됨)
-                bindCardFlipInteractions();
-            }
+            // 2. 받아온 실시간 데이터로 카드 렌더링
+            renderFamilyCards(snapshot);
         }, err => console.error("가족 구성원 정보 로드 에러:", err));
     }
 
@@ -1453,4 +1461,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     renderMessages();
+
+    // 실시간 Firestore 데이터베이스 리스너 등록
+    initRealtimeDbListeners();
 });
