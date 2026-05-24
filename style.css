@@ -119,6 +119,8 @@ main {
     min-height: 100vh;
     display: flex;
     align-items: center;
+    width: 100%;
+    overflow: hidden;
 }
 
 .section-header {
@@ -854,6 +856,8 @@ body.light-theme .calendar-day {
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 2rem;
     width: 100%;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .gallery-item {
@@ -1040,6 +1044,8 @@ body.light-theme .calendar-day {
     grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
     gap: 1.5rem;
     width: 100%;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .no-posts {
