@@ -253,6 +253,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (cachedFamilySnapshot) {
                         renderFamilyCards(cachedFamilySnapshot);
                     }
+
+                    // 메인 이미지 수정 배지 활성화
+                    const heroEditBadge = document.getElementById('hero-img-edit-trigger');
+                    if (heroEditBadge) heroEditBadge.classList.remove('hidden');
                 })
                 .catch((err) => {
                     console.error("사용자 정보를 불러오는 도중 오류 발생:", err);
@@ -272,6 +276,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (cachedFamilySnapshot) {
                         renderFamilyCards(cachedFamilySnapshot);
                     }
+
+                    // 메인 이미지 수정 배지 활성화 (폴백 경로)
+                    const heroEditBadge2 = document.getElementById('hero-img-edit-trigger');
+                    if (heroEditBadge2) heroEditBadge2.classList.remove('hidden');
                 });
         } else {
             currentUserInfo = null;
@@ -283,6 +291,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (cachedFamilySnapshot) {
                 renderFamilyCards(cachedFamilySnapshot);
             }
+
+            // 메인 이미지 수정 배지 비활성화
+            const heroEditBadge3 = document.getElementById('hero-img-edit-trigger');
+            if (heroEditBadge3) heroEditBadge3.classList.add('hidden');
         }
     });
 
@@ -291,6 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initBoardListener();
         initGuestbookListener();
         initFamilyMembers();
+        initSettingsListener();
     }
     // ----------------------------------------------------
     // 1. 테마 스위처 (다크/라이트 모드)
@@ -601,18 +614,31 @@ document.addEventListener('DOMContentLoaded', () => {
         // 일자 텍스트 생성
         dayCell.innerHTML = `<span class="day-number">${dateObj.getDate()}</span>`;
 
-        // 이 날짜에 등록된 일정 닷 배지 추가
+        // 이 날짜에 등록된 일정 가로 띠 추가 (구글 캘린더 스타일)
         if (familyEvents[dateStr] && familyEvents[dateStr].length > 0) {
-            const dotsWrapper = document.createElement('div');
-            dotsWrapper.className = 'day-dots';
+            const eventsWrapper = document.createElement('div');
+            eventsWrapper.className = 'day-events-list';
             
-            familyEvents[dateStr].forEach(event => {
-                const dot = document.createElement('span');
-                dot.className = 'day-dot';
-                dot.style.backgroundColor = event.color;
-                dotsWrapper.appendChild(dot);
+            const maxVisibleEvents = 2; // 날짜 칸 크기가 작으므로 최대 2개만 보여줌
+            const eventsToShow = familyEvents[dateStr].slice(0, maxVisibleEvents);
+            
+            eventsToShow.forEach(event => {
+                const eventBar = document.createElement('div');
+                eventBar.className = 'calendar-event-bar';
+                eventBar.style.backgroundColor = event.color;
+                eventBar.textContent = event.title;
+                eventBar.title = event.title; // 호버 시 툴팁 지원
+                eventsWrapper.appendChild(eventBar);
             });
-            dayCell.appendChild(dotsWrapper);
+            
+            if (familyEvents[dateStr].length > maxVisibleEvents) {
+                const moreText = document.createElement('div');
+                moreText.className = 'calendar-event-more';
+                moreText.textContent = `+${familyEvents[dateStr].length - maxVisibleEvents}`;
+                eventsWrapper.appendChild(moreText);
+            }
+            
+            dayCell.appendChild(eventsWrapper);
         }
 
         // 셀 클릭 시 일정 모달 활성화
@@ -671,9 +697,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const item = document.createElement('div');
             item.className = 'event-item';
             item.style.borderLeftColor = evt.color;
+
+            // 본인이 작성한 일정만 삭제 가능 (작성자 uid가 없을 시 로그인한 가족 전체에 삭제 권한 허용)
+            const isOwner = !evt.uid || (currentUserInfo && (evt.uid === currentUserInfo.uid || evt.author === currentUserInfo.nickname));
+            const delBtnHTML = isOwner 
+                ? `<button class="event-del-btn" data-index="${idx}"><i class="fa-regular fa-trash-can"></i></button>`
+                : '';
+
             item.innerHTML = `
                 <span class="event-item-title">${escapeHTML(evt.title)}</span>
-                <button class="event-del-btn" data-index="${idx}"><i class="fa-regular fa-trash-can"></i></button>
+                ${delBtnHTML}
             `;
             modalEventList.appendChild(item);
         });
@@ -697,7 +730,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!title) return;
 
         const currentEvents = familyEvents[activeSelectedDateStr] || [];
-        const newEvents = [...currentEvents, { title, color }];
+        const newEvents = [...currentEvents, { 
+            title, 
+            color,
+            uid: currentUserInfo ? currentUserInfo.uid : '',
+            author: currentUserInfo ? currentUserInfo.nickname : ''
+        }];
 
         db.collection('events').doc(activeSelectedDateStr).set({
             events: newEvents
@@ -893,6 +931,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? `<div class="post-img-header"><img src="${post.image}" alt="게시글 대표 사진"></div>`
                 : `<div class="post-img-header"><div class="post-no-img"><i class="fa-regular fa-image"></i></div></div>`;
 
+            // 본인 글 여부 판별 (이전 작성글 폴백 적용)
+            const isOwner = currentUserInfo && (post.uid === currentUserInfo.uid || (!post.uid && post.author === currentUserInfo.nickname));
+            const footerHTML = isOwner 
+                ? `<div class="post-footer" style="display: flex; gap: 10px;">
+                        <button class="edit-btn board-post-edit-btn" data-id="${post.id}" title="게시글 수정">
+                            <i class="fa-regular fa-pen-to-square"></i> 수정하기
+                        </button>
+                        <button class="delete-btn board-post-del-btn" data-id="${post.id}" title="게시글 삭제">
+                            <i class="fa-regular fa-trash-can"></i> 삭제하기
+                        </button>
+                   </div>`
+                : '';
+
             postCard.innerHTML = `
                 ${imgHeaderHTML}
                 <div class="post-body">
@@ -904,11 +955,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <h4 class="post-title">${escapeHTML(post.title)}</h4>
                         <p class="post-text">${escapeHTML(post.content).replace(/\n/g, '<br>')}</p>
                     </div>
-                    <div class="post-footer">
-                        <button class="delete-btn board-post-del-btn" data-id="${post.id}" title="게시글 삭제">
-                            <i class="fa-regular fa-trash-can"></i> 삭제하기
-                        </button>
-                    </div>
+                    ${footerHTML}
                 </div>
             `;
             boardPostsGrid.appendChild(postCard);
@@ -919,6 +966,14 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.addEventListener('click', () => {
                 const id = btn.getAttribute('data-id');
                 deleteBoardPost(id);
+            });
+        });
+
+        // 게시판 수정 이벤트 위임
+        boardPostsGrid.querySelectorAll('.board-post-edit-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-id');
+                startEditBoardPost(id);
             });
         });
     }
@@ -934,7 +989,86 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 게시글 등록
+    function resetBoardForm() {
+        boardForm.reset();
+        boardForm.removeAttribute('data-edit-id');
+        
+        // 이야기 등록 타이틀 복구
+        const formTitle = boardForm.parentNode.querySelector('h3');
+        if (formTitle) formTitle.textContent = '이야기 등록하기';
+        
+        // 등록 버튼 텍스트 복구
+        const submitBtn = boardForm.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.innerHTML = '등록하기 <i class="fa-solid fa-pen-nib"></i>';
+        
+        // 수정 취소 버튼 제거
+        const cancelBtn = document.getElementById('board-edit-cancel-btn');
+        if (cancelBtn) cancelBtn.remove();
+        
+        boardImgPreview.style.display = 'none';
+        boardImgPreview.innerHTML = '';
+        compressedImageBase64 = '';
+    }
+
+    function startEditBoardPost(id) {
+        if (!checkAuth()) return;
+        
+        db.collection('board_posts').doc(id).get()
+            .then(doc => {
+                if (doc.exists) {
+                    const post = doc.data();
+                    
+                    // 작성자 본인 확인
+                    const isOwner = currentUserInfo && (post.uid === currentUserInfo.uid || (!post.uid && post.author === currentUserInfo.nickname));
+                    if (!isOwner) {
+                        alert("작성자 본인만 수정할 수 있습니다! 🔐");
+                        return;
+                    }
+                    
+                    // 폼 내용 채우기
+                    boardForm.setAttribute('data-edit-id', id);
+                    boardTitle.value = post.title || '';
+                    boardContent.value = post.content || '';
+                    
+                    // 이미지 미리보기 설정
+                    if (post.image) {
+                        compressedImageBase64 = post.image;
+                        boardImgPreview.innerHTML = `<img src="${compressedImageBase64}" alt="업로드 이미지 미리보기">`;
+                        boardImgPreview.style.display = 'block';
+                    } else {
+                        compressedImageBase64 = '';
+                        boardImgPreview.style.display = 'none';
+                        boardImgPreview.innerHTML = '';
+                    }
+                    
+                    // 이야기 수정 타이틀 변경
+                    const formTitle = boardForm.parentNode.querySelector('h3');
+                    if (formTitle) formTitle.innerHTML = '이야기 수정하기 ✏️';
+                    
+                    // 등록 버튼 텍스트 변경
+                    const submitBtn = boardForm.querySelector('button[type="submit"]');
+                    if (submitBtn) submitBtn.innerHTML = '수정 완료 <i class="fa-solid fa-check"></i>';
+                    
+                    // 수정 취소 버튼 추가 (없을 경우에만)
+                    if (!document.getElementById('board-edit-cancel-btn')) {
+                        const cancelBtn = document.createElement('button');
+                        cancelBtn.type = 'button';
+                        cancelBtn.id = 'board-edit-cancel-btn';
+                        cancelBtn.className = 'btn btn-secondary w-100';
+                        cancelBtn.style.marginTop = '10px';
+                        cancelBtn.innerHTML = '수정 취소 <i class="fa-solid fa-xmark"></i>';
+                        cancelBtn.addEventListener('click', resetBoardForm);
+                        boardForm.appendChild(cancelBtn);
+                    }
+                    
+                    // 폼으로 스크롤 이동
+                    boardForm.scrollIntoView({ behavior: 'smooth' });
+                }
+            })
+            .catch(err => console.error("Error getting post details:", err));
+    }
+
+    // 게시글 등록 및 수정 제출
     boardForm.addEventListener('submit', (e) => {
         e.preventDefault();
         if (!checkAuth()) return;
@@ -946,25 +1080,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!author || !title || !content) return;
 
-        const newPost = {
-            author,
-            role,
-            title,
-            content,
-            image: compressedImageBase64, // 압축된 이미지 (없으면 빈 문자열)
-            date: new Date().getTime()
-        };
+        const editId = boardForm.getAttribute('data-edit-id');
 
-        db.collection('board_posts').add(newPost).then(() => {
-            // 폼 리셋 및 썸네일 박스 감추기
-            boardForm.reset();
-            boardImgPreview.style.display = 'none';
-            boardImgPreview.innerHTML = '';
-            compressedImageBase64 = '';
-        }).catch(err => {
-            console.error("Error adding post: ", err);
-            alert("게시글 저장에 실패했습니다. 데이터베이스 권한을 확인해주세요! ⚠️\n에러: " + err.message);
-        });
+        if (editId) {
+            // 수정 업데이트 진행
+            db.collection('board_posts').doc(editId).update({
+                title,
+                content,
+                image: compressedImageBase64
+            }).then(() => {
+                resetBoardForm();
+            }).catch(err => {
+                console.error("Error updating post: ", err);
+                alert("게시글 수정에 실패했습니다. 데이터베이스 권한을 확인해주세요! ⚠️\n에러: " + err.message);
+            });
+        } else {
+            // 신규 게시글 저장
+            const newPost = {
+                author,
+                role,
+                title,
+                content,
+                image: compressedImageBase64,
+                date: new Date().getTime(),
+                uid: currentUserInfo.uid
+            };
+
+            db.collection('board_posts').add(newPost).then(() => {
+                resetBoardForm();
+            }).catch(err => {
+                console.error("Error adding post: ", err);
+                alert("게시글 저장에 실패했습니다. 데이터베이스 권한을 확인해주세요! ⚠️\n에러: " + err.message);
+            });
+        }
     });
 
     // 게시글 삭제
@@ -1059,6 +1207,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 minute: '2-digit'
             });
 
+            // 본인 글 여부 판별 (이전 작성글 폴백 적용)
+            const isOwner = currentUserInfo && (msg.uid === currentUserInfo.uid || (!msg.uid && msg.author === currentUserInfo.nickname));
+            const actionsHTML = isOwner 
+                ? `<div class="guest-actions" style="display: flex; gap: 8px; margin-left: 10px;">
+                        <button class="edit-btn msg-edit-btn" data-id="${msg.id}" title="메시지 수정">
+                            <i class="fa-regular fa-pen-to-square"></i>
+                        </button>
+                        <button class="delete-btn msg-del-btn" data-id="${msg.id}" title="메시지 삭제">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                   </div>`
+                : '';
+
             card.innerHTML = `
                 <div class="guest-card-header">
                     <span class="guest-author"><i class="fa-solid fa-user-circle"></i> ${escapeHTML(msg.author)} (${msg.role})</span>
@@ -1071,9 +1232,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="like-count">${msg.likes || 0}</span>
                     </button>
                     <span class="guest-sticker">${msg.sticker}</span>
-                    <button class="delete-btn" data-id="${msg.id}" title="메시지 삭제">
-                        <i class="fa-regular fa-trash-can"></i>
-                    </button>
+                    ${actionsHTML}
                 </div>
             `;
             guestbookList.appendChild(card);
@@ -1086,10 +1245,19 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        document.querySelectorAll('.delete-btn:not(.board-post-del-btn)').forEach(btn => {
+        // 방명록 삭제 버튼 바인딩
+        guestbookList.querySelectorAll('.msg-del-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const id = btn.getAttribute('data-id');
                 deleteMessage(id);
+            });
+        });
+
+        // 방명록 수정 버튼 바인딩
+        guestbookList.querySelectorAll('.msg-edit-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-id');
+                startEditGuestbookMessage(id);
             });
         });
     }
@@ -1106,6 +1274,79 @@ document.addEventListener('DOMContentLoaded', () => {
         );
     }
 
+    function resetGuestbookForm() {
+        guestbookForm.reset();
+        guestbookForm.removeAttribute('data-edit-id');
+
+        // 메시지 작성 타이틀 복구
+        const formTitle = guestbookForm.parentNode.querySelector('h3');
+        if (formTitle) formTitle.textContent = '메시지 작성하기';
+
+        // 등록 버튼 텍스트 복구
+        const submitBtn = guestbookForm.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.innerHTML = '등록하기 <i class="fa-solid fa-paper-plane"></i>';
+
+        // 수정 취소 버튼 제거
+        const cancelBtn = document.getElementById('guestbook-edit-cancel-btn');
+        if (cancelBtn) cancelBtn.remove();
+
+        messageInput.value = '';
+        document.getElementById('st-heart').checked = true;
+    }
+
+    function startEditGuestbookMessage(id) {
+        if (!checkAuth()) return;
+
+        db.collection('messages').doc(id).get()
+            .then(doc => {
+                if (doc.exists) {
+                    const msg = doc.data();
+
+                    // 작성자 본인 확인
+                    const isOwner = currentUserInfo && (msg.uid === currentUserInfo.uid || (!msg.uid && msg.author === currentUserInfo.nickname));
+                    if (!isOwner) {
+                        alert("작성자 본인만 수정할 수 있습니다! 🔐");
+                        return;
+                    }
+
+                    // 폼 내용 채우기
+                    guestbookForm.setAttribute('data-edit-id', id);
+                    messageInput.value = msg.message || '';
+
+                    // 스티커 라디오 버튼 설정
+                    const stickerInput = document.querySelector(`input[name="sticker"][value="${msg.sticker}"]`);
+                    if (stickerInput) {
+                        stickerInput.checked = true;
+                    }
+
+                    // 메시지 수정 타이틀 변경
+                    const formTitle = guestbookForm.parentNode.querySelector('h3');
+                    if (formTitle) formTitle.innerHTML = '메시지 수정하기 ✏️';
+
+                    // 등록 버튼 텍스트 변경
+                    const submitBtn = guestbookForm.querySelector('button[type="submit"]');
+                    if (submitBtn) submitBtn.innerHTML = '수정 완료 <i class="fa-solid fa-check"></i>';
+
+                    // 수정 취소 버튼 추가 (없을 경우에만)
+                    if (!document.getElementById('guestbook-edit-cancel-btn')) {
+                        const cancelBtn = document.createElement('button');
+                        cancelBtn.type = 'button';
+                        cancelBtn.id = 'guestbook-edit-cancel-btn';
+                        cancelBtn.className = 'btn btn-secondary w-100';
+                        cancelBtn.style.marginTop = '10px';
+                        cancelBtn.innerHTML = '수정 취소 <i class="fa-solid fa-xmark"></i>';
+                        cancelBtn.addEventListener('click', resetGuestbookForm);
+                        guestbookForm.appendChild(cancelBtn);
+                    }
+
+                    // 폼으로 스크롤 이동
+                    guestbookForm.scrollIntoView({ behavior: 'smooth' });
+                }
+            })
+            .catch(err => console.error("Error getting message details:", err));
+    }
+
+    // 방명록 등록 및 수정 제출
     guestbookForm.addEventListener('submit', (e) => {
         e.preventDefault();
         if (!checkAuth()) return;
@@ -1117,22 +1358,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!author || !message) return;
 
-        const newMessage = {
-            author,
-            role,
-            message,
-            sticker: selectedSticker,
-            date: new Date().getTime(),
-            likes: 0
-        };
+        const editId = guestbookForm.getAttribute('data-edit-id');
 
-        db.collection('messages').add(newMessage).then(() => {
-            messageInput.value = '';
-            document.getElementById('st-heart').checked = true;
-        }).catch(err => {
-            console.error("Error adding message: ", err);
-            alert("방명록 저장에 실패했습니다. 데이터베이스 권한을 확인해주세요! ⚠️\n에러: " + err.message);
-        });
+        if (editId) {
+            // 수정 업데이트 진행
+            db.collection('messages').doc(editId).update({
+                message,
+                sticker: selectedSticker
+            }).then(() => {
+                resetGuestbookForm();
+            }).catch(err => {
+                console.error("Error updating message: ", err);
+                alert("방명록 수정에 실패했습니다. 데이터베이스 권한을 확인해주세요! ⚠️\n에러: " + err.message);
+            });
+        } else {
+            // 신규 방명록 등록
+            const newMessage = {
+                author,
+                role,
+                message,
+                sticker: selectedSticker,
+                date: new Date().getTime(),
+                likes: 0,
+                uid: currentUserInfo.uid
+            };
+
+            db.collection('messages').add(newMessage).then(() => {
+                resetGuestbookForm();
+            }).catch(err => {
+                console.error("Error adding message: ", err);
+                alert("방명록 저장에 실패했습니다. 데이터베이스 권한을 확인해주세요! ⚠️\n에러: " + err.message);
+            });
+        }
     });
 
     function toggleLike(id) {
@@ -1461,6 +1718,81 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     renderMessages();
+
+    // ----------------------------------------------------
+    // 15. 메인 배너 이미지 Firestore 동적 관리 (신규 추가)
+    // ----------------------------------------------------
+    const heroDisplayImg = document.getElementById('hero-display-img');
+    const heroEditTrigger = document.getElementById('hero-img-edit-trigger');
+    const heroImgFile = document.getElementById('hero-img-file');
+
+    // Firestore settings 컬렉션에서 메인 이미지 실시간 감시
+    function initSettingsListener() {
+        db.collection('settings').doc('main_image').onSnapshot((doc) => {
+            if (doc.exists && doc.data().url) {
+                heroDisplayImg.setAttribute('src', doc.data().url);
+            } else {
+                heroDisplayImg.setAttribute('src', './assets/dodo_hero.png');
+            }
+        }, err => console.error("메인 이미지 설정 로드 에러:", err));
+    }
+
+    // 사진 변경 배지 클릭 시 파일 선택 창 열기
+    if (heroEditTrigger && heroImgFile) {
+        heroEditTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!checkAuth()) return;
+            heroImgFile.click();
+        });
+
+        // 파일 선택 후 캔버스 압축 및 Firestore 저장
+        heroImgFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    // 최대 가로폭 1000px 리사이징
+                    const max_width = 1000;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > max_width) {
+                        height = Math.round((height * max_width) / width);
+                        width = max_width;
+                    }
+
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = width;
+                    tempCanvas.height = height;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCtx.drawImage(img, 0, 0, width, height);
+
+                    // JPEG 75% 압축
+                    const compressedBase64 = tempCanvas.toDataURL('image/jpeg', 0.75);
+
+                    // Firestore에 저장
+                    db.collection('settings').doc('main_image').set({
+                        url: compressedBase64,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        updatedBy: currentUserInfo ? currentUserInfo.nickname : 'unknown'
+                    }).then(() => {
+                        alert("메인 이미지가 성공적으로 변경되었습니다! 🎉");
+                    }).catch(err => {
+                        console.error("메인 이미지 저장 에러:", err);
+                        alert("이미지 저장에 실패했습니다. 데이터베이스 권한을 확인해주세요! ⚠️\n에러: " + err.message);
+                    });
+
+                    // 파일 입력 필드 리셋
+                    heroImgFile.value = '';
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
 
     // 실시간 Firestore 데이터베이스 리스너 등록
     initRealtimeDbListeners();

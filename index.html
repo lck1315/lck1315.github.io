@@ -24,7 +24,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=1.0.5">
+    <link rel="stylesheet" href="style.css?v=1.0.7">
 </head>
 <body class="dark-theme">
     <!-- 스크롤 진행 바 -->
@@ -196,8 +196,13 @@
                     </div>
                 </div>
                 <div class="hero-visual-content">
-                    <div class="glass-frame">
-                        <img src="./assets/dodo_hero.png" alt="DODO 가족 일러스트" class="hero-img">
+                    <div class="glass-frame" id="hero-img-frame">
+                        <img src="./assets/dodo_hero.png" alt="DODO 가족 일러스트" class="hero-img" id="hero-display-img">
+                        <!-- 로그인 상태 시 사진 변경 버튼 노출 -->
+                        <div id="hero-img-edit-trigger" class="hero-edit-badge hidden">
+                            <i class="fa-solid fa-camera"></i> 사진 변경
+                        </div>
+                        <input type="file" id="hero-img-file" accept="image/*" style="display: none;">
                     </div>
                 </div>
             </div>
@@ -579,6 +584,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
-    <script src="app.js?v=1.0.5"></script>
+    <script src="app.js?v=1.0.7"></script>
 </body>
 </html>
