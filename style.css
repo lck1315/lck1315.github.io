@@ -239,6 +239,76 @@ main {
     gap: 0.8rem;
 }
 
+/* 모바일 퀵 네비게이션 */
+.mobile-nav-container {
+    position: relative;
+    display: none; /* 기본 숨김 */
+}
+
+.mobile-nav-btn {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    color: var(--text-color);
+    cursor: pointer;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    transition: var(--transition-quick);
+}
+
+.mobile-nav-btn:hover {
+    background: var(--primary-gradient);
+    color: white;
+    border-color: transparent;
+}
+
+.mobile-nav-dropdown-content {
+    position: absolute;
+    top: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 150px;
+    background: var(--card-bg);
+    backdrop-filter: blur(15px) saturate(180%);
+    -webkit-backdrop-filter: blur(15px) saturate(180%);
+    border: 1px solid var(--card-border);
+    border-radius: 15px;
+    padding: 8px;
+    box-shadow: 0 10px 25px var(--card-shadow);
+    z-index: 1005;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mobile-nav-dropdown-content.hidden {
+    display: none;
+}
+
+.mobile-dropdown-item {
+    text-decoration: none;
+    color: var(--text-color);
+    padding: 0.5rem 0.8rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition-quick);
+}
+
+.mobile-dropdown-item:hover {
+    background: rgba(108, 92, 231, 0.12);
+    color: var(--primary-color);
+    padding-left: 1.1rem;
+}
+
 /* 테마 토글 버튼 */
 .theme-btn {
     background: var(--card-bg);
@@ -497,6 +567,33 @@ body.light-theme .glass-frame {
     transform: rotateY(180deg);
     justify-content: flex-start;
     padding-top: 3.5rem;
+}
+
+/* 가족 프로필 수정 버튼 */
+.member-edit-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.8rem;
+    z-index: 10;
+    transition: var(--transition-quick);
+}
+
+.member-edit-btn:hover {
+    background: var(--primary-gradient);
+    color: white;
+    transform: scale(1.1);
+    box-shadow: 0 4px 10px rgba(108, 92, 231, 0.3);
 }
 
 .member-icon {
@@ -1893,6 +1990,10 @@ body.light-theme .auth-tabs {
 
     .nav-links {
         display: none;
+    }
+    
+    .mobile-nav-container {
+        display: block;
     }
     
     .header-container {

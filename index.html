@@ -131,6 +131,23 @@
                 <a href="#timeline" class="nav-item"><i class="fa-solid fa-timeline"></i> Timeline</a>
                 <a href="#guestbook" class="nav-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
             </nav>
+            
+            <!-- 모바일 퀵 네비게이션 드롭다운 메뉴 (신규 추가) -->
+            <div class="mobile-nav-container" id="mobile-nav-container">
+                <button id="mobile-nav-btn" class="mobile-nav-btn" title="네비게이션 메뉴">
+                    <i class="fa-solid fa-compass"></i> Menu
+                </button>
+                <div id="mobile-nav-dropdown" class="mobile-nav-dropdown-content hidden">
+                    <a href="#hero" class="mobile-dropdown-item"><i class="fa-solid fa-house"></i> Home</a>
+                    <a href="#family" class="mobile-dropdown-item"><i class="fa-solid fa-users"></i> Family</a>
+                    <a href="#calendar" class="mobile-dropdown-item"><i class="fa-solid fa-calendar-days"></i> Calendar</a>
+                    <a href="#gallery" class="mobile-dropdown-item"><i class="fa-solid fa-images"></i> Gallery</a>
+                    <a href="#board" class="mobile-dropdown-item"><i class="fa-solid fa-clipboard-list"></i> Board</a>
+                    <a href="#timeline" class="mobile-dropdown-item"><i class="fa-solid fa-timeline"></i> Timeline</a>
+                    <a href="#guestbook" class="mobile-dropdown-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
+                </div>
+            </div>
+
             <div class="header-actions">
                 <!-- 로그인 상태 표시 및 제어용 사용자 프로필 버튼 -->
                 <div class="user-profile-menu" style="position: relative; display: inline-block;">
@@ -151,6 +168,7 @@
                                 <span class="user-role-badge" id="dropdown-user-role" style="font-size: 0.75rem; color: var(--primary-color); font-weight: 600;">역할</span>
                             </div>
                             <div class="dropdown-divider" style="height: 1px; background: var(--card-border); margin: 6px 0;"></div>
+                            <button id="dropdown-manage-family-btn" class="dropdown-item-btn" style="width: 100%; text-align: left; padding: 0.6rem 0.8rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; transition: var(--transition-quick);"><i class="fa-solid fa-users-gear"></i> 가족 관리</button>
                             <button id="dropdown-logout-btn" class="dropdown-item-btn logout-color" style="width: 100%; text-align: left; padding: 0.6rem 0.8rem; background: transparent; border: none; color: #ff7675; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; transition: var(--transition-quick);"><i class="fa-solid fa-right-from-bracket"></i> 로그아웃</button>
                         </div>
                     </div>
@@ -198,94 +216,8 @@
                     <h2 class="section-title">가족 구성원 소개</h2>
                     <p class="section-subtitle">DODO 패밀리의 든든하고 사랑스러운 멤버들을 소개합니다.</p>
                 </div>
-                <div class="family-grid">
-                    <!-- 아빠 카드 -->
-                    <div class="member-card-wrapper">
-                        <div class="member-card">
-                            <div class="card-front glass-card">
-                                <div class="member-icon bg-blue">
-                                    <i class="fa-solid fa-user-tie"></i>
-                                </div>
-                                <h3 class="member-name">아빠 (DODO-Daddy)</h3>
-                                <p class="member-role">든든한 울타리 & IT 마스터</p>
-                                <span class="card-flip-hint">클릭해서 더 알아보기 <i class="fa-solid fa-rotate"></i></span>
-                            </div>
-                            <div class="card-back glass-card">
-                                <h3>아빠의 관심사</h3>
-                                <ul class="member-details">
-                                    <li><i class="fa-solid fa-heart text-pink"></i> 취미: 캠핑, 전자기기 수집</li>
-                                    <li><i class="fa-solid fa-comment-dots text-blue"></i> 한마디: "오늘보다 더 나은 내일을 위해!"</li>
-                                    <li><i class="fa-solid fa-mug-hot text-brown"></i> 좋아하는 것: 진한 에스프레소</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 엄마 카드 -->
-                    <div class="member-card-wrapper">
-                        <div class="member-card">
-                            <div class="card-front glass-card">
-                                <div class="member-icon bg-pink">
-                                    <i class="fa-solid fa-spa"></i>
-                                </div>
-                                <h3 class="member-name">엄마 (DODO-Mommy)</h3>
-                                <p class="member-role">따뜻한 등대 & 요리 여왕</p>
-                                <span class="card-flip-hint">클릭해서 더 알아보기 <i class="fa-solid fa-rotate"></i></span>
-                            </div>
-                            <div class="card-back glass-card">
-                                <h3>엄마의 관심사</h3>
-                                <ul class="member-details">
-                                    <li><i class="fa-solid fa-heart text-pink"></i> 취미: 홈가드닝, 베이킹</li>
-                                    <li><i class="fa-solid fa-comment-dots text-blue"></i> 한마디: "매 순간을 온전히 감사하며 사랑하기"</li>
-                                    <li><i class="fa-solid fa-seedling text-green"></i> 좋아하는 것: 로즈마리 향기</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 첫째 카드 -->
-                    <div class="member-card-wrapper">
-                        <div class="member-card">
-                            <div class="card-front glass-card">
-                                <div class="member-icon bg-orange">
-                                    <i class="fa-solid fa-graduation-cap"></i>
-                                </div>
-                                <h3 class="member-name">첫째 (DODO-Junior)</h3>
-                                <p class="member-role">호기심 많은 모험가 & 그림 작가</p>
-                                <span class="card-flip-hint">클릭해서 더 알아보기 <i class="fa-solid fa-rotate"></i></span>
-                            </div>
-                            <div class="card-back glass-card">
-                                <h3>첫째의 관심사</h3>
-                                <ul class="member-details">
-                                    <li><i class="fa-solid fa-heart text-pink"></i> 취미: 드로잉, 자전거 라이딩</li>
-                                    <li><i class="fa-solid fa-comment-dots text-blue"></i> 한마디: "세상은 신나는 탐험으로 가득 차 있어!"</li>
-                                    <li><i class="fa-solid fa-palette text-orange"></i> 좋아하는 것: 디지털 드로잉</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 반려묘/막내 카드 -->
-                    <div class="member-card-wrapper">
-                        <div class="member-card">
-                            <div class="card-front glass-card">
-                                <div class="member-icon bg-purple">
-                                    <i class="fa-solid fa-cat"></i>
-                                </div>
-                                <h3 class="member-name">막둥이 도도 (DODO)</h3>
-                                <p class="member-role">가족의 비타민 & 잠자는 냥이</p>
-                                <span class="card-flip-hint">클릭해서 더 알아보기 <i class="fa-solid fa-rotate"></i></span>
-                            </div>
-                            <div class="card-back glass-card">
-                                <h3>도도의 관심사</h3>
-                                <ul class="member-details">
-                                    <li><i class="fa-solid fa-heart text-pink"></i> 취미: 캣타워 올라가기, 츄르 먹기</li>
-                                    <li><i class="fa-solid fa-comment-dots text-blue"></i> 한마디: "야옹~ (츄르 더 줘라냥)"</li>
-                                    <li><i class="fa-solid fa-fish text-purple"></i> 좋아하는 것: 햇볕이 드는 따뜻한 바닥</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
+                <div class="family-grid" id="family-grid">
+                    <!-- JS 코드를 통해 Firestore의 가족 구성원 데이터가 실시간 렌더링됩니다. -->
                 </div>
             </div>
         </section>
@@ -579,6 +511,57 @@
         </div>
     </div>
 
+    <!-- 가족 구성원 관리/수정 모달 (신규 추가) -->
+    <div id="family-modal" class="calendar-modal-overlay">
+        <div class="calendar-modal-content glass-card" style="max-width: 500px;">
+            <span class="family-modal-close" id="family-modal-close" style="position: absolute; right: 20px; top: 15px; font-size: 1.8rem; cursor: pointer; color: var(--text-muted); transition: var(--transition-quick);">&times;</span>
+            <h3 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 1.5rem; background: linear-gradient(135deg, var(--text-color), var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"><i class="fa-solid fa-users-gear"></i> 가족 프로필 관리</h3>
+            
+            <form id="family-edit-form">
+                <input type="hidden" id="edit-member-id">
+                
+                <div class="form-group" style="margin-bottom: 1.2rem;">
+                    <label for="edit-member-name" style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem;"><i class="fa-solid fa-signature"></i> 이름 (역할 포함)</label>
+                    <input type="text" id="edit-member-name" placeholder="예: 아빠 (DODO-Daddy)" required style="width: 100%; padding: 0.8rem 1rem; border-radius: 12px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color); font-family: inherit; font-size: 0.9rem;">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.2rem;">
+                    <label for="edit-member-role" style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem;"><i class="fa-solid fa-tag"></i> 한줄 설명</label>
+                    <input type="text" id="edit-member-role" placeholder="예: 든든한 울타리 & IT 마스터" required style="width: 100%; padding: 0.8rem 1rem; border-radius: 12px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color); font-family: inherit; font-size: 0.9rem;">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.2rem;">
+                    <label for="edit-member-icon" style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem;"><i class="fa-solid fa-icons"></i> 대표 아이콘</label>
+                    <select id="edit-member-icon" style="width: 100%; padding: 0.8rem 1rem; border-radius: 12px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color); font-family: inherit; font-size: 0.9rem; box-sizing: border-box;">
+                        <option value="fa-user-tie|bg-blue">👨 아빠 (넥타이 / 블루 배경)</option>
+                        <option value="fa-spa|bg-pink">👩 엄마 (스파 리프 / 핑크 배경)</option>
+                        <option value="fa-graduation-cap|bg-orange">👦 첫째 (학사모 / 오렌지 배경)</option>
+                        <option value="fa-cat|bg-purple">🐱 막내/반려묘 (고양이 / 퍼플 배경)</option>
+                        <option value="fa-child|bg-green">👶 아기 (아이 / 그린 배경)</option>
+                        <option value="fa-user|bg-blue">👤 기타 (사용자 / 회색 배경)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.2rem;">
+                    <label for="edit-member-hobby" style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem;"><i class="fa-solid fa-heart text-pink"></i> 관심사 (취미)</label>
+                    <input type="text" id="edit-member-hobby" placeholder="예: 캠핑, 전자기기 수집" required style="width: 100%; padding: 0.8rem 1rem; border-radius: 12px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color); font-family: inherit; font-size: 0.9rem;">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.2rem;">
+                    <label for="edit-member-comment" style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem;"><i class="fa-solid fa-comment-dots text-blue"></i> 각오 한마디</label>
+                    <input type="text" id="edit-member-comment" placeholder="예: 오늘보다 더 나은 내일을 위해!" required style="width: 100%; padding: 0.8rem 1rem; border-radius: 12px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color); font-family: inherit; font-size: 0.9rem;">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label for="edit-member-like" style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem;"><i class="fa-solid fa-seedling text-green"></i> 좋아하는 것</label>
+                    <input type="text" id="edit-member-like" placeholder="예: 진한 에스프레소, 맛있는 저녁 식사" required style="width: 100%; padding: 0.8rem 1rem; border-radius: 12px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color); font-family: inherit; font-size: 0.9rem;">
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100" style="padding: 0.9rem; border-radius: 15px; font-weight: 700; font-size: 1rem;"><i class="fa-solid fa-floppy-disk"></i> 저장하여 반영하기</button>
+              </form>
+          </div>
+      </div>
+
     <!-- 푸터 -->
     <footer id="main-footer">
         <div class="footer-container">
@@ -596,6 +579,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
-    <script src="app.js?v=1.0.3"></script>
+    <script src="app.js?v=1.0.4"></script>
 </body>
 </html>

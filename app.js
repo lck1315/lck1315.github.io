@@ -248,16 +248,41 @@ document.addEventListener('DOMContentLoaded', () => {
                     dropdownLoggedOut.classList.add('hidden');
                     dropdownLoggedIn.classList.remove('hidden');
                     authContainer.classList.add('hidden');
+
+                    // 로그인 상태에 맞춘 가족 구성원 카드 수정 아이콘 활성화를 위해 렌더링 갱신
+                    if (typeof initFamilyMembers === 'function') {
+                        initFamilyMembers();
+                    }
                 })
                 .catch((err) => {
                     console.error("사용자 정보를 불러오는 도중 오류 발생:", err);
-                    auth.signOut();
+                    currentUserInfo = {
+                        uid: user.uid,
+                        nickname: user.displayName || (user.email ? user.email.split('@')[0] : "가족"),
+                        role: "기타 🤍"
+                    };
+                    headerUserName.textContent = currentUserInfo.nickname;
+                    dropdownUserNickname.textContent = currentUserInfo.nickname;
+                    dropdownUserRole.textContent = currentUserInfo.role;
+
+                    dropdownLoggedOut.classList.add('hidden');
+                    dropdownLoggedIn.classList.remove('hidden');
+                    authContainer.classList.add('hidden');
+
+                    if (typeof initFamilyMembers === 'function') {
+                        initFamilyMembers();
+                    }
                 });
         } else {
             currentUserInfo = null;
             headerUserName.textContent = "Login";
             dropdownLoggedOut.classList.remove('hidden');
             dropdownLoggedIn.classList.add('hidden');
+
+            // 로그아웃 상태에 맞춘 가족 구성원 카드 수정 아이콘 제거를 위해 렌더링 갱신
+            if (typeof initFamilyMembers === 'function') {
+                initFamilyMembers();
+            }
         }
     });
 
@@ -265,6 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
         initEventsListener();
         initBoardListener();
         initGuestbookListener();
+        initFamilyMembers();
     }
     // ----------------------------------------------------
     // 1. 테마 스위처 (다크/라이트 모드)
@@ -677,7 +703,10 @@ document.addEventListener('DOMContentLoaded', () => {
             events: newEvents
         }).then(() => {
             eventTitleInput.value = ''; // 작성폼 초기화
-        }).catch(err => console.error("Error adding event: ", err));
+        }).catch(err => {
+            console.error("Error adding event: ", err);
+            alert("일정 저장에 실패했습니다. 데이터베이스 권한을 확인해주세요! ⚠️\n에러: " + err.message);
+        });
     });
 
     // 일정 삭제 처리
@@ -932,7 +961,10 @@ document.addEventListener('DOMContentLoaded', () => {
             boardImgPreview.style.display = 'none';
             boardImgPreview.innerHTML = '';
             compressedImageBase64 = '';
-        }).catch(err => console.error("Error adding post: ", err));
+        }).catch(err => {
+            console.error("Error adding post: ", err);
+            alert("게시글 저장에 실패했습니다. 데이터베이스 권한을 확인해주세요! ⚠️\n에러: " + err.message);
+        });
     });
 
     // 게시글 삭제
@@ -1097,7 +1129,10 @@ document.addEventListener('DOMContentLoaded', () => {
         db.collection('messages').add(newMessage).then(() => {
             messageInput.value = '';
             document.getElementById('st-heart').checked = true;
-        }).catch(err => console.error("Error adding message: ", err));
+        }).catch(err => {
+            console.error("Error adding message: ", err);
+            alert("방명록 저장에 실패했습니다. 데이터베이스 권한을 확인해주세요! ⚠️\n에러: " + err.message);
+        });
     });
 
     function toggleLike(id) {
@@ -1139,6 +1174,282 @@ document.addEventListener('DOMContentLoaded', () => {
             db.collection('messages').doc(id).delete()
                 .catch(err => console.error("Error deleting message: ", err));
         }
+    }
+
+    // ----------------------------------------------------
+    // 13. 모바일 퀵 네비게이션 제어 (신규 추가)
+    // ----------------------------------------------------
+    const mobileNavBtn = document.getElementById('mobile-nav-btn');
+    const mobileNavDropdown = document.getElementById('mobile-nav-dropdown');
+
+    if (mobileNavBtn && mobileNavDropdown) {
+        mobileNavBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            mobileNavDropdown.classList.toggle('hidden');
+        });
+
+        // 퀵 메뉴 링크 클릭 시 부드럽게 이동하고 닫기
+        mobileNavDropdown.querySelectorAll('.mobile-dropdown-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetId = item.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    const headerOffset = 90;
+                    const elementPosition = targetElement.getBoundingClientRect().top;
+                    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                    
+                    window.scrollTo({
+                        top: offsetPosition,
+                        behavior: "smooth"
+                    });
+                }
+                mobileNavDropdown.classList.add('hidden');
+            });
+        });
+
+        // 바깥 영역 클릭 시 자동으로 닫기
+        document.addEventListener('click', () => {
+            mobileNavDropdown.classList.add('hidden');
+        });
+    }
+
+    // ----------------------------------------------------
+    // 14. 가족 구성원 프로필 Firestore 연동 및 관리 (신규 추가)
+    // ----------------------------------------------------
+    const familyGrid = document.getElementById('family-grid');
+    const familyModal = document.getElementById('family-modal');
+    const familyModalClose = document.getElementById('family-modal-close');
+    const familyEditForm = document.getElementById('family-edit-form');
+    const dropdownManageFamilyBtn = document.getElementById('dropdown-manage-family-btn');
+
+    // 기본 시딩(Seeding) 데이터 정의
+    const defaultFamilyData = [
+        {
+            id: "daddy",
+            name: "아빠 (DODO-Daddy)",
+            role: "든든한 울타리 & IT 마스터",
+            iconClass: "fa-user-tie",
+            iconBg: "bg-blue",
+            hobby: "캠핑, 전자기기 수집",
+            comment: "오늘보다 더 나은 내일을 위해!",
+            like: "진한 에스프레소",
+            order: 1
+        },
+        {
+            id: "mommy",
+            name: "엄마 (DODO-Mommy)",
+            role: "따뜻한 등대 & 요리 여왕",
+            iconClass: "fa-spa",
+            iconBg: "bg-pink",
+            hobby: "홈가드닝, 베이킹",
+            comment: "매 순간을 온전히 감사하며 사랑하기",
+            like: "로즈마리 향기",
+            order: 2
+        },
+        {
+            id: "junior",
+            name: "첫째 (DODO-Junior)",
+            role: "호기심 많은 모험가 & 그림 작가",
+            iconClass: "fa-graduation-cap",
+            iconBg: "bg-orange",
+            hobby: "드로잉, 자전거 라이딩",
+            comment: "세상은 신나는 탐험으로 가득 차 있어!",
+            like: "디지털 드로잉",
+            order: 3
+        },
+        {
+            id: "dodo",
+            name: "막둥이 도도 (DODO)",
+            role: "가족의 비타민 & 잠자는 냥이",
+            iconClass: "fa-cat",
+            iconBg: "bg-purple",
+            hobby: "캣타워 올라가기, 츄르 먹기",
+            comment: "야옹~ (츄르 더 줘라냥)",
+            like: "햇볕이 드는 따뜻한 바닥",
+            order: 4
+        }
+    ];
+
+    window.initFamilyMembers = function() {
+        const membersRef = db.collection('family_members');
+
+        membersRef.orderBy('order').onSnapshot(snapshot => {
+            // 1. 만약 Firestore에 데이터가 아예 없다면 기본값 시딩 수행
+            if (snapshot.empty) {
+                const batch = db.batch();
+                defaultFamilyData.forEach(item => {
+                    const docRef = membersRef.doc(item.id);
+                    batch.set(docRef, item);
+                });
+                batch.commit().then(() => {
+                    console.log("기본 가족 구성원 데이터 시딩 완료");
+                }).catch(err => console.error("데이터 시딩 오류:", err));
+                return;
+            }
+
+            // 2. 받아온 실시간 데이터로 카드 렌더링
+            if (familyGrid) {
+                familyGrid.innerHTML = '';
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const memberCard = createMemberCardHTML(doc.id, data);
+                    familyGrid.appendChild(memberCard);
+                });
+
+                // 3. 카드 클릭 시 뒤집기 기능 바인딩 (수정 단추 클릭은 e.stopPropagation 처리됨)
+                bindCardFlipInteractions();
+            }
+        }, err => console.error("가족 구성원 정보 로드 에러:", err));
+    }
+
+    // 카드 HTML 엘리먼트 생성 헬퍼
+    function createMemberCardHTML(id, data) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'member-card-wrapper';
+        
+        // 로그인 시에만 연필 모양 수정 버튼 렌더링
+        const editBtnHTML = currentUserInfo 
+            ? `<div class="member-edit-btn" data-id="${id}" title="프로필 수정"><i class="fa-solid fa-pen-to-square"></i></div>` 
+            : '';
+
+        wrapper.innerHTML = `
+            <div class="member-card">
+                <div class="card-front glass-card">
+                    ${editBtnHTML}
+                    <div class="member-icon ${data.iconBg || 'bg-blue'}">
+                        <i class="fa-solid ${data.iconClass || 'fa-user-tie'}"></i>
+                    </div>
+                    <h3 class="member-name">${data.name || ''}</h3>
+                    <p class="member-role">${data.role || ''}</p>
+                    <span class="card-flip-hint">클릭해서 더 알아보기 <i class="fa-solid fa-rotate"></i></span>
+                </div>
+                <div class="card-back glass-card">
+                    <h3>${(data.name || '').split(' ')[0]}의 관심사</h3>
+                    <ul class="member-details">
+                        <li><i class="fa-solid fa-heart text-pink"></i> 취미: ${data.hobby || ''}</li>
+                        <li><i class="fa-solid fa-comment-dots text-blue"></i> 한마디: "${data.comment || ''}"</li>
+                        <li><i class="fa-solid fa-gift text-purple"></i> 좋아하는 것: ${data.like || ''}</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+
+        // 수정 버튼 클릭 이벤트 처리
+        if (currentUserInfo) {
+            const editBtn = wrapper.querySelector('.member-edit-btn');
+            if (editBtn) {
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // 카드 뒤집기 방지
+                    openFamilyEditModal(id, data);
+                });
+            }
+        }
+
+        return wrapper;
+    }
+
+    // 카드 플립 인터랙션 바인딩
+    function bindCardFlipInteractions() {
+        const cards = document.querySelectorAll('.member-card-wrapper');
+        cards.forEach(card => {
+            card.addEventListener('click', () => {
+                card.classList.toggle('flipped');
+            });
+        });
+    }
+
+    // 수정 모달 제어
+    function openFamilyEditModal(id, data) {
+        if (!checkAuth()) return;
+        
+        document.getElementById('edit-member-id').value = id;
+        document.getElementById('edit-member-name').value = data.name || '';
+        document.getElementById('edit-member-role').value = data.role || '';
+        document.getElementById('edit-member-hobby').value = data.hobby || '';
+        document.getElementById('edit-member-comment').value = data.comment || '';
+        document.getElementById('edit-member-like').value = data.like || '';
+
+        // 아이콘 선택 매핑 설정 (iconClass와 iconBg를 합친 밸류 매칭)
+        const selectIcon = document.getElementById('edit-member-icon');
+        if (selectIcon) {
+            const iconVal = `${data.iconClass || 'fa-user-tie'}|${data.iconBg || 'bg-blue'}`;
+            
+            // 옵션 순회하여 매칭
+            for (let i = 0; i < selectIcon.options.length; i++) {
+                if (selectIcon.options[i].value === iconVal) {
+                    selectIcon.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+
+        if (familyModal) {
+            familyModal.classList.add('show');
+        }
+    }
+
+    // 가족 모달 닫기
+    if (familyModalClose) {
+        familyModalClose.addEventListener('click', () => {
+            familyModal.classList.remove('show');
+        });
+    }
+    if (familyModal) {
+        familyModal.addEventListener('click', (e) => {
+            if (e.target === familyModal) {
+                familyModal.classList.remove('show');
+            }
+        });
+    }
+
+    // 드롭다운 [가족 관리] 클릭 시 아빠(첫 번째 구성원)의 편집 창을 디폴트로 열어 줍니다.
+    if (dropdownManageFamilyBtn) {
+        dropdownManageFamilyBtn.addEventListener('click', () => {
+            db.collection('family_members').orderBy('order').limit(1).get()
+                .then(querySnapshot => {
+                    if (!querySnapshot.empty) {
+                        const doc = querySnapshot.docs[0];
+                        openFamilyEditModal(doc.id, doc.data());
+                    } else {
+                        openFamilyEditModal('daddy', defaultFamilyData[0]);
+                    }
+                }).catch(err => console.error("가족 정보 로드 실패:", err));
+            profileDropdown.classList.add('hidden');
+        });
+    }
+
+    // 가족 프로필 수정 폼 제출
+    if (familyEditForm) {
+        familyEditForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!checkAuth()) return;
+
+            const id = document.getElementById('edit-member-id').value;
+            const name = document.getElementById('edit-member-name').value.trim();
+            const role = document.getElementById('edit-member-role').value.trim();
+            const iconVal = document.getElementById('edit-member-icon').value;
+            const [iconClass, iconBg] = iconVal.split('|');
+            const hobby = document.getElementById('edit-member-hobby').value.trim();
+            const comment = document.getElementById('edit-member-comment').value.trim();
+            const like = document.getElementById('edit-member-like').value.trim();
+
+            db.collection('family_members').doc(id).update({
+                name,
+                role,
+                iconClass,
+                iconBg,
+                hobby,
+                comment,
+                like
+            }).then(() => {
+                familyModal.classList.remove('show');
+            }).catch(err => {
+                console.error("가족 프로필 수정 에러:", err);
+                alert("수정 정보를 데이터베이스에 저장하는 도중 오류가 발생했습니다.");
+            });
+        });
     }
 
     renderMessages();
