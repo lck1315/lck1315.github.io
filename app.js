@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
         } else {
             currentUserInfo = null;
-            headerUserName.textContent = "로그인";
+            headerUserName.textContent = "Login";
             dropdownLoggedOut.classList.remove('hidden');
             dropdownLoggedIn.classList.add('hidden');
         }

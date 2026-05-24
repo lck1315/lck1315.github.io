@@ -230,6 +230,12 @@ main {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
 /* 테마 토글 버튼 */
 .theme-btn {
     background: var(--card-bg);
@@ -1871,7 +1877,17 @@ body.light-theme .auth-tabs {
     }
     
     .header-container {
-        padding: 1rem 1.5rem;
+        padding: 1rem 1.2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+    }
+    
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
     
     .section-title {
