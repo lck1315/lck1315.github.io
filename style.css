@@ -1552,7 +1552,195 @@ body.light-theme .calendar-day {
     transform: translateY(-3px);
 }
 
-/* 14. 미디어 쿼리 (반응형 대응) */
+/* 14. 미디어 쿼리 (반응형 대응) 및 신규 기능 스타일 */
+
+/* 로그인 / 회원가입 스타일 */
+.auth-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-gradient);
+    padding: 1.5rem;
+    overflow-y: auto;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 420px;
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.auth-header {
+    text-align: center;
+}
+
+.auth-header h2 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--text-color);
+}
+
+.auth-header h2 span {
+    color: var(--primary-color);
+}
+
+.auth-header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-top: 0.4rem;
+}
+
+.auth-tabs {
+    display: flex;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 4px;
+    border-radius: 12px;
+}
+
+body.light-theme .auth-tabs {
+    background: rgba(108, 92, 231, 0.08);
+}
+
+.auth-tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-weight: 700;
+    padding: 0.7rem;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: var(--transition-quick);
+}
+
+.auth-tab-btn.active {
+    background: var(--primary-gradient);
+    color: white;
+    box-shadow: 0 4px 12px rgba(108, 92, 231, 0.25);
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.auth-form select {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 12px;
+    color: var(--text-color);
+    font-family: inherit;
+    font-size: 0.95rem;
+}
+
+.auth-form select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.auth-form select option {
+    background: var(--bg-color);
+    color: var(--text-color);
+}
+
+.auth-error {
+    background: rgba(255, 118, 117, 0.12);
+    border: 1px solid rgba(255, 118, 117, 0.25);
+    color: #ff7675;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* 사용자 정보 및 로그아웃 버튼 */
+.user-info-text {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-color);
+    background: rgba(108, 92, 231, 0.12);
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    border: 1px solid rgba(108, 92, 231, 0.2);
+    white-space: nowrap;
+}
+
+.logout-btn-header {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    color: var(--text-color);
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: var(--transition-quick);
+}
+
+.logout-btn-header:hover {
+    background: var(--accent-gradient);
+    color: white;
+    border-color: transparent;
+    transform: scale(1.05);
+}
+
+/* 게시판 필터 스타일 */
+.board-list-header-split {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+    width: 100%;
+}
+
+.board-filter-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.board-filter-btn {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    color: var(--text-muted);
+    padding: 0.4rem 0.9rem;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition-quick);
+}
+
+.board-filter-btn:hover, .board-filter-btn.active {
+    background: var(--primary-gradient);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 10px rgba(108, 92, 231, 0.2);
+}
+
+/* 미디어 쿼리 */
 @media (max-width: 992px) {
     .hero-container {
         grid-template-columns: 1fr;
@@ -1581,14 +1769,10 @@ body.light-theme .calendar-day {
         left: 30px;
     }
     
-    .timeline-item {
+    .timeline-item, .timeline-item.left-item, .timeline-item.right-item {
         padding-left: 70px;
-        padding-right: 0;
+        padding-right: 0 !important;
         justify-content: flex-start;
-    }
-    
-    .timeline-item.right-item {
-        padding-left: 70px;
     }
     
     .timeline-dot {
@@ -1596,7 +1780,7 @@ body.light-theme .calendar-day {
     }
     
     .left-item .timeline-card, .right-item .timeline-card {
-        margin-left: 10px;
+        margin-left: 0;
         margin-right: 0;
         width: 100%;
     }
@@ -1646,5 +1830,10 @@ body.light-theme .calendar-day {
         flex-direction: column;
         gap: 1.5rem;
         text-align: center;
+    }
+    
+    .board-list-header-split {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }

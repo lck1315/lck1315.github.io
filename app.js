@@ -16,8 +16,164 @@ const firebaseConfig = {
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
 
 document.addEventListener('DOMContentLoaded', () => {
+    // ----------------------------------------------------
+    // 0. 회원 인증 및 권한 관리 (Firebase Auth)
+    // ----------------------------------------------------
+    const authContainer = document.getElementById('auth-container');
+    const appContent = document.getElementById('app-content');
+    const tabLogin = document.getElementById('tab-login');
+    const tabSignup = document.getElementById('tab-signup');
+    const loginForm = document.getElementById('login-form');
+    const signupForm = document.getElementById('signup-form');
+    const authErrorMsg = document.getElementById('auth-error-msg');
+    const userInfoDisplay = document.getElementById('user-info-display');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    let currentUserInfo = null;
+    let activeBoardFilter = 'all';
+    let isListenersInitialized = false;
+
+    // 탭 전환 로직
+    tabLogin.addEventListener('click', () => {
+        tabLogin.classList.add('active');
+        tabSignup.classList.remove('active');
+        loginForm.classList.remove('hidden');
+        signupForm.classList.add('hidden');
+        authErrorMsg.classList.add('hidden');
+    });
+
+    tabSignup.addEventListener('click', () => {
+        tabSignup.classList.add('active');
+        tabLogin.classList.remove('active');
+        signupForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+        authErrorMsg.classList.add('hidden');
+    });
+
+    // 에러 표시 헬퍼
+    function showAuthError(msg) {
+        authErrorMsg.textContent = msg;
+        authErrorMsg.classList.remove('hidden');
+    }
+
+    // 로그인 처리
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+
+        auth.signInWithEmailAndPassword(email, password)
+            .then(() => {
+                loginForm.reset();
+                authErrorMsg.classList.add('hidden');
+            })
+            .catch((error) => {
+                let errorMsg = "로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.";
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                    errorMsg = "이메일 또는 비밀번호가 잘못되었습니다.";
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMsg = "유효하지 않은 이메일 형식입니다.";
+                }
+                showAuthError(errorMsg);
+            });
+    });
+
+    // 회원가입 처리
+    signupForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('signup-email').value.trim();
+        const password = document.getElementById('signup-password').value;
+        const nickname = document.getElementById('signup-nickname').value.trim();
+        const role = document.getElementById('signup-role').value;
+
+        if (password.length < 6) {
+            showAuthError("비밀번호는 최소 6자 이상이어야 합니다.");
+            return;
+        }
+
+        auth.createUserWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+                const user = userCredential.user;
+                return db.collection('users').doc(user.uid).set({
+                    nickname: nickname,
+                    role: role,
+                    email: email,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            })
+            .then(() => {
+                signupForm.reset();
+                authErrorMsg.classList.add('hidden');
+            })
+            .catch((error) => {
+                let errorMsg = "회원가입에 실패했습니다.";
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMsg = "이미 가입된 이메일 주소입니다.";
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMsg = "유효하지 않은 이메일 형식입니다.";
+                } else if (error.code === 'auth/weak-password') {
+                    errorMsg = "비밀번호가 너무 취약합니다.";
+                }
+                showAuthError(errorMsg);
+            });
+    });
+
+    // 로그아웃 처리
+    logoutBtn.addEventListener('click', () => {
+        if (confirm("로그아웃 하시겠습니까?")) {
+            auth.signOut();
+        }
+    });
+
+    // 인증 상태 감시자
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            db.collection('users').doc(user.uid).get()
+                .then((doc) => {
+                    if (doc.exists) {
+                        const userData = doc.data();
+                        currentUserInfo = {
+                            uid: user.uid,
+                            nickname: userData.nickname || user.displayName || "가족",
+                            role: userData.role || "기타 🤍"
+                        };
+                    } else {
+                        currentUserInfo = {
+                            uid: user.uid,
+                            nickname: user.displayName || "가족",
+                            role: "기타 🤍"
+                        };
+                    }
+
+                    userInfoDisplay.innerHTML = `<i class="fa-solid fa-user-tag"></i> ${currentUserInfo.nickname} (${currentUserInfo.role})`;
+                    authContainer.classList.add('hidden');
+                    appContent.classList.remove('hidden');
+
+                    if (!isListenersInitialized) {
+                        initRealtimeDbListeners();
+                        isListenersInitialized = true;
+                    }
+                })
+                .catch((err) => {
+                    console.error("사용자 정보를 불러오는 도중 오류 발생:", err);
+                    auth.signOut();
+                });
+        } else {
+            currentUserInfo = null;
+            userInfoDisplay.textContent = "";
+            authContainer.classList.remove('hidden');
+            appContent.classList.add('hidden');
+        }
+    });
+
+    function initRealtimeDbListeners() {
+        initEventsListener();
+        initBoardListener();
+        initGuestbookListener();
+    }
     // ----------------------------------------------------
     // 1. 테마 스위처 (다크/라이트 모드)
     // ----------------------------------------------------
@@ -245,16 +401,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Firestore 실시간 일정 로드 및 동기화
     let familyEvents = {};
-    db.collection('events').onSnapshot((snapshot) => {
-        familyEvents = {};
-        snapshot.forEach((doc) => {
-            familyEvents[doc.id] = doc.data().events || [];
+    function initEventsListener() {
+        db.collection('events').onSnapshot((snapshot) => {
+            familyEvents = {};
+            snapshot.forEach((doc) => {
+                familyEvents[doc.id] = doc.data().events || [];
+            });
+            renderCalendar();
+            if (calendarModal.classList.contains('show') && activeSelectedDateStr) {
+                renderModalEventList();
+            }
         });
-        renderCalendar();
-        if (calendarModal.classList.contains('show') && activeSelectedDateStr) {
-            renderModalEventList();
-        }
-    });
+    }
 
     function renderCalendar() {
         calendarGrid.innerHTML = '';
@@ -567,22 +725,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Firestore 실시간 게시글 동기화
     let boardPosts = [];
-    db.collection('board_posts').orderBy('date', 'desc').onSnapshot((snapshot) => {
-        boardPosts = [];
-        snapshot.forEach((doc) => {
-            boardPosts.push({
-                id: doc.id,
-                ...doc.data()
+    function initBoardListener() {
+        db.collection('board_posts').orderBy('date', 'desc').onSnapshot((snapshot) => {
+            boardPosts = [];
+            snapshot.forEach((doc) => {
+                boardPosts.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
             });
+            renderBoardPosts();
         });
-        renderBoardPosts();
-    });
+    }
 
     // 게시글 목록 렌더링 함수
     function renderBoardPosts() {
         boardPostsGrid.innerHTML = '';
 
-        if (boardPosts.length === 0) {
+        const filteredPosts = activeBoardFilter === 'all'
+            ? boardPosts
+            : boardPosts.filter(post => post.role === activeBoardFilter);
+
+        if (filteredPosts.length === 0) {
             boardPostsGrid.innerHTML = `
                 <div class="no-posts">
                     <p><i class="fa-regular fa-folder-open"></i> 아직 등록된 게시글이 없어요. 사진과 글을 올려보세요!</p>
@@ -591,7 +755,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        boardPosts.forEach((post) => {
+        filteredPosts.forEach((post) => {
             const postCard = document.createElement('div');
             postCard.className = 'board-post-card glass-card';
 
@@ -611,7 +775,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="post-body">
                     <div>
                         <div class="post-meta">
-                            <span class="post-author"><i class="fa-solid fa-user-pen"></i> ${escapeHTML(post.author)}</span>
+                            <span class="post-author"><i class="fa-solid fa-user-pen"></i> ${escapeHTML(post.author)} (${post.role || '가족 🤍'})</span>
                             <span class="post-date"><i class="fa-regular fa-clock"></i> ${dateStr}</span>
                         </div>
                         <h4 class="post-title">${escapeHTML(post.title)}</h4>
@@ -636,11 +800,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // 게시판 필터 버튼 이벤트 바인딩
+    const boardFilterBtns = document.querySelectorAll('.board-filter-btn');
+    boardFilterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            boardFilterBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeBoardFilter = btn.getAttribute('data-filter');
+            renderBoardPosts();
+        });
+    });
+
     // 게시글 등록
     boardForm.addEventListener('submit', (e) => {
         e.preventDefault();
 
-        const author = boardAuthor.value.trim();
+        if (!currentUserInfo) return;
+
+        const author = currentUserInfo.nickname;
+        const role = currentUserInfo.role;
         const title = boardTitle.value.trim();
         const content = boardContent.value.trim();
 
@@ -648,6 +826,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const newPost = {
             author,
+            role,
             title,
             content,
             image: compressedImageBase64, // 압축된 이미지 (없으면 빈 문자열)
@@ -708,24 +887,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Firestore 실시간 방명록 동기화
     let messages = [];
-    db.collection('messages').orderBy('date', 'desc').onSnapshot((snapshot) => {
-        messages = [];
-        const likedMessages = JSON.parse(localStorage.getItem('dodo-liked-messages')) || [];
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            const msgId = doc.id;
-            messages.push({
-                id: msgId,
-                author: data.author,
-                message: data.message,
-                sticker: data.sticker,
-                date: data.date,
-                likes: data.likes || 0,
-                liked: likedMessages.includes(msgId)
+    function initGuestbookListener() {
+        db.collection('messages').orderBy('date', 'desc').onSnapshot((snapshot) => {
+            messages = [];
+            const likedMessages = JSON.parse(localStorage.getItem('dodo-liked-messages')) || [];
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                const msgId = doc.id;
+                messages.push({
+                    id: msgId,
+                    author: data.author,
+                    role: data.role || "가족 🤍",
+                    message: data.message,
+                    sticker: data.sticker,
+                    date: data.date,
+                    likes: data.likes || 0,
+                    liked: likedMessages.includes(msgId)
+                });
             });
+            renderMessages();
         });
-        renderMessages();
-    });
+    }
 
     function renderMessages() {
         guestbookList.innerHTML = '';
@@ -753,7 +935,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             card.innerHTML = `
                 <div class="guest-card-header">
-                    <span class="guest-author"><i class="fa-solid fa-user-circle"></i> ${escapeHTML(msg.author)}</span>
+                    <span class="guest-author"><i class="fa-solid fa-user-circle"></i> ${escapeHTML(msg.author)} (${msg.role})</span>
                     <span class="guest-date">${dateStr}</span>
                 </div>
                 <p class="guest-text">${escapeHTML(msg.message).replace(/\n/g, '<br>')}</p>
@@ -801,7 +983,10 @@ document.addEventListener('DOMContentLoaded', () => {
     guestbookForm.addEventListener('submit', (e) => {
         e.preventDefault();
 
-        const author = authorInput.value.trim();
+        if (!currentUserInfo) return;
+
+        const author = currentUserInfo.nickname;
+        const role = currentUserInfo.role;
         const message = messageInput.value.trim();
         const selectedSticker = document.querySelector('input[name="sticker"]:checked').value;
 
@@ -809,6 +994,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const newMessage = {
             author,
+            role,
             message,
             sticker: selectedSticker,
             date: new Date().getTime(),
@@ -816,7 +1002,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         db.collection('messages').add(newMessage).then(() => {
-            authorInput.value = '';
             messageInput.value = '';
             document.getElementById('st-heart').checked = true;
         }).catch(err => console.error("Error adding message: ", err));

@@ -35,6 +35,69 @@
     <!-- 배경 Canvas 파티클 -->
     <canvas id="particle-canvas"></canvas>
 
+    <!-- 로그인 / 회원가입 화면 -->
+    <div id="auth-container" class="auth-wrapper">
+        <div class="auth-card glass-card">
+            <div class="auth-header">
+                <h2>DODO<span>.family</span></h2>
+                <p>우리 가족만의 실시간 소통 아지트</p>
+            </div>
+            
+            <div class="auth-tabs">
+                <button id="tab-login" class="auth-tab-btn active">로그인</button>
+                <button id="tab-signup" class="auth-tab-btn">회원가입</button>
+            </div>
+
+            <!-- 로그인 폼 -->
+            <form id="login-form" class="auth-form">
+                <div class="form-group">
+                    <label for="login-email"><i class="fa-solid fa-envelope"></i> 이메일 주소</label>
+                    <input type="email" id="login-email" placeholder="email@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password"><i class="fa-solid fa-lock"></i> 비밀번호</label>
+                    <input type="password" id="login-password" placeholder="비밀번호 입력" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">로그인하기 <i class="fa-solid fa-right-to-bracket"></i></button>
+            </form>
+
+            <!-- 회원가입 폼 -->
+            <form id="signup-form" class="auth-form hidden">
+                <div class="form-group">
+                    <label for="signup-email"><i class="fa-solid fa-envelope"></i> 이메일 주소</label>
+                    <input type="email" id="signup-email" placeholder="email@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="signup-password"><i class="fa-solid fa-lock"></i> 비밀번호 (6자 이상)</label>
+                    <input type="password" id="signup-password" placeholder="비밀번호 입력" required>
+                </div>
+                <div class="form-group">
+                    <label for="signup-nickname"><i class="fa-solid fa-user"></i> 가족 구성원 닉네임</label>
+                    <input type="text" id="signup-nickname" placeholder="예: 길동, 미림" required>
+                </div>
+                <div class="form-group">
+                    <label for="signup-role"><i class="fa-solid fa-users-viewfinder"></i> 가족 역할 선택</label>
+                    <select id="signup-role" required>
+                        <option value="" disabled selected>내 역할 선택</option>
+                        <option value="아빠 👨">아빠 👨</option>
+                        <option value="엄마 👩">엄마 👩</option>
+                        <option value="첫째 👦">첫째 👦</option>
+                        <option value="둘째 👧">둘째 👧</option>
+                        <option value="막둥이 🐱">막둥이 🐱</option>
+                        <option value="기타 🤍">기타 🤍</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">가입 완료하기 <i class="fa-solid fa-user-plus"></i></button>
+            </form>
+
+            <!-- 에러 메시지 표시 -->
+            <div id="auth-error-msg" class="auth-error hidden"></div>
+        </div>
+    </div>
+
+    <!-- 메인 앱 콘텐츠 (로그인 시 보임) -->
+    <div id="app-content" class="hidden">
+
     <!-- 네비게이션 바 -->
     <header id="main-header">
         <div class="header-container">
@@ -49,6 +112,8 @@
                 <a href="#guestbook" class="nav-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
             </nav>
             <div class="header-actions">
+                <span id="user-info-display" class="user-info-text"></span>
+                <button id="logout-btn" class="logout-btn-header" title="로그아웃"><i class="fa-solid fa-right-from-bracket"></i></button>
                 <button id="theme-toggle" aria-label="테마 전환" class="theme-btn">
                     <i class="fa-solid fa-sun"></i>
                     <i class="fa-solid fa-moon"></i>
@@ -280,10 +345,6 @@
                         <h3>이야기 등록하기</h3>
                         <form id="board-form">
                             <div class="form-group">
-                                <label for="board-author"><i class="fa-solid fa-user"></i> 작성자</label>
-                                <input type="text" id="board-author" placeholder="닉네임 입력" required>
-                            </div>
-                            <div class="form-group">
                                 <label for="board-title"><i class="fa-solid fa-heading"></i> 제목</label>
                                 <input type="text" id="board-title" placeholder="글 제목 입력" required>
                             </div>
@@ -310,7 +371,17 @@
 
                     <!-- 2) 게시글 리스트 보드 (오른쪽) -->
                     <div class="board-list-container">
-                        <h3>최신 가족 게시글 📝</h3>
+                        <div class="board-list-header-split">
+                            <h3>최신 가족 게시글 📝</h3>
+                            <!-- 역할별 소식 필터 탭 -->
+                            <div class="board-filter-buttons">
+                                <button class="board-filter-btn active" data-filter="all">전체</button>
+                                <button class="board-filter-btn" data-filter="아빠 👨">아빠</button>
+                                <button class="board-filter-btn" data-filter="엄마 👩">엄마</button>
+                                <button class="board-filter-btn" data-filter="첫째 👦">첫째</button>
+                                <button class="board-filter-btn" data-filter="막둥이 🐱">막둥이</button>
+                            </div>
+                        </div>
                         <div id="board-posts-grid" class="board-posts-grid">
                             <!-- JS를 통해 글들이 채워집니다. -->
                             <div class="no-posts">
@@ -379,10 +450,6 @@
                     <div class="guestbook-form-container glass-card">
                         <h3>메시지 작성하기</h3>
                         <form id="guestbook-form">
-                            <div class="form-group">
-                                <label for="author-input"><i class="fa-solid fa-user"></i> 이름</label>
-                                <input type="text" id="author-input" placeholder="작성자 이름" required>
-                            </div>
                             <div class="form-group">
                                 <label for="message-input"><i class="fa-solid fa-comment-alt"></i> 메시지</label>
                                 <textarea id="message-input" rows="4" placeholder="가족에게 남기고 싶은 따뜻한 한마디..." required></textarea>
@@ -480,9 +547,11 @@
             </div>
         </div>
     </footer>
+    </div><!-- #app-content -->
 
     <!-- Firebase SDK Compat -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
     <script src="app.js"></script>
