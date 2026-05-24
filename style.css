@@ -1868,6 +1868,18 @@ body.light-theme .auth-tabs {
         padding: 1.2rem;
     }
     
+    .calendar-grid {
+        gap: 6px;
+    }
+    
+    .calendar-day {
+        padding: 6px;
+    }
+    
+    .day-number {
+        font-size: 0.9rem;
+    }
+    
     .gallery-grid, .board-posts-grid {
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         gap: 1.5rem;
@@ -1925,5 +1937,38 @@ body.light-theme .auth-tabs {
         flex-wrap: wrap;
         gap: 0.6rem;
         margin-bottom: 2rem;
+    }
+    
+    /* 모바일 달력 그리드 및 일자 정렬 최적화 */
+    .calendar-wrapper {
+        padding: 1rem 0.4rem;
+    }
+    
+    .calendar-grid {
+        gap: 3px;
+    }
+    
+    .calendar-weekdays {
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+    
+    .calendar-day {
+        padding: 4px 2px;
+        border-radius: 8px;
+    }
+    
+    .day-number {
+        font-size: 0.75rem;
+    }
+    
+    .day-dots {
+        gap: 2px;
+        margin-top: 2px;
+    }
+    
+    .day-dot {
+        width: 4px;
+        height: 4px;
     }
 }
