@@ -106,6 +106,7 @@ main {
 
 /* 공통 레이아웃 */
 .container {
+    width: 100%;
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 2rem;
@@ -1861,7 +1862,7 @@ body.light-theme .auth-tabs {
         padding: 1.2rem;
     }
     
-    .gallery-grid {
+    .gallery-grid, .board-posts-grid {
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         gap: 1.5rem;
     }
@@ -1909,7 +1910,7 @@ body.light-theme .auth-tabs {
         align-items: flex-start;
     }
     
-    .gallery-grid {
+    .gallery-grid, .board-posts-grid {
         grid-template-columns: 1fr;
         gap: 1.2rem;
     }
