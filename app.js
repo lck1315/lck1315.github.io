@@ -24,8 +24,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // ----------------------------------------------------
     const authContainer = document.getElementById('auth-container');
     const appContent = document.getElementById('app-content');
-    const tabLogin = document.getElementById('tab-login');
-    const tabSignup = document.getElementById('tab-signup');
+    const authWelcome = document.getElementById('auth-welcome');
+    const authLoginScreen = document.getElementById('auth-login-screen');
+    const authSignupScreen = document.getElementById('auth-signup-screen');
+    
+    const btnGoLogin = document.getElementById('btn-go-login');
+    const btnGoSignup = document.getElementById('btn-go-signup');
+    const backBtns = document.querySelectorAll('.auth-back-btn');
+    
+    const linkToSignup = document.getElementById('link-to-signup');
+    const linkToLogin = document.getElementById('link-to-login');
+    
     const loginForm = document.getElementById('login-form');
     const signupForm = document.getElementById('signup-form');
     const authErrorMsg = document.getElementById('auth-error-msg');
@@ -36,21 +45,44 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeBoardFilter = 'all';
     let isListenersInitialized = false;
 
-    // 탭 전환 로직
-    tabLogin.addEventListener('click', () => {
-        tabLogin.classList.add('active');
-        tabSignup.classList.remove('active');
-        loginForm.classList.remove('hidden');
-        signupForm.classList.add('hidden');
+    // 화면 전환 함수들
+    function showWelcomeScreen() {
+        authWelcome.classList.remove('hidden');
+        authLoginScreen.classList.add('hidden');
+        authSignupScreen.classList.add('hidden');
         authErrorMsg.classList.add('hidden');
+    }
+
+    function showLoginScreen() {
+        authWelcome.classList.add('hidden');
+        authLoginScreen.classList.remove('hidden');
+        authSignupScreen.classList.add('hidden');
+        authErrorMsg.classList.add('hidden');
+    }
+
+    function showSignupScreen() {
+        authWelcome.classList.add('hidden');
+        authLoginScreen.classList.add('hidden');
+        authSignupScreen.classList.remove('hidden');
+        authErrorMsg.classList.add('hidden');
+    }
+
+    // 이벤트 리스너 바인딩
+    btnGoLogin.addEventListener('click', showLoginScreen);
+    btnGoSignup.addEventListener('click', showSignupScreen);
+    
+    backBtns.forEach(btn => {
+        btn.addEventListener('click', showWelcomeScreen);
     });
 
-    tabSignup.addEventListener('click', () => {
-        tabSignup.classList.add('active');
-        tabLogin.classList.remove('active');
-        signupForm.classList.remove('hidden');
-        loginForm.classList.add('hidden');
-        authErrorMsg.classList.add('hidden');
+    linkToSignup.addEventListener('click', (e) => {
+        e.preventDefault();
+        showSignupScreen();
+    });
+
+    linkToLogin.addEventListener('click', (e) => {
+        e.preventDefault();
+        showLoginScreen();
     });
 
     // 에러 표시 헬퍼
@@ -164,6 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             currentUserInfo = null;
             userInfoDisplay.textContent = "";
+            showWelcomeScreen();
             authContainer.classList.remove('hidden');
             appContent.classList.add('hidden');
         }
