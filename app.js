@@ -847,8 +847,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 reader.onload = function(event) {
                     const img = new Image();
                     img.onload = function() {
-                        // Firestore 문서 크기 제한 대응: 가로 최대 400px, 40% 압축
-                        const max_width = 400;
+                        // Firestore 문서 크기 제한 대응: 가로 최대 800px, 70% 압축으로 화질 개선
+                        const max_width = 800;
                         let width = img.width;
                         let height = img.height;
 
@@ -863,7 +863,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const ctxTemp = canvasTemp.getContext('2d');
                         ctxTemp.drawImage(img, 0, 0, width, height);
 
-                        const base64Str = canvasTemp.toDataURL('image/jpeg', 0.40);
+                        const base64Str = canvasTemp.toDataURL('image/jpeg', 0.70);
                         compressedGalleryImages.push(base64Str);
                         console.log(`[갤러리] 이미지 압축 완료: ${compressedGalleryImages.length}/${files.length}, 크기: ${Math.round(base64Str.length / 1024)}KB`);
 
