@@ -253,7 +253,7 @@ main {
 }
 
 .theme-btn:hover {
-    transform: rotate(15deg) scale(1.05);
+    transform: scale(1.05);
     background: var(--primary-gradient);
     color: white;
 }
@@ -2257,4 +2257,77 @@ body.light-theme .lock-overlay {
     box-shadow: 0 10px 20px rgba(108, 92, 231, 0.3);
 }
 
+/* ==========================================================================
+   모바일 퀵 네비게이션 드롭다운 프리미엄 디자인
+   ========================================================================== */
+.mobile-nav-dropdown {
+    position: fixed;
+    right: 20px;
+    top: 80px;
+    z-index: 1050; /* 로그인 모달(1100) 하위, 기타 콘텐츠 상위 배치 */
+    width: 200px;
+    padding: 0.8rem;
+    background: rgba(22, 18, 38, 0.95);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    animation: slideDownFade 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
 
+body.light-theme .mobile-nav-dropdown {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0.8rem 1rem;
+    color: var(--text-color) !important;
+    text-decoration: none !important;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 10px;
+    transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.mobile-dropdown-item i {
+    color: var(--primary-color);
+    font-size: 1rem;
+    width: 18px;
+    text-align: center;
+    transition: transform 0.2s ease;
+}
+
+.mobile-dropdown-item:hover {
+    background: rgba(108, 92, 231, 0.1);
+    color: var(--primary-color) !important;
+    transform: translateX(5px);
+}
+
+body.light-theme .mobile-dropdown-item:hover {
+    background: rgba(108, 92, 231, 0.06);
+}
+
+.mobile-dropdown-item:hover i {
+    transform: scale(1.15);
+}
+
+/* 드롭다운 하강/페이드인 애니메이션 */
+@keyframes slideDownFade {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

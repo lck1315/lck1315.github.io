@@ -103,6 +103,10 @@ document.addEventListener('DOMContentLoaded', () => {
             authContainer.classList.remove('hidden');
         } else {
             profileDropdown.classList.toggle('hidden');
+            const mobDropdown = document.getElementById('mobile-nav-dropdown');
+            if (mobDropdown) {
+                mobDropdown.classList.add('hidden');
+            }
         }
     });
 
@@ -1924,6 +1928,9 @@ document.addEventListener('DOMContentLoaded', () => {
         mobileNavBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             mobileNavDropdown.classList.toggle('hidden');
+            if (profileDropdown) {
+                profileDropdown.classList.add('hidden');
+            }
         });
 
         mobileNavDropdown.querySelectorAll('.mobile-dropdown-item').forEach(item => {
