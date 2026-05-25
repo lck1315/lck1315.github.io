@@ -2525,7 +2525,4 @@ body.light-theme .mobile-dropdown-item:hover {
     transform: scale(1.25);
 }
 
-/* 슬라이더 내부 이미지는 hover 확대 방지 */
-.gallery-item:hover .card-image-slide img {
-    transform: none;
-}
+/* 슬라이더 내부 이미지도 동일하게 hover 확대 적용 */
