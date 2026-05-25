@@ -24,7 +24,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=1.0.42">
+    <link rel="stylesheet" href="style.css?v=1.0.43">
 </head>
 <body class="dark-theme">
     <!-- 스크롤 진행 바 -->
@@ -782,15 +782,20 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
-    <script src="app.js?v=1.0.42"></script>
+    <script src="app.js?v=1.0.43"></script>
 
     <!-- 단어장 연동 스크립트 -->
     <script>
-        function getDeviceUrl() {
+        function getDeviceUrl(defaultToAP = false) {
             let ip = document.getElementById('device-ip').value.trim();
             if(!ip) {
-                alert("M5Stick의 IP 주소를 먼저 입력해주세요!");
-                return null;
+                if (defaultToAP) {
+                    ip = "192.168.4.1";
+                    document.getElementById('device-ip').value = ip;
+                } else {
+                    alert("M5Stick의 IP 주소를 먼저 입력해주세요!");
+                    return null;
+                }
             }
             if(!ip.startsWith("http://")) ip = "http://" + ip;
             return ip;
@@ -939,7 +944,7 @@
             document.getElementById('wifi-scanner-panel').style.display = 'none';
         }
         async function scanDeviceWifi() {
-            const url = getDeviceUrl();
+            const url = getDeviceUrl(true);
             if(!url) return;
             document.getElementById('btn-scan-wifi').style.display = 'none';
             document.getElementById('wifi-scan-loader').style.display = 'block';
@@ -980,7 +985,7 @@
             }
         }
         async function connectDeviceWifi() {
-            const url = getDeviceUrl();
+            const url = getDeviceUrl(true);
             if(!url) return;
             const ssid = document.getElementById('target-ssid').value;
             const password = document.getElementById('target-password').value;
