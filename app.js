@@ -810,6 +810,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ----------------------------------------------------
     const galleryForm = document.getElementById('gallery-form');
     const galleryTitle = document.getElementById('gallery-title');
+    const galleryDate = document.getElementById('gallery-date');
     const galleryDesc = document.getElementById('gallery-desc');
     const galleryCategory = document.getElementById('gallery-category');
     const galleryFiles = document.getElementById('gallery-files');
@@ -938,13 +939,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...';
             }
 
+            let postDateStr = galleryDate ? galleryDate.value : '';
+            let postDateMs = new Date().getTime(); // 기본값은 현재 시간
+            
+            if (postDateStr) {
+                const parts = postDateStr.split('-');
+                if (parts.length === 3) {
+                    const selectedDate = new Date(parts[0], parts[1] - 1, parts[2]);
+                    const now = new Date();
+                    selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+                    postDateMs = selectedDate.getTime();
+                }
+            }
+
             const newAlbum = {
                 title,
                 desc,
                 category,
                 author: currentUserInfo.nickname,
                 uid: currentUserInfo.uid,
-                isPrivate: isPrivate
+                isPrivate: isPrivate,
+                date: postDateMs
             };
 
             const editId = galleryForm.getAttribute('data-edit-id');
@@ -985,7 +1000,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             } else {
                 // 신규 등록
-                newAlbum.date = new Date().getTime();
                 db.collection('gallery_posts').add(newAlbum).then(async (docRef) => {
                     const postId = docRef.id;
                     try {
@@ -1036,6 +1050,13 @@ document.addEventListener('DOMContentLoaded', () => {
         
         galleryImgPreviews.innerHTML = '';
         compressedGalleryImages = [];
+        
+        // 오늘 날짜로 초기화 (YYYY-MM-DD)
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        if (galleryDate) galleryDate.value = `${yyyy}-${mm}-${dd}`;
     }
 
     // 갤러리 수정 모드 시작
@@ -1057,6 +1078,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     galleryDesc.value = post.desc || '';
                     galleryCategory.value = post.category || 'daily';
                     document.getElementById('gallery-is-private').checked = post.isPrivate !== false;
+                    
+                    if (galleryDate && post.date) {
+                        const d = new Date(post.date);
+                        const yyyy = d.getFullYear();
+                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                        const dd = String(d.getDate()).padStart(2, '0');
+                        galleryDate.value = `${yyyy}-${mm}-${dd}`;
+                    }
                     
                     galleryImgPreviews.innerHTML = '';
                     
