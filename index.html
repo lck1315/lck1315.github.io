@@ -24,7 +24,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=1.0.32">
+    <link rel="stylesheet" href="style.css?v=1.0.33">
 </head>
 <body class="dark-theme">
     <!-- 스크롤 진행 바 -->
@@ -182,7 +182,7 @@
                     <h1 class="hero-title">소소하지만 특별한<br>DODO 가족의 이야기</h1>
                     <p class="hero-desc">서로 다른 색깔을 가진 우리가 모여 가장 아름다운 무지개를 만듭니다. 일정 관리와 이야기 게시판, 방명록이 하나로 묶인 DODO의 스마트 아지트입니다.</p>
                     <div class="hero-buttons">
-                        <a href="#board" class="btn btn-primary">게시판 구경하기 <i class="fa-solid fa-arrow-right"></i></a>
+                        <a href="#gallery" class="btn btn-primary">추억갤러리 구경하기 <i class="fa-solid fa-arrow-right"></i></a>
                         <a href="#calendar" class="btn btn-secondary">가족 일정 보기</a>
                     </div>
                 </div>
@@ -300,21 +300,19 @@
                     <p class="section-subtitle">가족이 함께 나누었던 소중한 발자취와 따뜻한 순간들입니다.</p>
                 </div>
                 
-                <!-- 1) 여행 갤러리 등록 폼 (로그인한 멤버에게만 JS로 토글 표시) -->
-                <div id="gallery-upload-container" class="gallery-upload-container glass-card hidden" style="margin-bottom: 3rem; padding: 2.5rem; width: 100%;">
-                    <h3 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 1.5rem;"><i class="fa-solid fa-camera-retro"></i> 새 여행 추억 등록하기 (다중 사진 지원)</h3>
-                    <form id="gallery-form" class="gallery-form-grid">
-                        <div class="form-left-col">
+                <div class="gallery-wrapper">
+                    <!-- 1) 여행 갤러리 등록 폼 (왼쪽) -->
+                    <div id="gallery-upload-container" class="gallery-form-container glass-card hidden">
+                        <h3 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 1.5rem;"><i class="fa-solid fa-camera-retro"></i> 새 여행 추억 등록하기</h3>
+                        <form id="gallery-form" class="gallery-form-grid">
                             <div class="form-group">
                                 <label for="gallery-title"><i class="fa-solid fa-heading"></i> 앨범 제목</label>
-                                <input type="text" id="gallery-title" placeholder="예: 제주도 가족 여행, 봄맞이 벚꽃 나들이" required>
+                                <input type="text" id="gallery-title" placeholder="예: 제주도 가족 여행" required>
                             </div>
                             <div class="form-group">
                                 <label for="gallery-desc"><i class="fa-solid fa-align-left"></i> 여행 설명/한줄평</label>
-                                <textarea id="gallery-desc" rows="4" placeholder="당시 나누었던 이야기나 즐거웠던 기억을 짧게 기록해보세요..." required></textarea>
+                                <textarea id="gallery-desc" rows="3" placeholder="기억을 기록해보세요..." required></textarea>
                             </div>
-                        </div>
-                        <div class="form-right-col">
                             <div class="form-group">
                                 <label for="gallery-category"><i class="fa-solid fa-tag"></i> 앨범 성격</label>
                                 <select id="gallery-category" style="width: 100%; padding: 0.8rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; color: var(--text-color); font-family: inherit;">
@@ -327,17 +325,14 @@
                                 <input type="date" id="gallery-date" required>
                             </div>
                             <div class="form-group">
-                                <label><i class="fa-solid fa-images"></i> 여행 사진 선택 (여러 장 동시 첨부 가능)</label>
+                                <label><i class="fa-solid fa-images"></i> 여행 사진 선택</label>
                                 <div class="file-upload-wrapper">
                                     <input type="file" id="gallery-files" accept="image/*" multiple required>
                                     <div class="file-upload-btn">
-                                        <i class="fa-solid fa-cloud-arrow-up"></i> 여러 장의 사진 선택하기
+                                        <i class="fa-solid fa-cloud-arrow-up"></i> 여러 장 선택
                                     </div>
                                 </div>
-                                <!-- 여러 장 업로드 시 썸네일 미리보기 컨테이너 -->
-                                <div id="gallery-img-previews" class="gallery-img-previews-container">
-                                    <!-- 동적 이미지 썸네일 노출 -->
-                                </div>
+                                <div id="gallery-img-previews" class="gallery-img-previews-container"></div>
                                 <div class="form-group" style="margin-top: 12px; display: flex; align-items: center; gap: 8px;">
                                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 0.85rem; font-weight: 700; color: var(--text-color);">
                                         <input type="checkbox" id="gallery-is-private" checked style="width: 18px; height: 18px; accent-color: var(--primary-color);">
@@ -346,19 +341,24 @@
                                 </div>
                             </div>
                             <button type="submit" class="btn btn-primary w-100" style="margin-top: 1rem;">추억 등록하기 <i class="fa-solid fa-check"></i></button>
+                        </form>
+                    </div>
+                    
+                    <!-- 2) 갤러리 필터 및 목록 (오른쪽) -->
+                    <div class="gallery-list-container">
+                        <div class="gallery-list-header-split" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px;">
+                            <div class="gallery-filter-buttons">
+                                <button class="filter-btn active" data-filter="all">전체보기</button>
+                                <button class="filter-btn" data-filter="travel">가족 여행</button>
+                                <button class="filter-btn" data-filter="daily">소소한 일상</button>
+                            </div>
                         </div>
-                    </form>
-                </div>
-                
-                <div class="gallery-filter-buttons">
-                    <button class="filter-btn active" data-filter="all">전체보기</button>
-                    <button class="filter-btn" data-filter="travel">가족 여행</button>
-                    <button class="filter-btn" data-filter="daily">소소한 일상</button>
-                </div>
 
-                <!-- 동적으로 채워질 갤러리 그리드 -->
-                <div id="gallery-grid" class="gallery-grid">
-                    <!-- JS 코드로 Firestore 갤러리 데이터 및 예제 데이터가 바인딩됩니다. -->
+                        <!-- 동적으로 채워질 갤러리 그리드 -->
+                        <div id="gallery-grid" class="gallery-grid">
+                            <!-- JS 코드로 Firestore 갤러리 데이터 및 예제 데이터가 바인딩됩니다. -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -669,6 +669,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
-    <script src="app.js?v=1.0.32"></script>
+    <script src="app.js?v=1.0.33"></script>
 </body>
 </html>

@@ -1047,9 +1047,9 @@ body.light-theme .event-del-btn {
 }
 
 .gallery-form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
     max-width: 100%;
     overflow: hidden;
 }
@@ -1105,11 +1105,22 @@ body.light-theme .event-del-btn {
     border-radius: 50%;
     width: 16px;
     height: 16px;
-    font-size: 0.6rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    font-size: 0.75rem;
+}
+
+/* 갤러리 래퍼 (가족 게시판과 동일 구조) */
+.gallery-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1.8fr; /* 좌우 비율 설정 */
+    gap: 3rem;
+    width: 100%;
+    align-items: start;
+}
+
+.gallery-form-container {
+    padding: 2.5rem;
+    position: sticky;
+    top: 100px;
 }
 
 .gallery-filter-buttons {
@@ -2068,11 +2079,11 @@ body.light-theme .guest-sticker {
         border-color: transparent var(--card-border) transparent transparent;
     }
     
-    .guestbook-wrapper, .board-wrapper, .gallery-form-grid {
+    .guestbook-wrapper, .board-wrapper, .gallery-wrapper {
         grid-template-columns: 1fr;
     }
     
-    .guestbook-form-container, .board-form-container, .gallery-upload-container {
+    .guestbook-form-container, .board-form-container, .gallery-form-container {
         position: static;
     }
     
