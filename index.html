@@ -304,46 +304,56 @@
                 
                 <div class="gallery-wrapper">
                     <!-- 1) 여행 갤러리 등록 폼 (왼쪽) -->
-                    <div id="gallery-upload-container" class="gallery-form-container glass-card hidden">
-                        <h3 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 1.5rem;"><i class="fa-solid fa-camera-retro"></i> 새 여행 추억 등록하기</h3>
-                        <form id="gallery-form" class="gallery-form-grid">
-                            <div class="form-group">
-                                <label for="gallery-title"><i class="fa-solid fa-heading"></i> 앨범 제목</label>
-                                <input type="text" id="gallery-title" placeholder="예: 제주도 가족 여행" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="gallery-desc"><i class="fa-solid fa-align-left"></i> 여행 설명/한줄평</label>
-                                <textarea id="gallery-desc" rows="3" placeholder="기억을 기록해보세요..." required></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label for="gallery-category"><i class="fa-solid fa-tag"></i> 앨범 성격</label>
-                                <select id="gallery-category" style="width: 100%; padding: 0.8rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; color: var(--text-color); font-family: inherit;">
-                                    <option value="travel">가족 여행 ✈️</option>
-                                    <option value="daily">소소한 일상 ☕</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="gallery-date"><i class="fa-solid fa-calendar-day"></i> 날짜</label>
-                                <input type="date" id="gallery-date" required>
-                            </div>
-                            <div class="form-group">
-                                <label><i class="fa-solid fa-images"></i> 여행 사진 선택</label>
-                                <div class="file-upload-wrapper">
-                                    <input type="file" id="gallery-files" accept="image/*" multiple required>
-                                    <div class="file-upload-btn">
-                                        <i class="fa-solid fa-cloud-arrow-up"></i> 여러 장 선택
+                    <div id="gallery-upload-container" class="gallery-form-container glass-card">
+                        <div id="gallery-form-inner">
+                            <h3 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 1.5rem;"><i class="fa-solid fa-camera-retro"></i> 새 여행 추억 등록하기</h3>
+                            <form id="gallery-form" class="gallery-form-grid">
+                                <div class="form-group">
+                                    <label for="gallery-title"><i class="fa-solid fa-heading"></i> 앨범 제목</label>
+                                    <input type="text" id="gallery-title" placeholder="예: 제주도 가족 여행" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="gallery-desc"><i class="fa-solid fa-align-left"></i> 여행 설명/한줄평</label>
+                                    <textarea id="gallery-desc" rows="3" placeholder="기억을 기록해보세요..." required></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label for="gallery-category"><i class="fa-solid fa-tag"></i> 앨범 성격</label>
+                                    <select id="gallery-category" style="width: 100%; padding: 0.8rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; color: var(--text-color); font-family: inherit;">
+                                        <option value="travel">가족 여행 ✈️</option>
+                                        <option value="daily">소소한 일상 ☕</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="gallery-date"><i class="fa-solid fa-calendar-day"></i> 날짜</label>
+                                    <input type="date" id="gallery-date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="fa-solid fa-images"></i> 여행 사진 선택</label>
+                                    <div class="file-upload-wrapper">
+                                        <input type="file" id="gallery-files" accept="image/*" multiple required>
+                                        <div class="file-upload-btn">
+                                            <i class="fa-solid fa-cloud-arrow-up"></i> 여러 장 선택
+                                        </div>
+                                    </div>
+                                    <div id="gallery-img-previews" class="gallery-img-previews-container"></div>
+                                    <div class="form-group" style="margin-top: 12px; display: flex; align-items: center; gap: 8px;">
+                                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 0.85rem; font-weight: 700; color: var(--text-color);">
+                                            <input type="checkbox" id="gallery-is-private" checked style="width: 18px; height: 18px; accent-color: var(--primary-color);">
+                                            <span>가족에게만 공개 (로그인 필요) 🔐</span>
+                                        </label>
                                     </div>
                                 </div>
-                                <div id="gallery-img-previews" class="gallery-img-previews-container"></div>
-                                <div class="form-group" style="margin-top: 12px; display: flex; align-items: center; gap: 8px;">
-                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 0.85rem; font-weight: 700; color: var(--text-color);">
-                                        <input type="checkbox" id="gallery-is-private" checked style="width: 18px; height: 18px; accent-color: var(--primary-color);">
-                                        <span>가족에게만 공개 (로그인 필요) 🔐</span>
-                                    </label>
-                                </div>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100" style="margin-top: 1rem;">추억 등록하기 <i class="fa-solid fa-check"></i></button>
-                        </form>
+                                <button type="submit" class="btn btn-primary w-100" style="margin-top: 1rem;">추억 등록하기 <i class="fa-solid fa-check"></i></button>
+                            </form>
+                        </div>
+                        
+                        <!-- 갤러리 등록 로그인 락 카드 -->
+                        <div id="gallery-form-lock" class="lock-overlay hidden" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem 1rem; gap: 1.2rem;">
+                            <i class="fa-solid fa-camera-retro" style="font-size: 3rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
+                            <h3 style="font-size: 1.25rem; font-weight: 800; margin: 0;">소중한 추억은 로그인 후 등록 가능합니다 📷</h3>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 280px; line-height: 1.5; margin: 0;">여행 사진과 앨범을 등록하려면 가족 계정으로 로그인해 주세요.</p>
+                            <button class="btn btn-primary btn-lock-login" style="padding: 0.7rem 1.8rem; font-size: 0.85rem;" onclick="document.getElementById('auth-menu-btn').click();"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
+                        </div>
                     </div>
                     
                     <!-- 2) 갤러리 필터 및 목록 (오른쪽) -->

@@ -233,6 +233,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const calendarLock = document.getElementById('calendar-lock');
         const boardFormInner = document.getElementById('board-form-inner');
         const boardFormLock = document.getElementById('board-form-lock');
+        const galleryFormInner = document.getElementById('gallery-form-inner');
+        const galleryFormLock = document.getElementById('gallery-form-lock');
         const guestbookAuthorGroup = document.getElementById('guestbook-author-group');
         const guestbookAuthorInput = document.getElementById('guestbook-author-input');
 
@@ -241,6 +243,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (calendarLock) calendarLock.classList.add('hidden');
             if (boardFormInner) boardFormInner.classList.remove('hidden');
             if (boardFormLock) boardFormLock.classList.add('hidden');
+            if (galleryFormInner) galleryFormInner.classList.remove('hidden');
+            if (galleryFormLock) galleryFormLock.classList.add('hidden');
             if (guestbookAuthorGroup) {
                 guestbookAuthorGroup.classList.add('hidden');
                 guestbookAuthorInput.removeAttribute('required');
@@ -250,6 +254,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (calendarLock) calendarLock.classList.remove('hidden');
             if (boardFormInner) boardFormInner.classList.add('hidden');
             if (boardFormLock) boardFormLock.classList.remove('hidden');
+            if (galleryFormInner) galleryFormInner.classList.add('hidden');
+            if (galleryFormLock) galleryFormLock.classList.remove('hidden');
             if (guestbookAuthorGroup) {
                 guestbookAuthorGroup.classList.remove('hidden');
                 guestbookAuthorInput.setAttribute('required', 'true');
@@ -307,9 +313,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     dropdownLoggedIn.classList.remove('hidden');
                     authContainer.classList.add('hidden');
 
-                    // 로그인 시에만 여행 갤러리 등록 폼 노출
-                    if (galleryUploadContainer) galleryUploadContainer.classList.remove('hidden');
-
                     // 구성원 카드 렌더링 갱신
                     if (cachedFamilySnapshot) {
                         renderFamilyCards(cachedFamilySnapshot);
@@ -336,8 +339,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     dropdownLoggedOut.classList.add('hidden');
                     dropdownLoggedIn.classList.remove('hidden');
                     authContainer.classList.add('hidden');
-
-                    if (galleryUploadContainer) galleryUploadContainer.classList.remove('hidden');
 
                     if (cachedFamilySnapshot) {
                         renderFamilyCards(cachedFamilySnapshot);
