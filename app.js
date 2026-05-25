@@ -1418,6 +1418,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ----------------------------------------------------
     const boardForm = document.getElementById('board-form');
     const boardTitle = document.getElementById('board-title');
+    const boardDate = document.getElementById('board-date');
     const boardFile = document.getElementById('board-file');
     const boardContent = document.getElementById('board-content');
     const boardImgPreview = document.getElementById('board-img-preview');
@@ -1587,8 +1588,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
 
-            // 라이트박스 호출 제거 – 슬라이더만 사용
-            // (클릭 이벤트 비활성화)
+            // 게시판 사진 클릭 시 라이트박스 호출 (갤러리와 동일하게)
+            const imagesToView = post.images && post.images.length > 0 ? post.images : (post.image ? [post.image] : []);
+            if (imagesToView.length > 0) {
+                const imgEls = postCard.querySelectorAll('.post-img-header img');
+                imgEls.forEach(imgEl => {
+                    imgEl.style.cursor = 'pointer';
+                    imgEl.addEventListener('click', (ev) => {
+                        ev.stopPropagation();
+                        openLightboxSlider(imagesToView, post.title);
+                    });
+                });
+            }
 
             boardPostsGrid.appendChild(postCard);
         });
@@ -1735,6 +1746,13 @@ function initCardSliders(container) {
         
         boardImgPreviews.innerHTML = '';
         compressedImageBase64 = [];
+        
+        // 오늘 날짜로 초기화 (YYYY-MM-DD)
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        if (boardDate) boardDate.value = `${yyyy}-${mm}-${dd}`;
     }
 
     function startEditBoardPost(id) {
@@ -1754,6 +1772,14 @@ function initCardSliders(container) {
                     boardTitle.value = post.title || '';
                     boardContent.value = post.content || '';
                     document.getElementById('board-is-private').checked = post.isPrivate !== false;
+                    
+                    if (boardDate && post.date) {
+                        const d = new Date(post.date);
+                        const yyyy = d.getFullYear();
+                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                        const dd = String(d.getDate()).padStart(2, '0');
+                        boardDate.value = `${yyyy}-${mm}-${dd}`;
+                    }
                     
                     boardImgPreviews.innerHTML = '';
                     // 기존 images 배열이 있거나 단일 image 필드가 있는 경우 병합 수집
@@ -1811,6 +1837,19 @@ function initCardSliders(container) {
         if (!author || !title || !content) return;
 
         const editId = boardForm.getAttribute('data-edit-id');
+        
+        let postDateStr = boardDate ? boardDate.value : '';
+        let postDateMs = new Date().getTime(); // 기본값은 현재 시간
+        
+        if (postDateStr) {
+            const parts = postDateStr.split('-');
+            if (parts.length === 3) {
+                const selectedDate = new Date(parts[0], parts[1] - 1, parts[2]);
+                const now = new Date();
+                selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+                postDateMs = selectedDate.getTime();
+            }
+        }
 
         if (editId) {
             db.collection('board_posts').doc(editId).update({
@@ -1818,7 +1857,8 @@ function initCardSliders(container) {
                 content,
                 image: compressedImageBase64[0] || '', // 하위 호환성용 첫 사진
                 images: compressedImageBase64, // 다중 이미지 배열 필드
-                isPrivate: isPrivate
+                isPrivate: isPrivate,
+                date: postDateMs
             }).then(() => {
                 resetBoardForm();
             }).catch(err => {
@@ -1833,7 +1873,7 @@ function initCardSliders(container) {
                 content,
                 image: compressedImageBase64[0] || '', // 하위 호환성용 첫 사진
                 images: compressedImageBase64, // 다중 이미지 배열 필드
-                date: new Date().getTime(),
+                date: postDateMs,
                 uid: currentUserInfo.uid,
                 isPrivate: isPrivate
             };

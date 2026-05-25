@@ -24,7 +24,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=1.0.27">
+    <link rel="stylesheet" href="style.css?v=1.0.28">
 </head>
 <body class="dark-theme">
     <!-- 스크롤 진행 바 -->
@@ -379,6 +379,10 @@
                                     <input type="text" id="board-title" placeholder="글 제목 입력" required>
                                 </div>
                                 <div class="form-group">
+                                    <label for="board-date"><i class="fa-solid fa-calendar-day"></i> 날짜</label>
+                                    <input type="date" id="board-date" required>
+                                </div>
+                                <div class="form-group">
                                     <label for="board-file"><i class="fa-solid fa-images"></i> 사진 첨부 (여러 장 가능)</label>
                                     <div class="file-upload-wrapper">
                                         <input type="file" id="board-file" accept="image/*" multiple>
@@ -661,6 +665,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
-    <script src="app.js?v=1.0.27"></script>
+    <script src="app.js?v=1.0.28"></script>
 </body>
 </html>
