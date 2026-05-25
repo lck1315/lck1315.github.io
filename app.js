@@ -669,7 +669,11 @@ document.addEventListener('DOMContentLoaded', () => {
         dayEvents.forEach((evt, idx) => {
             const item = document.createElement('div');
             item.className = 'event-item';
-            item.style.borderLeftColor = evt.color;
+            
+            // 일정 종류 색상에 맞는 파스텔톤 배경색(10% 투명도)과 보더 칼라 매칭
+            const baseColor = evt.color || '#6c5ce7';
+            item.style.backgroundColor = `${baseColor}1a`; 
+            item.style.borderLeftColor = baseColor;
 
             const isOwner = !evt.uid || (currentUserInfo && (evt.uid === currentUserInfo.uid || evt.author === currentUserInfo.nickname));
             const delBtnHTML = isOwner 
@@ -1133,7 +1137,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         filteredPosts.forEach((post) => {
             const postCard = document.createElement('div');
-            postCard.className = 'board-post-card glass-card';
+            // 이미지가 없는 포스트에 no-image-card 클래스를 적용해 레이아웃 휑함 방지
+            postCard.className = `board-post-card glass-card${post.image ? '' : ' no-image-card'}`;
 
             const dateStr = new Date(post.date).toLocaleDateString('ko-KR', {
                 year: 'numeric',
@@ -1147,12 +1152,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const isOwner = currentUserInfo && (post.uid === currentUserInfo.uid || (!post.uid && post.author === currentUserInfo.nickname));
             const footerHTML = isOwner 
-                ? `<div class="post-footer" style="display: flex; gap: 10px;">
+                ? `<div class="post-footer">
                         <button class="edit-btn board-post-edit-btn" data-id="${post.id}" title="게시글 수정">
-                            <i class="fa-regular fa-pen-to-square"></i> 수정하기
+                            <i class="fa-regular fa-pen-to-square"></i> 수정
                         </button>
                         <button class="delete-btn board-post-del-btn" data-id="${post.id}" title="게시글 삭제">
-                            <i class="fa-regular fa-trash-can"></i> 삭제하기
+                            <i class="fa-regular fa-trash-can"></i> 삭제
                         </button>
                    </div>`
                 : '';
