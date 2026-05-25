@@ -1013,6 +1013,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let activeSliderImages = []; // 현재 슬라이드할 이미지 목록
     let activeSliderIndex = 0; // 현재 인덱스
+    
+    // 라이트박스 터치 스와이프 제스처 이벤트 장착
+    let lightboxTouchStartX = 0;
+    if (lightboxModal) {
+        lightboxModal.addEventListener('touchstart', (e) => {
+            lightboxTouchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        lightboxModal.addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].screenX;
+            const diffX = lightboxTouchStartX - touchEndX;
+            if (activeSliderImages.length <= 1) return;
+
+            if (diffX > 50) {
+                // 오른쪽에서 왼쪽 스와이프: 다음 사진
+                activeSliderIndex = (activeSliderIndex + 1) % activeSliderImages.length;
+                lightboxImg.setAttribute('src', activeSliderImages[activeSliderIndex]);
+                updateSliderIndicator();
+            } else if (diffX < -50) {
+                // 왼쪽에서 오른쪽 스와이프: 이전 사진
+                activeSliderIndex = (activeSliderIndex - 1 + activeSliderImages.length) % activeSliderImages.length;
+                lightboxImg.setAttribute('src', activeSliderImages[activeSliderIndex]);
+                updateSliderIndicator();
+            }
+        }, { passive: true });
+    }
 
     function openLightboxSlider(images, caption) {
         activeSliderImages = images;
@@ -1084,42 +1110,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let compressedImageBase64 = ''; // 압축된 이미지 캐시 변수
 
+    const boardImgPreviews = document.getElementById('board-img-previews');
+    let compressedImageBase64 = []; // 다중 base64 이미지 캐시 배열로 전환
+
     boardFile.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) {
-            boardImgPreview.style.display = 'none';
-            boardImgPreview.innerHTML = '';
-            compressedImageBase64 = '';
-            return;
-        }
+        const files = Array.from(e.target.files);
+        boardImgPreviews.innerHTML = '';
+        compressedImageBase64 = [];
 
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            const img = new Image();
-            img.onload = function() {
-                const max_width = 600;
-                let width = img.width;
-                let height = img.height;
+        if (files.length === 0) return;
 
-                if (width > max_width) {
-                    height = Math.round((height * max_width) / width);
-                    width = max_width;
-                }
+        files.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const max_width = 600;
+                    let width = img.width;
+                    let height = img.height;
 
-                const tempCanvas = document.createElement('canvas');
-                tempCanvas.width = width;
-                tempCanvas.height = height;
-                const tempCtx = tempCanvas.getContext('2d');
-                tempCtx.drawImage(img, 0, 0, width, height);
+                    if (width > max_width) {
+                        height = Math.round((height * max_width) / width);
+                        width = max_width;
+                    }
 
-                compressedImageBase64 = tempCanvas.toDataURL('image/jpeg', 0.7);
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = width;
+                    tempCanvas.height = height;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCtx.drawImage(img, 0, 0, width, height);
 
-                boardImgPreview.innerHTML = `<img src="${compressedImageBase64}" alt="업로드 이미지 미리보기">`;
-                boardImgPreview.style.display = 'block';
+                    const base64Str = tempCanvas.toDataURL('image/jpeg', 0.65);
+                    compressedImageBase64.push(base64Str);
+
+                    // 미리보기 썸네일 생성 및 삭제 핸들러 연동
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'gallery-preview-item';
+                    previewItem.innerHTML = `
+                        <img src="${base64Str}" alt="미리보기">
+                        <button type="button" class="del-btn" data-index="${index}">&times;</button>
+                    `;
+
+                    previewItem.querySelector('.del-btn').addEventListener('click', (ev) => {
+                        ev.stopPropagation();
+                        previewItem.remove();
+                        compressedImageBase64.splice(index, 1);
+                    });
+
+                    boardImgPreviews.appendChild(previewItem);
+                };
+                img.src = event.target.result;
             };
-            img.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
+            reader.readAsDataURL(file);
+        });
     });
 
     let boardPosts = [];
@@ -1162,8 +1205,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         filteredPosts.forEach((post) => {
             const postCard = document.createElement('div');
-            // 이미지가 없는 포스트에 no-image-card 클래스를 적용해 레이아웃 휑함 방지
-            postCard.className = `board-post-card glass-card${post.image ? '' : ' no-image-card'}`;
+            
+            // 첫 번째 대표 이미지 설정
+            const hasImages = (post.images && post.images.length > 0) || post.image;
+            postCard.className = `board-post-card glass-card${hasImages ? '' : ' no-image-card'}`;
 
             const dateStr = new Date(post.date).toLocaleDateString('ko-KR', {
                 year: 'numeric',
@@ -1171,8 +1216,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 day: '2-digit'
             });
 
-            const imgHeaderHTML = post.image 
-                ? `<div class="post-img-header"><img src="${post.image}" alt="게시글 대표 사진"></div>`
+            const firstImg = post.images && post.images.length > 0 ? post.images[0] : post.image;
+            const multiBadgeHTML = post.images && post.images.length > 1
+                ? `<div class="board-multi-badge"><i class="fa-regular fa-images"></i> +${post.images.length}장</div>`
+                : '';
+
+            const imgHeaderHTML = firstImg 
+                ? `<div class="post-img-header">${multiBadgeHTML}<img src="${firstImg}" alt="게시글 대표 사진"></div>`
                 : `<div class="post-img-header"><div class="post-no-img"><i class="fa-regular fa-image"></i></div></div>`;
 
             const isOwner = currentUserInfo && (post.uid === currentUserInfo.uid || (!post.uid && post.author === currentUserInfo.nickname));
@@ -1201,6 +1251,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${footerHTML}
                 </div>
             `;
+
+            // 대표 이미지 클릭 시 갤러리처럼 라이트박스 롤러 팝업 호출
+            if (firstImg) {
+                postCard.querySelector('.post-img-header').addEventListener('click', () => {
+                    const sliderImagesList = post.images && post.images.length > 0 ? post.images : [firstImg];
+                    openLightboxSlider(sliderImagesList, post.title);
+                });
+            }
+
             boardPostsGrid.appendChild(postCard);
         });
 
@@ -1242,9 +1301,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const cancelBtn = document.getElementById('board-edit-cancel-btn');
         if (cancelBtn) cancelBtn.remove();
         
-        boardImgPreview.style.display = 'none';
-        boardImgPreview.innerHTML = '';
-        compressedImageBase64 = '';
+        boardImgPreviews.innerHTML = '';
+        compressedImageBase64 = [];
     }
 
     function startEditBoardPost(id) {
@@ -1265,15 +1323,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     boardContent.value = post.content || '';
                     document.getElementById('board-is-private').checked = post.isPrivate !== false;
                     
-                    if (post.image) {
-                        compressedImageBase64 = post.image;
-                        boardImgPreview.innerHTML = `<img src="${compressedImageBase64}" alt="업로드 이미지 미리보기">`;
-                        boardImgPreview.style.display = 'block';
-                    } else {
-                        compressedImageBase64 = '';
-                        boardImgPreview.style.display = 'none';
-                        boardImgPreview.innerHTML = '';
-                    }
+                    boardImgPreviews.innerHTML = '';
+                    // 기존 images 배열이 있거나 단일 image 필드가 있는 경우 병합 수집
+                    compressedImageBase64 = post.images || (post.image ? [post.image] : []);
+                    
+                    compressedImageBase64.forEach((base64Str, index) => {
+                        const previewItem = document.createElement('div');
+                        previewItem.className = 'gallery-preview-item';
+                        previewItem.innerHTML = `
+                            <img src="${base64Str}" alt="미리보기">
+                            <button type="button" class="del-btn" data-index="${index}">&times;</button>
+                        `;
+
+                        previewItem.querySelector('.del-btn').addEventListener('click', (ev) => {
+                            ev.stopPropagation();
+                            previewItem.remove();
+                            compressedImageBase64.splice(index, 1);
+                        });
+                        boardImgPreviews.appendChild(previewItem);
+                    });
                     
                     const formTitle = boardForm.parentNode.querySelector('h3');
                     if (formTitle) formTitle.innerHTML = '이야기 수정하기 ✏️';
@@ -1316,7 +1384,8 @@ document.addEventListener('DOMContentLoaded', () => {
             db.collection('board_posts').doc(editId).update({
                 title,
                 content,
-                image: compressedImageBase64,
+                image: compressedImageBase64[0] || '', // 하위 호환성용 첫 사진
+                images: compressedImageBase64, // 다중 이미지 배열 필드
                 isPrivate: isPrivate
             }).then(() => {
                 resetBoardForm();
@@ -1330,7 +1399,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 role,
                 title,
                 content,
-                image: compressedImageBase64,
+                image: compressedImageBase64[0] || '', // 하위 호환성용 첫 사진
+                images: compressedImageBase64, // 다중 이미지 배열 필드
                 date: new Date().getTime(),
                 uid: currentUserInfo.uid,
                 isPrivate: isPrivate
@@ -2164,7 +2234,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 슬라이더 수동 제어 버튼
+    // 슬라이더 수동 제어 버튼 및 모바일 터치 제스처 연동
     if (heroPrevBtn && heroNextBtn) {
         heroPrevBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -2176,6 +2246,29 @@ document.addEventListener('DOMContentLoaded', () => {
             nextSlide();
             resetHeroSliderTimer();
         });
+        
+        // 메인 이미지 슬라이더 컨테이너 터치 제스처 장착
+        const heroSliderContainer = document.querySelector('.hero-slider-container');
+        if (heroSliderContainer) {
+            let heroTouchStartX = 0;
+            heroSliderContainer.addEventListener('touchstart', (e) => {
+                heroTouchStartX = e.changedTouches[0].screenX;
+            }, { passive: true });
+
+            heroSliderContainer.addEventListener('touchend', (e) => {
+                const touchEndX = e.changedTouches[0].screenX;
+                const diffX = heroTouchStartX - touchEndX;
+                if (heroImages.length <= 1) return;
+
+                if (diffX > 50) {
+                    nextSlide();
+                    resetHeroSliderTimer();
+                } else if (diffX < -50) {
+                    prevSlide();
+                    resetHeroSliderTimer();
+                }
+            }, { passive: true });
+        }
     }
 
     // 배경 사진 관리 모달창 기능

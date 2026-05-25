@@ -1140,7 +1140,7 @@ body.light-theme .event-del-btn {
 }
 
 /* 여러 장 있는 경우 나타낼 앨범 배지 */
-.gallery-multi-badge {
+.gallery-multi-badge, .board-multi-badge {
     position: absolute;
     top: 15px;
     right: 15px;
@@ -1384,6 +1384,7 @@ body.light-theme .board-post-card.no-image-card {
     background: rgba(108, 92, 231, 0.1);
     position: relative;
     transition: var(--transition-smooth);
+    cursor: pointer;
 }
 
 .board-post-card.no-image-card .post-img-header {
