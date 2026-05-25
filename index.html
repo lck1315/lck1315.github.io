@@ -24,7 +24,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=1.0.43">
+    <link rel="stylesheet" href="style.css?v=1.0.44">
 </head>
 <body class="dark-theme">
     <!-- 스크롤 진행 바 -->
@@ -542,30 +542,36 @@
                         <div id="wordbook-form">
                             <div class="form-group">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                    <label for="device-ip" style="margin: 0;"><i class="fa-solid fa-wifi"></i> 기기 IP 주소</label>
+                                    <label for="device-ip" style="margin: 0;"><i class="fa-solid fa-link"></i> 기기 IP 주소 (기존 연결 시)</label>
                                     <span id="connection-status-badge" style="font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 12px; background: rgba(128, 128, 128, 0.2); color: var(--text-muted);"><i class="fa-solid fa-circle-question"></i> 대기중</span>
                                 </div>
-                                <div style="display: flex; gap: 8px;">
-                                    <input type="text" id="device-ip" placeholder="예: 192.168.0.100" style="flex: 1; padding: 0.8rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; color: var(--text-color);">
-                                    <button onclick="connectDevice()" class="btn btn-primary" style="white-space: nowrap;"><i class="fa-solid fa-link"></i> 기기 연결</button>
-                                    <button onclick="openWifiScanner()" class="btn" style="white-space: nowrap; padding: 0 1rem; border-radius: 12px; font-weight: 700; background: rgba(56, 189, 248, 0.2); color: var(--primary-color); border: 1px solid var(--primary-color); cursor: pointer;"><i class="fa-solid fa-wifi"></i> 변경</button>
+                                <div style="display: flex; gap: 8px; margin-bottom: 1.5rem;">
+                                    <input type="text" id="device-ip" placeholder="예: 192.168.0.100 (또는 비워두세요)" style="flex: 1; padding: 0.8rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; color: var(--text-color);">
+                                    <button onclick="connectDevice()" class="btn btn-primary" style="white-space: nowrap; padding: 0 1.2rem;"><i class="fa-solid fa-link"></i> 연결</button>
                                 </div>
-                                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px;">M5Stick 기기의 WiFi Web 화면에 표시된 IP를 입력 후 연결을 누르세요.</p>
+                                
+                                <!-- IP 입력 없이 바로 와이파이 검색/설정할 수 있는 전용 패널 -->
+                                <div style="background: rgba(56, 189, 248, 0.08); border: 1px dashed rgba(56, 189, 248, 0.4); border-radius: 12px; padding: 1rem; text-align: center;">
+                                    <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--primary-color); margin-bottom: 0.5rem;"><i class="fa-solid fa-wifi"></i> 기기 와이파이 연결 (초기 설정)</h4>
+                                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">기기와 처음 연결하거나 새 와이파이로 변경하시나요?<br>IP 주소를 몰라도 아래 버튼을 눌러 주변 와이파이를 검색할 수 있습니다.</p>
+                                    <button onclick="openWifiScanner()" class="btn btn-secondary w-100" style="padding: 0.8rem; font-weight: 700;"><i class="fa-solid fa-magnifying-glass"></i> 주변 와이파이 목록 확인하기</button>
+                                </div>
 
                                 <!-- 와이파이 스캐너 패널 (기본 숨김) -->
-                                <div id="wifi-scanner-panel" style="display: none; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 12px; margin-top: 1rem; margin-bottom: 1rem; font-size: 0.9rem; border: 1px solid var(--primary-color);">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                        <h5 style="margin: 0; color: var(--primary-color); font-size: 1rem;"><i class="fa-solid fa-wifi"></i> 기기 와이파이 변경</h5>
-                                        <button onclick="closeWifiScanner()" style="background: none; border: none; color: var(--text-muted); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+                                <div id="wifi-scanner-panel" style="display: none; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 12px; margin-top: 1rem; font-size: 0.9rem; border: 1px solid var(--primary-color);">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                        <h5 style="margin: 0; color: var(--primary-color); font-size: 1rem;"><i class="fa-solid fa-tower-broadcast"></i> 와이파이 검색 결과</h5>
+                                        <button onclick="closeWifiScanner()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem;"><i class="fa-solid fa-xmark"></i></button>
                                     </div>
-                                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px;">먼저 위의 IP 입력란에 기기의 현재 IP를 올바르게 적어주신 후 검색 버튼을 눌러주세요!</p>
-                                    <button id="btn-scan-wifi" onclick="scanDeviceWifi()" class="btn btn-secondary w-100" style="padding: 0.6rem; margin-bottom: 10px;"><i class="fa-solid fa-magnifying-glass"></i> 주변 와이파이 검색</button>
-                                    <div id="wifi-scan-loader" style="display: none; text-align: center; margin-bottom: 10px; color: var(--primary-color);"><i class="fa-solid fa-spinner fa-spin"></i> 검색 중... (수 초 소요)</div>
-                                    <ul id="device-network-list" style="list-style: none; padding: 0; margin: 0; max-height: 150px; overflow-y: auto; background: var(--input-bg); border-radius: 8px; margin-bottom: 10px;"></ul>
-                                    <div id="wifi-connect-form" style="display: none; flex-direction: column; gap: 8px;">
-                                        <input type="text" id="target-ssid" readonly style="padding: 0.6rem; border-radius: 8px; border: 1px solid var(--input-border); background: rgba(0,0,0,0.3); color: white;">
-                                        <input type="password" id="target-password" placeholder="선택한 와이파이 비밀번호 입력" style="padding: 0.6rem; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: white;">
-                                        <button onclick="connectDeviceWifi()" class="btn btn-primary w-100" style="padding: 0.6rem;"><i class="fa-solid fa-plug"></i> 기기에 저장 및 재시작</button>
+                                    <button id="btn-scan-wifi" onclick="scanDeviceWifi()" class="btn btn-primary w-100" style="padding: 0.8rem; margin-bottom: 12px; font-weight: 700;"><i class="fa-solid fa-rotate"></i> 와이파이 다시 검색</button>
+                                    <div id="wifi-scan-loader" style="display: none; text-align: center; margin-bottom: 10px; color: var(--primary-color); padding: 1rem 0;"><i class="fa-solid fa-spinner fa-spin fa-2x"></i><p style="margin-top: 10px; font-size: 0.85rem;">기기가 주변 와이파이를 스캔하고 있습니다...<br>(약 3~5초 소요)</p></div>
+                                    <ul id="device-network-list" style="list-style: none; padding: 0; margin: 0; max-height: 180px; overflow-y: auto; background: var(--input-bg); border-radius: 8px; margin-bottom: 10px;"></ul>
+                                    <div id="wifi-connect-form" style="display: none; flex-direction: column; gap: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
+                                        <label style="font-size: 0.8rem; color: var(--text-muted);"><i class="fa-solid fa-network-wired"></i> 선택된 와이파이</label>
+                                        <input type="text" id="target-ssid" readonly style="padding: 0.8rem; border-radius: 8px; border: 1px solid var(--input-border); background: rgba(0,0,0,0.3); color: white; font-weight: 700;">
+                                        <label style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;"><i class="fa-solid fa-lock"></i> 비밀번호</label>
+                                        <input type="password" id="target-password" placeholder="비밀번호를 정확히 입력하세요" style="padding: 0.8rem; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: white;">
+                                        <button onclick="connectDeviceWifi()" class="btn btn-primary w-100" style="padding: 0.8rem; margin-top: 8px; background: var(--accent-gradient); border: none;"><i class="fa-solid fa-paper-plane"></i> 이 와이파이로 연결하기</button>
                                     </div>
                                 </div>
                             </div>
@@ -939,6 +945,7 @@
         // 와이파이 스캐너 제어
         function openWifiScanner() {
             document.getElementById('wifi-scanner-panel').style.display = 'block';
+            scanDeviceWifi(); // 패널을 열자마자 자동으로 주변 와이파이 검색 시작
         }
         function closeWifiScanner() {
             document.getElementById('wifi-scanner-panel').style.display = 'none';

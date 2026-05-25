@@ -605,7 +605,7 @@ body.light-theme .glass-frame {
 /* 6. 가족 카드 3D Flip */
 .family-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 2rem;
     width: 100%;
 }
@@ -759,6 +759,7 @@ body.light-theme .glass-frame {
     margin: 0 auto;
     padding: 2.5rem;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .calendar-header {
@@ -799,7 +800,7 @@ body.light-theme .glass-frame {
 
 .calendar-weekdays {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     text-align: center;
     font-weight: 700;
     margin-bottom: 1rem;
@@ -817,12 +818,12 @@ body.light-theme .glass-frame {
 
 .calendar-grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 8px;
 }
 
 .calendar-day {
-    aspect-ratio: 1 / 1;
+    min-height: 80px;
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid var(--card-border);
