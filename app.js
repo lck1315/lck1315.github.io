@@ -2906,5 +2906,14 @@ function initCardSliders(container) {
         });
     }
 
+    // 페이지 로딩 시 날짜 입력칸을 오늘 날짜로 기본 세팅
+    const initToday = new Date();
+    const initYyyy = initToday.getFullYear();
+    const initMm = String(initToday.getMonth() + 1).padStart(2, '0');
+    const initDd = String(initToday.getDate()).padStart(2, '0');
+    const todayStr = `${initYyyy}-${initMm}-${initDd}`;
+    if (document.getElementById('gallery-date')) document.getElementById('gallery-date').value = todayStr;
+    if (document.getElementById('board-date')) document.getElementById('board-date').value = todayStr;
+
     initRealtimeDbListeners();
 });
