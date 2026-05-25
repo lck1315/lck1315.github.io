@@ -922,10 +922,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Firestore 문서 크기 제한 (약 1MB) 사전 체크
-            const totalSize = compressedGalleryImages.reduce((sum, str) => sum + str.length, 0);
-            if (totalSize > 900000) {
-                alert(`사진 총 용량이 너무 큽니다! 📦\n현재 ${compressedGalleryImages.length}장 / 약 ${Math.round(totalSize / 1024)}KB\n사진 수를 줄이거나 작은 사진을 사용해주세요.`);
+            // 개별 사진 용량 사전 체크 (사진 1장당 약 900KB 이하로 제한)
+            const oversizedImages = compressedGalleryImages.filter(str => str.length > 900000);
+            if (oversizedImages.length > 0) {
+                alert(`일부 사진의 용량이 너무 큽니다! 📦\n더 작게 압축된 사진을 사용해주세요.`);
                 return;
             }
 
@@ -940,7 +940,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 title,
                 desc,
                 category,
-                images: compressedGalleryImages, // 압축된 다중 base64 이미지 배열
                 author: currentUserInfo.nickname,
                 uid: currentUserInfo.uid,
                 isPrivate: isPrivate
@@ -949,16 +948,33 @@ document.addEventListener('DOMContentLoaded', () => {
             const editId = galleryForm.getAttribute('data-edit-id');
             if (editId) {
                 // 수정
-                db.collection('gallery_posts').doc(editId).update(newAlbum).then(() => {
-                    resetGalleryForm();
-                    alert("소중한 추억 앨범이 수정되었습니다! ✏️");
+                db.collection('gallery_posts').doc(editId).update(newAlbum).then(async () => {
+                    try {
+                        // 기존 이미지들 일괄 삭제
+                        const oldImagesSnapshot = await db.collection('gallery_images').where('postId', '==', editId).get();
+                        const deletePromises = [];
+                        oldImagesSnapshot.forEach(doc => deletePromises.push(doc.ref.delete()));
+                        await Promise.all(deletePromises);
+
+                        // 새 이미지 분할 저장
+                        for (let i = 0; i < compressedGalleryImages.length; i++) {
+                            await db.collection('gallery_images').add({
+                                postId: editId,
+                                base64: compressedGalleryImages[i],
+                                index: i,
+                                date: new Date().getTime() + i
+                            });
+                        }
+
+                        resetGalleryForm();
+                        alert("소중한 추억 앨범이 성공적으로 수정되었습니다! ✏️");
+                    } catch (err) {
+                        console.error("이미지 업데이트 에러:", err);
+                        alert("사진 저장 중 오류가 발생했습니다. 다시 시도해주세요.");
+                    }
                 }).catch(err => {
                     console.error("갤러리 수정 에러:", err);
-                    if (err.message && err.message.includes('exceeds the maximum')) {
-                        alert("사진 용량이 너무 커서 저장에 실패했습니다. 📦\n사진 수를 줄여주세요!");
-                    } else {
-                        alert("갤러리 수정 실패! ⚠️ " + err.message);
-                    }
+                    alert("갤러리 수정 실패! ⚠️ " + err.message);
                 }).finally(() => {
                     if (submitBtn) {
                         submitBtn.disabled = false;
@@ -968,18 +984,29 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 // 신규 등록
                 newAlbum.date = new Date().getTime();
-                db.collection('gallery_posts').add(newAlbum).then(() => {
-                    galleryForm.reset();
-                    galleryImgPreviews.innerHTML = '';
-                    compressedGalleryImages = [];
-                    alert("소중한 추억 앨범이 등록되었습니다! ✈️");
+                db.collection('gallery_posts').add(newAlbum).then(async (docRef) => {
+                    const postId = docRef.id;
+                    try {
+                        // 새 이미지 분할 저장
+                        for (let i = 0; i < compressedGalleryImages.length; i++) {
+                            await db.collection('gallery_images').add({
+                                postId: postId,
+                                base64: compressedGalleryImages[i],
+                                index: i,
+                                date: new Date().getTime() + i
+                            });
+                        }
+                        galleryForm.reset();
+                        galleryImgPreviews.innerHTML = '';
+                        compressedGalleryImages = [];
+                        alert("소중한 추억 앨범이 성공적으로 등록되었습니다! ✈️");
+                    } catch (err) {
+                        console.error("이미지 저장 에러:", err);
+                        alert("사진 저장 중 오류가 발생했습니다. 앨범을 삭제 후 다시 시도해주세요.");
+                    }
                 }).catch(err => {
                     console.error("갤러리 저장 에러:", err);
-                    if (err.message && err.message.includes('exceeds the maximum')) {
-                        alert("사진 용량이 너무 커서 저장에 실패했습니다. 📦\n사진 수를 줄여주세요!");
-                    } else {
-                        alert("갤러리 저장 실패! ⚠️ " + err.message);
-                    }
+                    alert("갤러리 저장 실패! ⚠️ " + err.message);
                 }).finally(() => {
                     if (submitBtn) {
                         submitBtn.disabled = false;
@@ -1014,7 +1041,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!checkAuth()) return;
         
         db.collection('gallery_posts').doc(id).get()
-            .then(doc => {
+            .then(async doc => {
                 if (doc.exists) {
                     const post = doc.data();
                     const isOwner = currentUserInfo && (post.uid === currentUserInfo.uid);
@@ -1030,7 +1057,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('gallery-is-private').checked = post.isPrivate !== false;
                     
                     galleryImgPreviews.innerHTML = '';
-                    compressedGalleryImages = post.images ? [...post.images] : [];
+                    
+                    try {
+                        const imagesSnapshot = await db.collection('gallery_images').where('postId', '==', id).orderBy('index', 'asc').get();
+                        let postImages = [];
+                        imagesSnapshot.forEach(imgDoc => postImages.push(imgDoc.data().base64));
+                        
+                        if (postImages.length === 0 && post.images) {
+                            postImages = [...post.images];
+                        }
+                        compressedGalleryImages = postImages;
+                    } catch (err) {
+                        console.error("수정 이미지 로드 에러:", err);
+                        compressedGalleryImages = post.images ? [...post.images] : [];
+                    }
                     
                     compressedGalleryImages.forEach((base64Str, index) => {
                         const previewItem = document.createElement('div');
@@ -1075,21 +1115,39 @@ document.addEventListener('DOMContentLoaded', () => {
     // 기본 정적 앨범 2개 삭제됨
     const defaultGalleryPosts = [];
 
+    let galleryPostsList = [];
+    let galleryImagesList = [];
     let galleryPosts = [];
+
     function initGalleryListener() {
         db.collection('gallery_posts').orderBy('date', 'desc').onSnapshot(snapshot => {
             const dbPosts = [];
             snapshot.forEach(doc => {
-                dbPosts.push({
-                    id: doc.id,
-                    ...doc.data()
-                });
+                dbPosts.push({ id: doc.id, ...doc.data() });
             });
-
-            // 기본 로컬 이미지 병합 안함
-            galleryPosts = [...dbPosts];
-            renderGallery();
+            galleryPostsList = dbPosts;
+            updateGalleryPosts();
         }, err => console.error("갤러리 로드 에러:", err));
+
+        db.collection('gallery_images').orderBy('date', 'desc').onSnapshot(snapshot => {
+            const dbImages = [];
+            snapshot.forEach(doc => {
+                dbImages.push({ id: doc.id, ...doc.data() });
+            });
+            galleryImagesList = dbImages;
+            updateGalleryPosts();
+        }, err => console.error("갤러리 이미지 로드 에러:", err));
+    }
+
+    function updateGalleryPosts() {
+        galleryPosts = galleryPostsList.map(post => {
+            const postImages = galleryImagesList
+                .filter(img => img.postId === post.id)
+                .sort((a, b) => a.index - b.index)
+                .map(img => img.base64);
+            return { ...post, images: postImages.length > 0 ? postImages : (post.images || []) };
+        });
+        renderGallery();
     }
 
     // 갤러리 카드 그리기
@@ -1179,6 +1237,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         ev.stopPropagation();
                         if (confirm("이 앨범을 삭제하시겠습니까?")) {
                             db.collection('gallery_posts').doc(post.id).delete()
+                                .then(async () => {
+                                    try {
+                                        const oldImagesSnapshot = await db.collection('gallery_images').where('postId', '==', post.id).get();
+                                        const deletePromises = [];
+                                        oldImagesSnapshot.forEach(doc => deletePromises.push(doc.ref.delete()));
+                                        await Promise.all(deletePromises);
+                                    } catch (err) {
+                                        console.error("이미지 삭제 에러:", err);
+                                    }
+                                })
                                 .catch(err => console.error("갤러리 삭제 에러:", err));
                         }
                     });
