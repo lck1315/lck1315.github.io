@@ -108,7 +108,7 @@ main {
 
 /* 공통 레이아웃 */
 .container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 0 2rem;
 }
@@ -756,7 +756,6 @@ body.light-theme .glass-frame {
 
 /* 7. 가족 캘린더 */
 .calendar-wrapper {
-    max-width: 850px;
     margin: 0 auto;
     padding: 2.5rem;
     width: 100%;
@@ -1562,7 +1561,6 @@ body.light-theme .board-post-card.no-image-card {
 /* 10. 타임라인 */
 .timeline-container {
     position: relative;
-    max-width: 900px;
     margin: 0 auto;
     padding: 2rem 0;
     width: 100%;
