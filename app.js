@@ -828,8 +828,10 @@ document.addEventListener('DOMContentLoaded', () => {
             galleryProcessingCount = 0;
 
             if (files.length === 0) return;
-            if (files.length > 10) {
-                alert("최대 10장까지 업로드 가능합니다! 📷");
+            // 최대 장수 제한 해제 (이미지 분할 저장 덕분)
+            // 브라우저 멈춤 방지를 위해 한 번에 50장 정도로 넉넉하게 제한을 걸 수도 있지만, 우선 요청대로 해제합니다.
+            if (files.length > 50) {
+                alert("한 번에 너무 많은 사진(50장 초과)을 올리면 기기가 느려질 수 있습니다! 📷\n나누어서 올려주세요.");
                 galleryFiles.value = '';
                 return;
             }
