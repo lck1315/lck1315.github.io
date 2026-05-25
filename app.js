@@ -818,22 +818,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let compressedGalleryImages = []; // 다중 업로드용 압축 이미지 캐시 배열
 
-    // 갤러리 파일 다중 업로드 & 리사이징 압축
+    // 갤러리 파일 다중 업로드 & 리사이징 압축 (Firestore 1MB 제한 대응)
+    let galleryProcessingCount = 0; // 현재 압축 진행 중인 이미지 수
     if (galleryFiles) {
         galleryFiles.addEventListener('change', (e) => {
             const files = Array.from(e.target.files);
             galleryImgPreviews.innerHTML = '';
             compressedGalleryImages = [];
+            galleryProcessingCount = 0;
 
             if (files.length === 0) return;
+            if (files.length > 10) {
+                alert("최대 10장까지 업로드 가능합니다! 📷");
+                galleryFiles.value = '';
+                return;
+            }
 
-            files.forEach((file, index) => {
+            galleryProcessingCount = files.length;
+            // 제출 버튼 비활성화 (압축 완료까지)
+            const submitBtn = galleryForm ? galleryForm.querySelector('button[type="submit"]') : null;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 사진 처리 중... (0/${files.length})`;
+            }
+
+            files.forEach((file) => {
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     const img = new Image();
                     img.onload = function() {
-                        // 여행사진 최적화: 가로 최대 600px, 65% 압축 (용량 극최소화)
-                        const max_width = 600;
+                        // Firestore 문서 크기 제한 대응: 가로 최대 400px, 40% 압축
+                        const max_width = 400;
                         let width = img.width;
                         let height = img.height;
 
@@ -848,25 +863,41 @@ document.addEventListener('DOMContentLoaded', () => {
                         const ctxTemp = canvasTemp.getContext('2d');
                         ctxTemp.drawImage(img, 0, 0, width, height);
 
-                        const base64Str = canvasTemp.toDataURL('image/jpeg', 0.65);
+                        const base64Str = canvasTemp.toDataURL('image/jpeg', 0.40);
                         compressedGalleryImages.push(base64Str);
+                        console.log(`[갤러리] 이미지 압축 완료: ${compressedGalleryImages.length}/${files.length}, 크기: ${Math.round(base64Str.length / 1024)}KB`);
 
                         // 미리보기 썸네일 노출
                         const previewItem = document.createElement('div');
                         previewItem.className = 'gallery-preview-item';
                         previewItem.innerHTML = `
                             <img src="${base64Str}" alt="미리보기">
-                            <button type="button" class="del-btn" data-index="${index}">&times;</button>
+                            <button type="button" class="del-btn">&times;</button>
                         `;
                         
-                        // 미리보기 삭제 버튼 바인딩
+                        // 미리보기 삭제 버튼 바인딩 (base64 참조로 정확히 삭제)
+                        const capturedBase64 = base64Str;
                         previewItem.querySelector('.del-btn').addEventListener('click', (ev) => {
                             ev.stopPropagation();
                             previewItem.remove();
-                            compressedGalleryImages.splice(index, 1);
+                            const idx = compressedGalleryImages.indexOf(capturedBase64);
+                            if (idx > -1) compressedGalleryImages.splice(idx, 1);
                         });
 
                         galleryImgPreviews.appendChild(previewItem);
+
+                        // 모든 이미지 압축 완료 시 버튼 활성화
+                        galleryProcessingCount--;
+                        if (submitBtn) {
+                            if (galleryProcessingCount <= 0) {
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = '추억 등록하기 <i class="fa-solid fa-check"></i>';
+                                const totalSize = compressedGalleryImages.reduce((s, str) => s + str.length, 0);
+                                console.log(`[갤러리] 전체 압축 완료: ${compressedGalleryImages.length}장, 총 ${Math.round(totalSize / 1024)}KB`);
+                            } else {
+                                submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> 사진 처리 중... (${compressedGalleryImages.length}/${files.length})`;
+                            }
+                        }
                     };
                     img.src = event.target.result;
                 };
@@ -891,6 +922,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // Firestore 문서 크기 제한 (약 1MB) 사전 체크
+            const totalSize = compressedGalleryImages.reduce((sum, str) => sum + str.length, 0);
+            if (totalSize > 900000) {
+                alert(`사진 총 용량이 너무 큽니다! 📦\n현재 ${compressedGalleryImages.length}장 / 약 ${Math.round(totalSize / 1024)}KB\n사진 수를 줄이거나 작은 사진을 사용해주세요.`);
+                return;
+            }
+
+            // 저장 중 버튼 비활성화
+            const submitBtn = galleryForm.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...';
+            }
+
             const newAlbum = {
                 title,
                 desc,
@@ -909,7 +954,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert("소중한 추억 앨범이 등록되었습니다! ✈️");
             }).catch(err => {
                 console.error("갤러리 저장 에러:", err);
-                alert("갤러리 저장 실패! ⚠️");
+                if (err.message && err.message.includes('exceeds the maximum')) {
+                    alert("사진 용량이 너무 커서 저장에 실패했습니다. 📦\n사진 수를 줄여주세요!");
+                } else {
+                    alert("갤러리 저장 실패! ⚠️ " + err.message);
+                }
+            }).finally(() => {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '추억 등록하기 <i class="fa-solid fa-check"></i>';
+                }
             });
         });
     }
@@ -981,14 +1035,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const item = document.createElement('div');
             item.className = 'gallery-item glass-card';
             item.setAttribute('data-category', post.category);
-
-            // 첫 번째 대표 사진 설정
-            const firstImg = post.images && post.images.length > 0 ? post.images[0] : './assets/dodo_hero.png';
             
             // 사진이 여러 장일 경우 상단 배지 노출
             const multiBadgeHTML = post.images && post.images.length > 1
                 ? `<div class="gallery-multi-badge"><i class="fa-regular fa-images"></i> +${post.images.length}장</div>`
                 : '';
+
+            // 첫 번째 대표 사진 설정
+            const firstImg = post.images && post.images.length > 0 ? post.images[0] : './assets/dodo_hero.png';
 
             // 삭제 버튼 (본인 글만 노출)
             const isOwner = currentUserInfo && (post.uid === currentUserInfo.uid);
@@ -999,10 +1053,17 @@ document.addEventListener('DOMContentLoaded', () => {
             item.innerHTML = `
                 <div class="gallery-img-container" style="position: relative;">
                     ${multiBadgeHTML}
-                    <img src="${firstImg}" alt="${post.title}">
-                    <div class="gallery-overlay">
-                        <i class="fa-solid fa-magnifying-glass-plus"></i>
-                    </div>
+                    ${post.images && post.images.length > 1 ? `
+                    <div class="card-image-slider">
+                        <div class="card-image-track">
+                            ${post.images.map(src => `<div class="card-image-slide"><img src="${src}" alt="${post.title}"></div>`).join('')}
+                        </div>
+                        <button class="card-slider-prev">&#x2039;</button>
+                        <button class="card-slider-next">&#x203A;</button>
+                        <div class="card-slider-dots">
+                            ${post.images.map((_, i) => `<span class="card-slider-dot${i === 0 ? ' active' : ''}"></span>`).join('')}
+                        </div>
+                    </div>` : `<img src="${firstImg}" alt="${post.title}">`}
                 </div>
                 <div class="gallery-content" style="position: relative; padding-bottom: 3.5rem;">
                     <span class="gallery-tag">${post.category === 'travel' ? '가족 여행 ✈️' : '소소한 일상 ☕'}</span>
@@ -1013,10 +1074,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
 
-            // 클릭 시 슬라이더 라이트박스 연동
-            item.querySelector('.gallery-img-container').addEventListener('click', () => {
-                openLightboxSlider(post.images || [], post.title);
-            });
+            // 라이트박스 사용 안 함 – 슬라이더만 이용
+            // (클릭 이벤트 제거)
 
             // 삭제 이벤트 연결
             if (isOwner) {
@@ -1031,6 +1090,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             galleryGrid.appendChild(item);
         });
+        // 슬라이더 초기화 호출
+        initCardSliders(galleryGrid);
 
         // 갤러리 필터 작동 동기화
         const activeFilterBtn = document.querySelector('.filter-btn.active');
@@ -1289,9 +1350,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? `<div class="board-multi-badge"><i class="fa-regular fa-images"></i> +${post.images.length}장</div>`
                 : '';
 
-            const imgHeaderHTML = firstImg 
-                ? `<div class="post-img-header">${multiBadgeHTML}<img src="${firstImg}" alt="게시글 대표 사진"></div>`
-                : `<div class="post-img-header"><div class="post-no-img"><i class="fa-regular fa-image"></i></div></div>`;
+            const hasMultiple = post.images && post.images.length > 1;
+            const sliderHTML = hasMultiple ? `
+                <div class="card-image-slider">
+                    <div class="card-image-track">
+                        ${post.images.map(src => `<div class="card-image-slide"><img src="${src}" alt="${post.title}"></div>`).join('')}
+                    </div>
+                    <button class="card-slider-prev"><i class="fa-solid fa-chevron-left"></i></button>
+                    <button class="card-slider-next"><i class="fa-solid fa-chevron-right"></i></button>
+                    <div class="card-slider-dots">
+                        ${post.images.map(() => `<span class="card-slider-dot"></span>`).join('')}
+                    </div>
+                </div>` : `<img src="${firstImg}" alt="게시글 대표 사진" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">`;
+            const imgHeaderHTML = `<div class="post-img-header">${multiBadgeHTML}${sliderHTML}</div>`;
 
             const isOwner = currentUserInfo && (post.uid === currentUserInfo.uid || (!post.uid && post.author === currentUserInfo.nickname));
             const footerHTML = isOwner 
@@ -1320,16 +1391,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
 
-            // 대표 이미지 클릭 시 갤러리처럼 라이트박스 롤러 팝업 호출
-            if (firstImg) {
-                postCard.querySelector('.post-img-header').addEventListener('click', () => {
-                    const sliderImagesList = post.images && post.images.length > 0 ? post.images : [firstImg];
-                    openLightboxSlider(sliderImagesList, post.title);
-                });
-            }
+            // 라이트박스 호출 제거 – 슬라이더만 사용
+            // (클릭 이벤트 비활성화)
 
             boardPostsGrid.appendChild(postCard);
         });
+        // 슬라이더 초기화 호출
+        initCardSliders(boardPostsGrid);
 
         boardPostsGrid.querySelectorAll('.board-post-del-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -1345,6 +1413,98 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
+
+// 이미지 슬라이더 초기화 함수
+function initCardSliders(container) {
+    const sliders = container.querySelectorAll('.card-image-slider');
+    sliders.forEach(slider => {
+        const track = slider.querySelector('.card-image-track');
+        const slides = slider.querySelectorAll('.card-image-slide');
+        const prevBtn = slider.querySelector('.card-slider-prev');
+        const nextBtn = slider.querySelector('.card-slider-next');
+        const dots = slider.querySelectorAll('.card-slider-dot');
+        let current = 0;
+        const total = slides.length;
+        if (total === 0) return;
+
+        const goTo = (idx) => {
+            current = idx;
+            track.style.transform = `translateX(-${current * 100}%)`;
+            dots.forEach((dot, i) => dot.classList.toggle('active', i === current));
+        };
+
+        if (prevBtn) prevBtn.addEventListener('click', e => { e.stopPropagation(); goTo((current - 1 + total) % total); });
+        if (nextBtn) nextBtn.addEventListener('click', e => { e.stopPropagation(); goTo((current + 1) % total); });
+        dots.forEach((dot, i) => {
+            dot.addEventListener('click', e => { e.stopPropagation(); goTo(i); });
+        });
+
+        // 터치 스와이프 (모바일)
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let isDragging = false;
+        let startTime = 0;
+
+        slider.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            isDragging = true;
+            startTime = Date.now();
+            track.style.transition = 'none';
+        }, { passive: true });
+
+        slider.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            const dx = e.touches[0].clientX - touchStartX;
+            const dy = e.touches[0].clientY - touchStartY;
+            // 가로 이동이 세로보다 크면 수평 스크롤로 판단
+            if (Math.abs(dx) > Math.abs(dy)) {
+                e.preventDefault();
+                const offset = -current * 100 + (dx / slider.offsetWidth) * 100;
+                track.style.transform = `translateX(${offset}%)`;
+            }
+        }, { passive: false });
+
+        slider.addEventListener('touchend', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            track.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+            const dx = e.changedTouches[0].clientX - touchStartX;
+            const elapsed = Date.now() - startTime;
+            // 빠른 스와이프 또는 30% 이상 이동 시 슬라이드 전환
+            const threshold = elapsed < 250 ? 30 : slider.offsetWidth * 0.3;
+            if (Math.abs(dx) > threshold) {
+                if (dx > 0 && current > 0) {
+                    goTo(current - 1);
+                } else if (dx < 0 && current < total - 1) {
+                    goTo(current + 1);
+                } else {
+                    goTo(current); // 경계에서 되돌리기
+                }
+            } else {
+                goTo(current); // 원래 위치로 되돌리기
+            }
+        });
+
+        // 마우스 드래그 (데스크톱)
+        let mouseStartX = 0;
+        let mouseDown = false;
+        slider.addEventListener('mousedown', e => { mouseStartX = e.clientX; mouseDown = true; e.preventDefault(); });
+        slider.addEventListener('mouseup', e => {
+            if (!mouseDown) return;
+            mouseDown = false;
+            const diff = e.clientX - mouseStartX;
+            if (Math.abs(diff) > 40) {
+                if (diff > 0 && current > 0) goTo(current - 1);
+                else if (diff < 0 && current < total - 1) goTo(current + 1);
+            }
+        });
+        slider.addEventListener('mouseleave', () => { mouseDown = false; });
+
+        // 초기 상태
+        goTo(0);
+    });
+}
 
     const boardFilterBtns = document.querySelectorAll('.board-filter-btn');
     boardFilterBtns.forEach(btn => {
