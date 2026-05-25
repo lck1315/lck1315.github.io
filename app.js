@@ -1220,8 +1220,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
 
-            // 라이트박스 사용 안 함 – 슬라이더만 이용
-            // (클릭 이벤트 제거)
+            // 이미지 영역 클릭 시 전체화면 라이트박스 열기
+            const imgContainer = item.querySelector('.gallery-img-container');
+            if (imgContainer) {
+                imgContainer.addEventListener('click', (e) => {
+                    // 슬라이더 좌우 버튼이나 하단 인디케이터 클릭 시 라이트박스가 열리지 않도록 방지
+                    if (e.target.closest('.card-slider-prev') || e.target.closest('.card-slider-next') || e.target.closest('.card-slider-dots')) return;
+                    
+                    const imagesToView = post.images && post.images.length > 0 ? post.images : [firstImg];
+                    openLightboxSlider(imagesToView, post.title);
+                });
+            }
 
             // 액션 이벤트 연결
             if (isOwner) {
