@@ -24,7 +24,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=1.0.38">
+    <link rel="stylesheet" href="style.css?v=1.0.39">
 </head>
 <body class="dark-theme">
     <!-- 스크롤 진행 바 -->
@@ -565,6 +565,10 @@
                                         <span style="color: var(--text-muted);">현재 기기 IP</span>
                                         <span id="detail-ip" style="font-weight: 600;">-</span>
                                     </div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                        <span style="color: var(--text-muted);">기기 연결 와이파이</span>
+                                        <span id="detail-ssid" style="font-weight: 600; color: var(--primary-color);">-</span>
+                                    </div>
                                     <div style="display: flex; justify-content: space-between;">
                                         <span style="color: var(--text-muted);">등록된 단어 수</span>
                                         <span id="detail-word-count" style="font-weight: 600;">0개</span>
@@ -760,7 +764,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
-    <script src="app.js?v=1.0.38"></script>
+    <script src="app.js?v=1.0.39"></script>
 
     <!-- 단어장 연동 스크립트 -->
     <script>
@@ -820,6 +824,13 @@
                 updateConnectionBadge(true); // 연결 성공 표시
                 document.getElementById('device-settings-panel').style.display = 'block'; // 패널 보이기
                 document.getElementById('detail-ip').innerText = document.getElementById('device-ip').value.trim();
+                
+                if (data.ssid) {
+                    document.getElementById('detail-ssid').innerText = data.ssid;
+                } else {
+                    document.getElementById('detail-ssid').innerText = "알 수 없음";
+                }
+                
                 document.getElementById('detail-word-count').innerText = data.words.length + '개';
                 
                 if(data.words.length === 0) {
