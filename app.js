@@ -257,6 +257,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // 로그인 세션 상태 변경 시 UI 컴포넌트 전체 재생성 헬퍼
+    function refreshUIComponents() {
+        if (typeof renderGallery === 'function') renderGallery();
+        if (typeof renderBoardPosts === 'function') renderBoardPosts();
+        if (typeof renderMessages === 'function') renderMessages();
+        if (typeof renderCalendar === 'function') renderCalendar();
+        if (typeof updateAutoTimeline === 'function') updateAutoTimeline();
+    }
+
     // 인증 상태 감시자
     auth.onAuthStateChanged((user) => {
         const headerUserName = document.getElementById('header-user-name');
@@ -304,6 +313,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     // 메인 이미지 수정 배지 활성화
                     const heroEditBadge = document.getElementById('hero-img-edit-trigger');
                     if (heroEditBadge) heroEditBadge.classList.remove('hidden');
+
+                    // UI 리스트들 즉시 새로고침
+                    refreshUIComponents();
                 })
                 .catch((err) => {
                     console.error("사용자 정보 로드 오류:", err);
@@ -325,6 +337,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (cachedFamilySnapshot) {
                         renderFamilyCards(cachedFamilySnapshot);
                     }
+
+                    // UI 리스트들 즉시 새로고침
+                    refreshUIComponents();
                 });
         } else {
             currentUserInfo = null;
@@ -343,6 +358,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // 메인 이미지 수정 배지 비활성화
             const heroEditBadge = document.getElementById('hero-img-edit-trigger');
             if (heroEditBadge) heroEditBadge.classList.add('hidden');
+
+            // UI 리스트들 즉시 새로고침 (비로그인 제한 모드로 전환)
+            refreshUIComponents();
         }
     });
 
