@@ -24,7 +24,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=1.0.39">
+    <link rel="stylesheet" href="style.css?v=1.0.40">
 </head>
 <body class="dark-theme">
     <!-- 스크롤 진행 바 -->
@@ -47,7 +47,7 @@
                 <a href="#board" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Board</a>
                 <a href="#timeline" class="nav-item"><i class="fa-solid fa-timeline"></i> Timeline</a>
                 <a href="#guestbook" class="nav-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
-                <a href="#wordbook" class="nav-item"><i class="fa-solid fa-spell-check"></i> Wordbook</a>
+                <a href="#wordbook" class="nav-item auth-only-wordbook hidden"><i class="fa-solid fa-spell-check"></i> Wordbook</a>
             </nav>
             
             <div class="header-actions" style="display: flex; gap: 10px; align-items: center;">
@@ -98,7 +98,7 @@
         <a href="#board" class="mobile-dropdown-item"><i class="fa-solid fa-clipboard-list"></i> Board</a>
         <a href="#timeline" class="mobile-dropdown-item"><i class="fa-solid fa-timeline"></i> Timeline</a>
         <a href="#guestbook" class="mobile-dropdown-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
-        <a href="#wordbook" class="mobile-dropdown-item"><i class="fa-solid fa-spell-check"></i> Wordbook</a>
+        <a href="#wordbook" class="mobile-dropdown-item auth-only-wordbook hidden"><i class="fa-solid fa-spell-check"></i> Wordbook</a>
     </div>
 
     <!-- 회원가입 & 로그인 인증 모달 컨테이너 -->
@@ -529,7 +529,7 @@
         </section>
 
         <!-- 8. 단어장 연동 섹션 -->
-        <section id="wordbook" class="section">
+        <section id="wordbook" class="section auth-only-wordbook hidden">
             <div class="container">
                 <div class="section-header">
                     <h2 class="section-title">스마트 단어장 관리</h2>
@@ -764,7 +764,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
-    <script src="app.js?v=1.0.39"></script>
+    <script src="app.js?v=1.0.40"></script>
 
     <!-- 단어장 연동 스크립트 -->
     <script>

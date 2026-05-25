@@ -277,6 +277,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (user) {
             toggleUIPanelLocks(true);
+            
+            // 로그인 시 스마트 단어장 관련 요소 노출
+            const wordbookElements = document.querySelectorAll('.auth-only-wordbook');
+            wordbookElements.forEach(el => el.classList.remove('hidden'));
+
             db.collection('users').doc(user.uid).get()
                 .then((doc) => {
                     if (doc.exists) {
@@ -344,6 +349,11 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             currentUserInfo = null;
             toggleUIPanelLocks(false);
+            
+            // 로그아웃 시 스마트 단어장 관련 요소 숨김
+            const wordbookElements = document.querySelectorAll('.auth-only-wordbook');
+            wordbookElements.forEach(el => el.classList.add('hidden'));
+
             headerUserName.textContent = "Login";
             dropdownLoggedOut.classList.remove('hidden');
             dropdownLoggedIn.classList.add('hidden');
