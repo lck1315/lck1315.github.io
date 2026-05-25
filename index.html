@@ -47,6 +47,7 @@
                 <a href="#board" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Board</a>
                 <a href="#timeline" class="nav-item"><i class="fa-solid fa-timeline"></i> Timeline</a>
                 <a href="#guestbook" class="nav-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
+                <a href="#wordbook" class="nav-item"><i class="fa-solid fa-spell-check"></i> Wordbook</a>
             </nav>
             
             <div class="header-actions" style="display: flex; gap: 10px; align-items: center;">
@@ -97,6 +98,7 @@
         <a href="#board" class="mobile-dropdown-item"><i class="fa-solid fa-clipboard-list"></i> Board</a>
         <a href="#timeline" class="mobile-dropdown-item"><i class="fa-solid fa-timeline"></i> Timeline</a>
         <a href="#guestbook" class="mobile-dropdown-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
+        <a href="#wordbook" class="mobile-dropdown-item"><i class="fa-solid fa-spell-check"></i> Wordbook</a>
     </div>
 
     <!-- 회원가입 & 로그인 인증 모달 컨테이너 -->
@@ -525,6 +527,51 @@
                 </div>
             </div>
         </section>
+
+        <!-- 8. 단어장 연동 섹션 -->
+        <section id="wordbook" class="section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">스마트 단어장 관리</h2>
+                    <p class="section-subtitle">M5Stick 기기와 실시간으로 연동되어 와이파이로 단어를 추가하고 삭제할 수 있습니다.</p>
+                </div>
+                <div class="board-wrapper">
+                    <!-- 1) 단어 추가 폼 -->
+                    <div class="board-form-container glass-card">
+                        <h3>새 단어 등록하기</h3>
+                        <div id="wordbook-form">
+                            <div class="form-group">
+                                <label for="device-ip"><i class="fa-solid fa-wifi"></i> 기기 IP 주소</label>
+                                <input type="text" id="device-ip" placeholder="예: 192.168.0.100" style="width: 100%; padding: 0.8rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; color: var(--text-color);">
+                                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px;">M5Stick 기기의 WiFi Web 화면에 표시된 IP를 입력하세요.</p>
+                            </div>
+                            
+                            <div class="form-group" style="margin-top: 1rem;">
+                                <label for="new-word-input"><i class="fa-solid fa-pen"></i> 단어 입력</label>
+                                <input type="text" id="new-word-input" placeholder="추가할 단어를 입력하세요" style="width: 100%; padding: 0.8rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; color: var(--text-color);">
+                            </div>
+                            
+                            <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+                                <button onclick="fetchWords()" class="btn btn-secondary w-100"><i class="fa-solid fa-rotate"></i> 단어 불러오기</button>
+                                <button onclick="addWord()" class="btn btn-primary w-100"><i class="fa-solid fa-plus"></i> 추가하기</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 2) 단어 리스트 -->
+                    <div class="board-list-container">
+                        <div class="board-list-header-split">
+                            <h3>현재 단어 목록 📚</h3>
+                        </div>
+                        <!-- 단어 목록이 표시될 공간 -->
+                        <div id="word-list-container" style="display: flex; flex-direction: column; gap: 10px; margin-top: 1rem; max-height: 400px; overflow-y: auto; padding-right: 10px;">
+                            <div class="no-posts" style="text-align: center; padding: 2rem; background: var(--card-bg); border-radius: 15px; border: 1px solid var(--card-border);">
+                                <p><i class="fa-solid fa-plug"></i> 기기 IP를 입력하고 불러오기 버튼을 눌러주세요.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- 갤러리 라이트박스 모달 (다중 이미지 슬라이더 지원 구조) -->
@@ -669,6 +716,84 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
-    <script src="app.js?v=1.0.33"></script>
+    <script src="app.js?v=1.0.34"></script>
+
+    <!-- 단어장 연동 스크립트 -->
+    <script>
+        function getDeviceUrl() {
+            let ip = document.getElementById('device-ip').value.trim();
+            if(!ip) {
+                alert("M5Stick의 IP 주소를 먼저 입력해주세요!");
+                return null;
+            }
+            if(!ip.startsWith("http://")) ip = "http://" + ip;
+            return ip;
+        }
+        async function fetchWords() {
+            const url = getDeviceUrl();
+            if(!url) return;
+            
+            const container = document.getElementById('word-list-container');
+            container.innerHTML = '<p style="text-align:center; padding:1rem;"><i class="fa-solid fa-spinner fa-spin"></i> 기기에서 데이터를 불러오는 중...</p>';
+            try {
+                const response = await fetch(`${url}/api/words`);
+                const data = await response.json();
+                
+                if(data.words.length === 0) {
+                    container.innerHTML = '<div class="no-posts" style="text-align: center; padding: 2rem; background: var(--card-bg); border-radius: 15px; border: 1px solid var(--card-border);"><p>단어장이 비어있습니다.</p></div>';
+                    return;
+                }
+                container.innerHTML = '';
+                data.words.forEach(item => {
+                    const div = document.createElement('div');
+                    div.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px;";
+                    div.innerHTML = `
+                        <span style="font-size: 1.1rem; font-weight: 600;">${item.word}</span>
+                        <button onclick="deleteWord(${item.index})" class="btn" style="background: rgba(232, 67, 147, 0.2); color: #e84393; border: 1px solid rgba(232, 67, 147, 0.3); padding: 0.4rem 0.8rem; border-radius: 8px;">
+                            <i class="fa-solid fa-trash"></i> 삭제
+                        </button>
+                    `;
+                    container.appendChild(div);
+                });
+            } catch (error) {
+                container.innerHTML = `<div class="no-posts" style="text-align: center; padding: 2rem; background: var(--card-bg); border-radius: 15px; border: 1px solid var(--card-border); color: #e84393;"><p><i class="fa-solid fa-circle-exclamation"></i> 연결 실패! IP 주소가 맞는지, 기기가 WiFi Web 모드인지 확인해주세요.</p></div>`;
+                console.error(error);
+            }
+        }
+        async function addWord() {
+            const url = getDeviceUrl();
+            if(!url) return;
+            
+            const wordInput = document.getElementById('new-word-input');
+            const word = wordInput.value.trim();
+            if(!word) {
+                alert("추가할 단어를 입력해주세요!");
+                return;
+            }
+            try {
+                await fetch(`${url}/api/words`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `word=${encodeURIComponent(word)}`
+                });
+                wordInput.value = ''; // 입력창 비우기
+                fetchWords(); // 목록 새로고침
+            } catch (error) {
+                alert("단어 추가에 실패했습니다. 연결을 확인해주세요.");
+            }
+        }
+        async function deleteWord(index) {
+            const url = getDeviceUrl();
+            if(!url) return;
+            
+            if(!confirm("정말 이 단어를 삭제할까요?")) return;
+            try {
+                await fetch(`${url}/api/words?id=${index}`, { method: 'DELETE' });
+                fetchWords(); // 목록 새로고침
+            } catch (error) {
+                alert("단어 삭제에 실패했습니다.");
+            }
+        }
+    </script>
 </body>
 </html>
