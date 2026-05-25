@@ -472,6 +472,11 @@
                         <div id="guestbook-form-inner">
                             <h3>메시지 작성하기</h3>
                             <form id="guestbook-form">
+                                <!-- 비로그인 시 동적으로 보일 작성자 이름 필드 -->
+                                <div class="form-group" id="guestbook-author-group">
+                                    <label for="guestbook-author-input"><i class="fa-solid fa-signature"></i> 작성자 이름</label>
+                                    <input type="text" id="guestbook-author-input" placeholder="이름이나 호칭 입력 (예: 손님, 삼촌, 홍길동)" style="width: 100%; padding: 0.8rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; color: var(--text-color);">
+                                </div>
                                 <div class="form-group">
                                     <label for="message-input"><i class="fa-solid fa-comment-alt"></i> 메시지</label>
                                     <textarea id="message-input" rows="4" placeholder="가족에게 남기고 싶은 따뜻한 한마디..." required></textarea>
@@ -497,14 +502,6 @@
                                 </div>
                                 <button type="submit" class="btn btn-primary w-100">등록하기 <i class="fa-solid fa-paper-plane"></i></button>
                             </form>
-                        </div>
-
-                        <!-- 방명록 등록 로그인 락 카드 -->
-                        <div id="guestbook-form-lock" class="lock-overlay hidden" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem 1rem; gap: 1.2rem;">
-                            <i class="fa-solid fa-comment-dots" style="font-size: 3rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
-                            <h3 style="font-size: 1.25rem; font-weight: 800; margin: 0;">메시지는 로그인 후 작성 가능합니다 💌</h3>
-                            <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 280px; line-height: 1.5; margin: 0;">따뜻한 축하의 말이나 안부를 남기시려면 가족 로그인을 거쳐야 합니다.</p>
-                            <button class="btn btn-primary btn-lock-login" style="padding: 0.7rem 1.8rem; font-size: 0.85rem;"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
                         </div>
                     </div>
 
@@ -664,6 +661,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
-    <script src="app.js?v=1.0.10"></script>
+    <script src="app.js?v=1.0.11"></script>
 </body>
 </html>

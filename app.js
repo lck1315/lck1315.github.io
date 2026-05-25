@@ -233,23 +233,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const calendarLock = document.getElementById('calendar-lock');
         const boardFormInner = document.getElementById('board-form-inner');
         const boardFormLock = document.getElementById('board-form-lock');
-        const guestbookFormInner = document.getElementById('guestbook-form-inner');
-        const guestbookFormLock = document.getElementById('guestbook-form-lock');
+        const guestbookAuthorGroup = document.getElementById('guestbook-author-group');
+        const guestbookAuthorInput = document.getElementById('guestbook-author-input');
 
         if (isLoggedIn) {
             if (calendarInner) calendarInner.classList.remove('hidden');
             if (calendarLock) calendarLock.classList.add('hidden');
             if (boardFormInner) boardFormInner.classList.remove('hidden');
             if (boardFormLock) boardFormLock.classList.add('hidden');
-            if (guestbookFormInner) guestbookFormInner.classList.remove('hidden');
-            if (guestbookFormLock) guestbookFormLock.classList.add('hidden');
+            if (guestbookAuthorGroup) {
+                guestbookAuthorGroup.classList.add('hidden');
+                guestbookAuthorInput.removeAttribute('required');
+            }
         } else {
             if (calendarInner) calendarInner.classList.add('hidden');
             if (calendarLock) calendarLock.classList.remove('hidden');
             if (boardFormInner) boardFormInner.classList.add('hidden');
             if (boardFormLock) boardFormLock.classList.remove('hidden');
-            if (guestbookFormInner) guestbookFormInner.classList.add('hidden');
-            if (guestbookFormLock) guestbookFormLock.classList.remove('hidden');
+            if (guestbookAuthorGroup) {
+                guestbookAuthorGroup.classList.remove('hidden');
+                guestbookAuthorInput.setAttribute('required', 'true');
+            }
         }
     }
 
@@ -1675,18 +1679,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!guestbookList) return;
         guestbookList.innerHTML = '';
 
-        if (!currentUserInfo) {
-            guestbookList.innerHTML = `
-                <div class="glass-card login-prompt-card" style="width: 100%; text-align: center; padding: 3rem 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.2rem; border: 1px solid var(--card-border); border-radius: 20px;">
-                    <i class="fa-solid fa-comment-medical" style="font-size: 3rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
-                    <h3 style="font-size: 1.2rem; font-weight: 800; margin: 0;">방명록은 로그인 후 이용 가능합니다 💌</h3>
-                    <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 280px; line-height: 1.5; margin: 0;">가족 아지트에 방문하셨나요? 인증 로그인 후 따뜻한 축하의 말이나 메시지를 남겨보세요!</p>
-                    <button class="btn btn-primary" onclick="document.getElementById('auth-menu-btn').click();" style="padding: 0.6rem 1.5rem; font-size:0.85rem;"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
-                </div>
-            `;
-            return;
-        }
-
         if (messages.length === 0) {
             guestbookList.innerHTML = `
                 <div class="no-messages">
@@ -1835,10 +1827,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     guestbookForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        if (!checkAuth()) return;
 
-        const author = currentUserInfo.nickname;
-        const role = currentUserInfo.role;
+        // 로그인 상태면 닉네임을 사용하고, 비로그인이면 입력한 닉네임을 수집
+        const author = currentUserInfo 
+            ? currentUserInfo.nickname 
+            : (document.getElementById('guestbook-author-input').value.trim() || "손님");
+        const role = currentUserInfo 
+            ? currentUserInfo.role 
+            : "손님 👤";
         const message = messageInput.value.trim();
         const selectedSticker = document.querySelector('input[name="sticker"]:checked').value;
 
@@ -1864,7 +1860,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 sticker: selectedSticker,
                 date: new Date().getTime(),
                 likes: 0,
-                uid: currentUserInfo.uid
+                uid: currentUserInfo ? currentUserInfo.uid : null
             };
 
             db.collection('messages').add(newMessage).then(() => {
@@ -1877,7 +1873,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function toggleLike(id) {
-        if (!checkAuth()) return;
+        // 좋아요는 비로그인도 누를 수 있도록 checkAuth() 검사를 생략하고 로컬스토리지 캐시 기반으로 처리
         const likedMessages = JSON.parse(localStorage.getItem('dodo-liked-messages')) || [];
         const msgRef = db.collection('messages').doc(id);
 
