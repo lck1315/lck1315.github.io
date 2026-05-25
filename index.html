@@ -24,7 +24,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=1.0.37">
+    <link rel="stylesheet" href="style.css?v=1.0.38">
 </head>
 <body class="dark-theme">
     <!-- 스크롤 진행 바 -->
@@ -755,14 +755,12 @@
             </div>
         </div>
     </footer>
-    </div><!-- #app-content -->
-
     <!-- Firebase SDK Compat -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
-    <script src="app.js?v=1.0.37"></script>
+    <script src="app.js?v=1.0.38"></script>
 
     <!-- 단어장 연동 스크립트 -->
     <script>
@@ -792,6 +790,10 @@
             const url = getDeviceUrl();
             if(!url) return;
             
+            if (window.location.protocol === 'https:' && !url.startsWith('https')) {
+                alert("⚠️ 보안 경고 (Mixed Content)\n\n현재 웹사이트는 HTTPS(보안 연결)로 접속되어 있으나, M5Stick 기기는 HTTP(일반 연결)를 사용하고 있어 브라우저가 통신을 차단했습니다.\n\n[해결 방법]\n크롬 주소창 왼쪽의 '자물쇠(또는 설정 아이콘)' 클릭 -> '사이트 설정' -> '안전하지 않은 콘텐츠'를 '허용'으로 변경 후 새로고침하세요.");
+            }
+
             const badge = document.getElementById('connection-status-badge');
             badge.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 연결 중...';
             badge.style.color = 'var(--text-color)';
