@@ -1204,11 +1204,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (visibleGalleryPosts.length === 0) {
             if (!currentUserInfo) {
                 galleryGrid.innerHTML = `
-                    <div class="glass-card login-prompt-card" style="grid-column: 1 / -1; width: 100%; text-align: center; padding: 4rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; border: 1px solid var(--card-border); border-radius: 20px;">
-                        <i class="fa-solid fa-lock" style="font-size: 3.5rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
-                        <h3 style="font-size: 1.4rem; font-weight: 800; margin: 0;">추억 갤러리는 로그인 후 이용 가능합니다 🔐</h3>
-                        <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 340px; line-height: 1.6; margin: 0;">DODO 가족의 소중한 여행 사진과 따뜻한 일상 모습은 가족 인증을 마친 멤버들에게만 안전하게 공개됩니다.</p>
-                        <button class="btn btn-primary" onclick="document.getElementById('auth-menu-btn').click();" style="padding: 0.8rem 2rem;"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
+                    <div style="grid-column: 1 / -1; position: relative; width: 100%; min-height: 450px; border-radius: 20px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                        <div style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; padding: 1rem; opacity: 0.15; filter: blur(4px); pointer-events: none;">
+                            <div class="glass-card" style="height: 350px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;"></div>
+                            <div class="glass-card hide-on-mobile" style="height: 350px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;"></div>
+                            <div class="glass-card hide-on-tablet" style="height: 350px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;"></div>
+                            <div class="glass-card hide-on-tablet" style="height: 350px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;"></div>
+                        </div>
+                        <div class="glass-card login-prompt-card" style="position: relative; width: 90%; max-width: 450px; text-align: center; padding: 3rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; background: rgba(30, 30, 45, 0.75); backdrop-filter: blur(12px); box-shadow: 0 15px 50px rgba(0,0,0,0.5); z-index: 10;">
+                            <i class="fa-solid fa-lock" style="font-size: 3.5rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
+                            <h3 style="font-size: 1.4rem; font-weight: 800; margin: 0;">추억 갤러리는 로그인 후 이용 가능합니다 🔐</h3>
+                            <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 340px; line-height: 1.6; margin: 0;">DODO 가족의 소중한 여행 사진과 따뜻한 일상 모습은 가족 인증을 마친 멤버들에게만 안전하게 공개됩니다.</p>
+                            <button class="btn btn-primary" onclick="document.getElementById('auth-menu-btn').click();" style="padding: 0.8rem 2rem;"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
+                        </div>
                     </div>
                 `;
             } else {
@@ -1552,11 +1560,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filteredPosts.length === 0) {
             if (!currentUserInfo) {
                 boardPostsGrid.innerHTML = `
-                    <div class="glass-card login-prompt-card" style="grid-column: 1 / -1; width: 100%; text-align: center; padding: 4rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; border: 1px solid var(--card-border); border-radius: 20px;">
-                        <i class="fa-solid fa-user-lock" style="font-size: 3.5rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
-                        <h3 style="font-size: 1.4rem; font-weight: 800; margin: 0;">가족 소식은 로그인 후 볼 수 있습니다 📝</h3>
-                        <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 340px; line-height: 1.6; margin: 0;">우리들만의 스마트 비밀 아지트 게시판입니다. 로그인하셔서 새로운 이야기와 소중한 안부를 등록해 보세요!</p>
-                        <button class="btn btn-primary" onclick="document.getElementById('auth-menu-btn').click();" style="padding: 0.8rem 2rem;"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
+                    <div style="grid-column: 1 / -1; position: relative; width: 100%; min-height: 450px; border-radius: 20px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                        <div style="position: absolute; width: 100%; height: 100%; top: 0; left: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; padding: 1rem; opacity: 0.15; filter: blur(4px); pointer-events: none;">
+                            <div class="glass-card" style="height: 280px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;"></div>
+                            <div class="glass-card hide-on-mobile" style="height: 280px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;"></div>
+                            <div class="glass-card hide-on-tablet" style="height: 280px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;"></div>
+                        </div>
+                        <div class="glass-card login-prompt-card" style="position: relative; width: 90%; max-width: 450px; text-align: center; padding: 3rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; background: rgba(30, 30, 45, 0.75); backdrop-filter: blur(12px); box-shadow: 0 15px 50px rgba(0,0,0,0.5); z-index: 10;">
+                            <i class="fa-solid fa-user-lock" style="font-size: 3.5rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
+                            <h3 style="font-size: 1.4rem; font-weight: 800; margin: 0;">가족 소식은 로그인 후 볼 수 있습니다 📝</h3>
+                            <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 340px; line-height: 1.6; margin: 0;">우리들만의 스마트 비밀 아지트 게시판입니다. 로그인하셔서 새로운 이야기와 소중한 안부를 등록해 보세요!</p>
+                            <button class="btn btn-primary" onclick="document.getElementById('auth-menu-btn').click();" style="padding: 0.8rem 2rem;"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
+                        </div>
                     </div>
                 `;
             } else {
