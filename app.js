@@ -118,10 +118,19 @@ document.addEventListener('DOMContentLoaded', () => {
         profileDropdown.classList.add('hidden');
     });
 
-    // 바깥 클릭 시 드롭다운 자동으로 닫기
-    document.addEventListener('click', () => {
+    // 바깥 클릭 시 드롭다운 자동으로 닫기 & 락 카드의 로그인 유도 클릭 위임
+    document.addEventListener('click', (e) => {
         if (profileDropdown) {
             profileDropdown.classList.add('hidden');
+        }
+
+        // 락 카드 내 로그인 버튼 클릭 시
+        const lockLoginBtn = e.target.closest('.btn-lock-login');
+        if (lockLoginBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            showLoginScreen();
+            if (authContainer) authContainer.classList.remove('hidden');
         }
     });
 
@@ -214,6 +223,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // 비로그인 시 UI 패널 락/언락 제어 헬퍼 함수
+    function toggleUIPanelLocks(isLoggedIn) {
+        const calendarInner = document.getElementById('calendar-inner');
+        const calendarLock = document.getElementById('calendar-lock');
+        const boardFormInner = document.getElementById('board-form-inner');
+        const boardFormLock = document.getElementById('board-form-lock');
+        const guestbookFormInner = document.getElementById('guestbook-form-inner');
+        const guestbookFormLock = document.getElementById('guestbook-form-lock');
+
+        if (isLoggedIn) {
+            if (calendarInner) calendarInner.classList.remove('hidden');
+            if (calendarLock) calendarLock.classList.add('hidden');
+            if (boardFormInner) boardFormInner.classList.remove('hidden');
+            if (boardFormLock) boardFormLock.classList.add('hidden');
+            if (guestbookFormInner) guestbookFormInner.classList.remove('hidden');
+            if (guestbookFormLock) guestbookFormLock.classList.add('hidden');
+        } else {
+            if (calendarInner) calendarInner.classList.add('hidden');
+            if (calendarLock) calendarLock.classList.remove('hidden');
+            if (boardFormInner) boardFormInner.classList.add('hidden');
+            if (boardFormLock) boardFormLock.classList.remove('hidden');
+            if (guestbookFormInner) guestbookFormInner.classList.add('hidden');
+            if (guestbookFormLock) guestbookFormLock.classList.remove('hidden');
+        }
+    }
+
     // 인증 상태 감시자
     auth.onAuthStateChanged((user) => {
         const headerUserName = document.getElementById('header-user-name');
@@ -224,6 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const galleryUploadContainer = document.getElementById('gallery-upload-container');
 
         if (user) {
+            toggleUIPanelLocks(true);
             db.collection('users').doc(user.uid).get()
                 .then((doc) => {
                     if (doc.exists) {
@@ -284,6 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
         } else {
             currentUserInfo = null;
+            toggleUIPanelLocks(false);
             headerUserName.textContent = "Login";
             dropdownLoggedOut.classList.remove('hidden');
             dropdownLoggedIn.classList.add('hidden');
@@ -638,6 +675,9 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCalendar();
     });
 
+    // 페이지 로드 직후 달력 최초 1회 즉시 렌더링 (데이터 오기 전에 틀 노출)
+    renderCalendar();
+
     function openEventModal(dateStr) {
         activeSelectedDateStr = dateStr;
         const parts = dateStr.split('-');
@@ -901,9 +941,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (visibleGalleryPosts.length === 0) {
             galleryGrid.innerHTML = `
-                <div class="no-posts" style="grid-column: 1 / -1; width: 100%; text-align: center; padding: 4rem;">
-                    <p><i class="fa-solid fa-lock" style="font-size: 2.5rem; display: block; margin-bottom: 1rem; color: var(--primary-color);"></i>
-                    로그인하시면 DODO 가족의 소중한 추억 앨범들을 보실 수 있습니다. 🔐</p>
+                <div class="glass-card login-prompt-card" style="grid-column: 1 / -1; width: 100%; text-align: center; padding: 4rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; border: 1px solid var(--card-border); border-radius: 20px;">
+                    <i class="fa-solid fa-lock" style="font-size: 3.5rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
+                    <h3 style="font-size: 1.4rem; font-weight: 800; margin: 0;">추억 갤러리는 로그인 후 이용 가능합니다 🔐</h3>
+                    <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 340px; line-height: 1.6; margin: 0;">DODO 가족의 소중한 여행 사진과 따뜻한 일상 모습은 가족 인증을 마친 멤버들에게만 안전하게 공개됩니다.</p>
+                    <button class="btn btn-primary" onclick="document.getElementById('auth-menu-btn').click();" style="padding: 0.8rem 2rem;"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
                 </div>
             `;
             return;
@@ -1108,8 +1150,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const boardImgPreview = document.getElementById('board-img-preview');
     const boardPostsGrid = document.getElementById('board-posts-grid');
 
-    let compressedImageBase64 = ''; // 압축된 이미지 캐시 변수
-
     const boardImgPreviews = document.getElementById('board-img-previews');
     let compressedImageBase64 = []; // 다중 base64 이미지 캐시 배열로 전환
 
@@ -1195,9 +1235,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (filteredPosts.length === 0) {
             boardPostsGrid.innerHTML = `
-                <div class="no-posts">
-                    <p><i class="fa-solid fa-lock" style="font-size: 2.5rem; display: block; margin-bottom: 1rem; color: var(--primary-color);"></i>
-                    로그인하시면 DODO 가족 소식 게시글을 읽고 작성하실 수 있습니다. 🔐</p>
+                <div class="glass-card login-prompt-card" style="grid-column: 1 / -1; width: 100%; text-align: center; padding: 4rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; border: 1px solid var(--card-border); border-radius: 20px;">
+                    <i class="fa-solid fa-user-lock" style="font-size: 3.5rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
+                    <h3 style="font-size: 1.4rem; font-weight: 800; margin: 0;">가족 소식은 로그인 후 볼 수 있습니다 📝</h3>
+                    <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 340px; line-height: 1.6; margin: 0;">우리들만의 스마트 비밀 아지트 게시판입니다. 로그인하셔서 새로운 이야기와 소중한 안부를 등록해 보세요!</p>
+                    <button class="btn btn-primary" onclick="document.getElementById('auth-menu-btn').click();" style="padding: 0.8rem 2rem;"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
                 </div>
             `;
             return;
@@ -1631,9 +1673,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!currentUserInfo) {
             guestbookList.innerHTML = `
-                <div class="no-messages">
-                    <p><i class="fa-solid fa-lock" style="font-size: 2rem; display: block; margin-bottom: 1rem; color: var(--primary-color);"></i>
-                    로그인하시면 가족들이 남긴 따뜻한 한마디를 읽어볼 수 있습니다. 🔐</p>
+                <div class="glass-card login-prompt-card" style="width: 100%; text-align: center; padding: 3rem 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.2rem; border: 1px solid var(--card-border); border-radius: 20px;">
+                    <i class="fa-solid fa-comment-medical" style="font-size: 3rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
+                    <h3 style="font-size: 1.2rem; font-weight: 800; margin: 0;">방명록은 로그인 후 이용 가능합니다 💌</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 280px; line-height: 1.5; margin: 0;">가족 아지트에 방문하셨나요? 인증 로그인 후 따뜻한 축하의 말이나 메시지를 남겨보세요!</p>
+                    <button class="btn btn-primary" onclick="document.getElementById('auth-menu-btn').click();" style="padding: 0.6rem 1.5rem; font-size:0.85rem;"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
                 </div>
             `;
             return;

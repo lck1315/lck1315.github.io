@@ -255,27 +255,38 @@
                 </div>
                 
                 <div class="calendar-wrapper glass-card">
-                    <!-- 캘린더 컨트롤 헤더 -->
-                    <div class="calendar-header">
-                        <button id="prev-month-btn" class="calendar-nav-btn"><i class="fa-solid fa-chevron-left"></i></button>
-                        <h3 id="calendar-month-year">2026년 5월</h3>
-                        <button id="next-month-btn" class="calendar-nav-btn"><i class="fa-solid fa-chevron-right"></i></button>
+                    <!-- 캘린더 원래 콘텐츠 래퍼 -->
+                    <div id="calendar-inner">
+                        <!-- 캘린더 컨트롤 헤더 -->
+                        <div class="calendar-header">
+                            <button id="prev-month-btn" class="calendar-nav-btn"><i class="fa-solid fa-chevron-left"></i></button>
+                            <h3 id="calendar-month-year">2026년 5월</h3>
+                            <button id="next-month-btn" class="calendar-nav-btn"><i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                        
+                        <!-- 요일 헤더 -->
+                        <div class="calendar-weekdays">
+                            <div class="weekday sun">일</div>
+                            <div class="weekday">월</div>
+                            <div class="weekday">화</div>
+                            <div class="weekday">수</div>
+                            <div class="weekday">목</div>
+                            <div class="weekday">금</div>
+                            <div class="weekday sat">토</div>
+                        </div>
+                        
+                        <!-- 날짜 그리드 -->
+                        <div id="calendar-grid" class="calendar-grid">
+                            <!-- JS 코드로 일자가 동적 할당됩니다. -->
+                        </div>
                     </div>
-                    
-                    <!-- 요일 헤더 -->
-                    <div class="calendar-weekdays">
-                        <div class="weekday sun">일</div>
-                        <div class="weekday">월</div>
-                        <div class="weekday">화</div>
-                        <div class="weekday">수</div>
-                        <div class="weekday">목</div>
-                        <div class="weekday">금</div>
-                        <div class="weekday sat">토</div>
-                    </div>
-                    
-                    <!-- 날짜 그리드 -->
-                    <div id="calendar-grid" class="calendar-grid">
-                        <!-- JS 코드로 일자가 동적 할당됩니다. -->
+
+                    <!-- 캘린더 로그인 락 카드 -->
+                    <div id="calendar-lock" class="lock-overlay hidden" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 4rem 1.5rem; gap: 1.2rem;">
+                        <i class="fa-solid fa-calendar-days" style="font-size: 3.5rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
+                        <h3 style="font-size: 1.4rem; font-weight: 800; margin: 0;">가족 일정은 로그인 후 확인 가능합니다 🗓️</h3>
+                        <p style="font-size: 0.9rem; color: var(--text-muted); max-width: 340px; line-height: 1.6; margin: 0;">가족 모임, 생신, 기념일 등 소중한 약속들을 안전하게 공유하기 위해 인증 로그인이 필요합니다.</p>
+                        <button class="btn btn-primary btn-lock-login" style="padding: 0.8rem 2rem;"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
                     </div>
                 </div>
             </div>
@@ -359,37 +370,48 @@
                 <div class="board-wrapper">
                     <!-- 1) 게시글 작성 폼 (왼쪽) -->
                     <div class="board-form-container glass-card">
-                        <h3>이야기 등록하기</h3>
-                        <form id="board-form">
-                            <div class="form-group">
-                                <label for="board-title"><i class="fa-solid fa-heading"></i> 제목</label>
-                                <input type="text" id="board-title" placeholder="글 제목 입력" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="board-file"><i class="fa-solid fa-images"></i> 사진 첨부 (여러 장 가능)</label>
-                                <div class="file-upload-wrapper">
-                                    <input type="file" id="board-file" accept="image/*" multiple>
-                                    <div class="file-upload-btn">
-                                        <i class="fa-solid fa-cloud-arrow-up"></i> 여러 장의 사진 선택하기
+                        <!-- 원래 글쓰기 콘텐츠 래퍼 -->
+                        <div id="board-form-inner">
+                            <h3>이야기 등록하기</h3>
+                            <form id="board-form">
+                                <div class="form-group">
+                                    <label for="board-title"><i class="fa-solid fa-heading"></i> 제목</label>
+                                    <input type="text" id="board-title" placeholder="글 제목 입력" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="board-file"><i class="fa-solid fa-images"></i> 사진 첨부 (여러 장 가능)</label>
+                                    <div class="file-upload-wrapper">
+                                        <input type="file" id="board-file" accept="image/*" multiple>
+                                        <div class="file-upload-btn">
+                                            <i class="fa-solid fa-cloud-arrow-up"></i> 여러 장의 사진 선택하기
+                                        </div>
+                                    </div>
+                                    <!-- 업로드 이미지 썸네일 미리보기 -->
+                                    <div id="board-img-previews" class="gallery-img-previews-container">
+                                        <!-- JS를 통해 여러 장의 썸네일 프리뷰가 들어갑니다 -->
+                                    </div>
+                                    <div class="form-group" style="margin-top: 12px; display: flex; align-items: center; gap: 8px;">
+                                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 0.85rem; font-weight: 700; color: var(--text-color);">
+                                            <input type="checkbox" id="board-is-private" checked style="width: 18px; height: 18px; accent-color: var(--primary-color);">
+                                            <span>가족에게만 공개 (로그인 필요) 🔐</span>
+                                        </label>
                                     </div>
                                 </div>
-                                <!-- 업로드 이미지 썸네일 미리보기 -->
-                                <div id="board-img-previews" class="gallery-img-previews-container">
-                                    <!-- JS를 통해 여러 장의 썸네일 프리뷰가 들어갑니다 -->
+                                <div class="form-group">
+                                    <label for="board-content"><i class="fa-solid fa-align-left"></i> 내용</label>
+                                    <textarea id="board-content" rows="5" placeholder="재미있고 소중한 이야기를 여기에 기록하세요..." required></textarea>
                                 </div>
-                                <div class="form-group" style="margin-top: 12px; display: flex; align-items: center; gap: 8px;">
-                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 0.85rem; font-weight: 700; color: var(--text-color);">
-                                        <input type="checkbox" id="board-is-private" checked style="width: 18px; height: 18px; accent-color: var(--primary-color);">
-                                        <span>가족에게만 공개 (로그인 필요) 🔐</span>
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label for="board-content"><i class="fa-solid fa-align-left"></i> 내용</label>
-                                <textarea id="board-content" rows="5" placeholder="재미있고 소중한 이야기를 여기에 기록하세요..." required></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100">등록하기 <i class="fa-solid fa-pen-nib"></i></button>
-                        </form>
+                                <button type="submit" class="btn btn-primary w-100">등록하기 <i class="fa-solid fa-pen-nib"></i></button>
+                            </form>
+                        </div>
+
+                        <!-- 이야기 등록 로그인 락 카드 -->
+                        <div id="board-form-lock" class="lock-overlay hidden" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem 1rem; gap: 1.2rem;">
+                            <i class="fa-solid fa-pen-fancy" style="font-size: 3rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
+                            <h3 style="font-size: 1.25rem; font-weight: 800; margin: 0;">소중한 추억은 로그인 후 등록 가능합니다 ✏️</h3>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 280px; line-height: 1.5; margin: 0;">이야기 글을 기록하고 사진을 올리려면 가족 계정으로 로그인해 주세요.</p>
+                            <button class="btn btn-primary btn-lock-login" style="padding: 0.7rem 1.8rem; font-size: 0.85rem;"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
+                        </div>
                     </div>
 
                     <!-- 2) 게시글 리스트 보드 (오른쪽) -->
@@ -446,33 +468,44 @@
                 <div class="guestbook-wrapper">
                     <!-- 입력 폼 (글래스모피즘 카드) -->
                     <div class="guestbook-form-container glass-card">
-                        <h3>메시지 작성하기</h3>
-                        <form id="guestbook-form">
-                            <div class="form-group">
-                                <label for="message-input"><i class="fa-solid fa-comment-alt"></i> 메시지</label>
-                                <textarea id="message-input" rows="4" placeholder="가족에게 남기고 싶은 따뜻한 한마디..." required></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label><i class="fa-solid fa-smile"></i> 스티커 선택</label>
-                                <div class="sticker-selector">
-                                    <input type="radio" name="sticker" id="st-heart" value="💖" checked>
-                                    <label for="st-heart" class="sticker-label">💖</label>
-                                    
-                                    <input type="radio" name="sticker" id="st-smile" value="😊">
-                                    <label for="st-smile" class="sticker-label">😊</label>
-                                    
-                                    <input type="radio" name="sticker" id="st-star" value="⭐">
-                                    <label for="st-star" class="sticker-label">⭐</label>
-                                    
-                                    <input type="radio" name="sticker" id="st-cat" value="🐱">
-                                    <label for="st-cat" class="sticker-label">🐱</label>
-                                    
-                                    <input type="radio" name="sticker" id="st-cake" value="🎂">
-                                    <label for="st-cake" class="sticker-label">🎂</label>
+                        <!-- 원래 방명록 작성 콘텐츠 래퍼 -->
+                        <div id="guestbook-form-inner">
+                            <h3>메시지 작성하기</h3>
+                            <form id="guestbook-form">
+                                <div class="form-group">
+                                    <label for="message-input"><i class="fa-solid fa-comment-alt"></i> 메시지</label>
+                                    <textarea id="message-input" rows="4" placeholder="가족에게 남기고 싶은 따뜻한 한마디..." required></textarea>
                                 </div>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100">등록하기 <i class="fa-solid fa-paper-plane"></i></button>
-                        </form>
+                                <div class="form-group">
+                                    <label><i class="fa-solid fa-smile"></i> 스티커 선택</label>
+                                    <div class="sticker-selector">
+                                        <input type="radio" name="sticker" id="st-heart" value="💖" checked>
+                                        <label for="st-heart" class="sticker-label">💖</label>
+                                        
+                                        <input type="radio" name="sticker" id="st-smile" value="😊">
+                                        <label for="st-smile" class="sticker-label">😊</label>
+                                        
+                                        <input type="radio" name="sticker" id="st-star" value="⭐">
+                                        <label for="st-star" class="sticker-label">⭐</label>
+                                        
+                                        <input type="radio" name="sticker" id="st-cat" value="🐱">
+                                        <label for="st-cat" class="sticker-label">🐱</label>
+                                        
+                                        <input type="radio" name="sticker" id="st-cake" value="🎂">
+                                        <label for="st-cake" class="sticker-label">🎂</label>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">등록하기 <i class="fa-solid fa-paper-plane"></i></button>
+                            </form>
+                        </div>
+
+                        <!-- 방명록 등록 로그인 락 카드 -->
+                        <div id="guestbook-form-lock" class="lock-overlay hidden" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem 1rem; gap: 1.2rem;">
+                            <i class="fa-solid fa-comment-dots" style="font-size: 3rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
+                            <h3 style="font-size: 1.25rem; font-weight: 800; margin: 0;">메시지는 로그인 후 작성 가능합니다 💌</h3>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 280px; line-height: 1.5; margin: 0;">따뜻한 축하의 말이나 안부를 남기시려면 가족 로그인을 거쳐야 합니다.</p>
+                            <button class="btn btn-primary btn-lock-login" style="padding: 0.7rem 1.8rem; font-size: 0.85rem;"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
+                        </div>
                     </div>
 
                     <!-- 방명록 리스트 보드 -->
@@ -631,6 +664,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
-    <script src="app.js?v=1.0.8"></script>
+    <script src="app.js?v=1.0.9"></script>
 </body>
 </html>

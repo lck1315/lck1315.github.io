@@ -2219,3 +2219,42 @@ body.light-theme .guest-sticker {
     }
 }
 
+/* ==========================================================================
+   로그인 UI 락 가이드 오버레이 (Premium Glassmorphism)
+   ========================================================================== */
+.lock-overlay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 3rem 1.5rem;
+    gap: 1.2rem;
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    animation: fadeIn 0.4s ease-out;
+}
+
+body.light-theme .lock-overlay {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+.lock-overlay i {
+    text-shadow: 0 0 20px rgba(108, 92, 231, 0.4);
+}
+
+/* 락 화면 내의 로그인 단추 호버 micro-animation */
+.lock-overlay .btn-lock-login {
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
+}
+
+.lock-overlay .btn-lock-login:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 10px 20px rgba(108, 92, 231, 0.3);
+}
+
+
