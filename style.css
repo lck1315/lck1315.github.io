@@ -2168,7 +2168,7 @@ body.light-theme .guest-sticker {
     }
 
     /* 모든 모바일 글래스 박스의 좌우 패딩을 1.2rem으로 정밀 통일 (좌우 폭 일치화) */
-    .gallery-upload-container, 
+    .gallery-form-container, 
     .board-form-container, 
     .guestbook-form-container,
     .calendar-wrapper {
@@ -2284,6 +2284,22 @@ body.light-theme .guest-sticker {
         padding: 0 1.2rem;
         width: 100% !important;
         box-sizing: border-box !important;
+    }
+    
+    /* 가족 카드 모바일 패딩 축소 */
+    .card-front, .card-back {
+        padding: 1.2rem !important;
+    }
+    .card-back {
+        padding-top: 2.5rem !important;
+    }
+    
+    /* 모바일 캘린더 날짜 두 자리 표시 오류 수정 */
+    .calendar-day {
+        padding: 4px !important;
+    }
+    .day-number {
+        font-size: 0.85rem !important;
     }
 }
 

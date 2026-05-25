@@ -24,7 +24,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=1.0.35">
+    <link rel="stylesheet" href="style.css?v=1.0.36">
 </head>
 <body class="dark-theme">
     <!-- 스크롤 진행 바 -->
@@ -541,7 +541,10 @@
                         <h3>새 단어 등록하기</h3>
                         <div id="wordbook-form">
                             <div class="form-group">
-                                <label for="device-ip"><i class="fa-solid fa-wifi"></i> 기기 IP 주소</label>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                    <label for="device-ip" style="margin: 0;"><i class="fa-solid fa-wifi"></i> 기기 IP 주소</label>
+                                    <span id="connection-status-badge" style="font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 12px; background: rgba(128, 128, 128, 0.2); color: var(--text-muted);"><i class="fa-solid fa-circle-question"></i> 대기중</span>
+                                </div>
                                 <input type="text" id="device-ip" placeholder="예: 192.168.0.100" style="width: 100%; padding: 0.8rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; color: var(--text-color);">
                                 <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 5px;">M5Stick 기기의 WiFi Web 화면에 표시된 IP를 입력하세요.</p>
                             </div>
@@ -716,7 +719,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
-    <script src="app.js?v=1.0.35"></script>
+    <script src="app.js?v=1.0.36"></script>
 
     <!-- 단어장 연동 스크립트 -->
     <script>
