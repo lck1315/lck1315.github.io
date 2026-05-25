@@ -1254,7 +1254,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="gallery-tag">${post.category === 'travel' ? '가족 여행 ✈️' : '소소한 일상 ☕'}</span>
                     <h3 class="gallery-item-title">${escapeHTML(post.title)}</h3>
                     <p class="gallery-item-desc">${escapeHTML(post.desc)}</p>
-                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; font-weight: 600;"><i class="fa-solid fa-user"></i> ${escapeHTML(post.author)}</p>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; font-weight: 600;">
+                        <i class="fa-solid fa-user"></i> ${escapeHTML(post.author)}
+                        <span style="margin-left: 10px;"><i class="fa-regular fa-calendar-days"></i> ${post.date ? new Date(post.date).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' }) : ''}</span>
+                    </p>
                     ${actionBtnsHTML}
                 </div>
             `;
