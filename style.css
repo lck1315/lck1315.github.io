@@ -71,6 +71,8 @@ body {
     overflow-x: hidden;
     transition: var(--transition-smooth);
     position: relative;
+    word-break: keep-all;
+    overflow-wrap: break-word;
 }
 
 /* 뒷배경 입자 캔버스 */
@@ -1488,7 +1490,8 @@ body.light-theme .board-post-card.no-image-card {
     -webkit-box-orient: vertical;
     overflow: hidden;
     margin-bottom: 1rem;
-    word-break: break-all;
+    word-break: keep-all;
+    overflow-wrap: break-word;
 }
 
 .post-footer {
@@ -1801,7 +1804,8 @@ body.light-theme .guest-card {
 .guest-text {
     font-size: 0.95rem;
     line-height: 1.7;
-    word-break: break-all;
+    word-break: keep-all;
+    overflow-wrap: break-word;
     color: var(--text-color);
     opacity: 0.95;
     margin: 0.2rem 0;
@@ -2173,7 +2177,8 @@ body.light-theme .guest-sticker {
         width: 100% !important;
         max-width: 100% !important;
         box-sizing: border-box !important;
-        word-break: break-all;
+        word-break: keep-all;
+    overflow-wrap: break-word;
         word-wrap: break-word;
     }
 
@@ -2190,7 +2195,8 @@ body.light-theme .guest-sticker {
         width: 100% !important;
         max-width: 100% !important;
         box-sizing: border-box !important;
-        word-break: break-all;
+        word-break: keep-all;
+    overflow-wrap: break-word;
         word-wrap: break-word;
     }
     
@@ -2252,7 +2258,8 @@ body.light-theme .guest-sticker {
         padding: 1.2rem !important;
         width: 100% !important;
         box-sizing: border-box !important;
-        word-break: break-all;
+        word-break: keep-all;
+    overflow-wrap: break-word;
         word-wrap: break-word;
     }
     
