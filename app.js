@@ -155,7 +155,6 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .catch((error) => {
                 let errorMsg = "로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.";
-                console.error("로그인 에러 코드:", error.code, error.message);
                 if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
                     errorMsg = "이메일 또는 비밀번호가 잘못되었습니다.";
                 } else if (error.code === 'auth/invalid-email') {
@@ -222,6 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dropdownLoggedIn = document.getElementById('dropdown-logged-in');
         const dropdownUserNickname = document.getElementById('dropdown-user-nickname');
         const dropdownUserRole = document.getElementById('dropdown-user-role');
+        const galleryUploadContainer = document.getElementById('gallery-upload-container');
 
         if (user) {
             db.collection('users').doc(user.uid).get()
@@ -249,7 +249,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     dropdownLoggedIn.classList.remove('hidden');
                     authContainer.classList.add('hidden');
 
-                    // 로그인 상태에 맞춘 가족 구성원 카드 수정 아이콘 활성화를 위해 렌더링 갱신
+                    // 로그인 시에만 여행 갤러리 등록 폼 노출
+                    if (galleryUploadContainer) galleryUploadContainer.classList.remove('hidden');
+
+                    // 구성원 카드 렌더링 갱신
                     if (cachedFamilySnapshot) {
                         renderFamilyCards(cachedFamilySnapshot);
                     }
@@ -259,10 +262,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (heroEditBadge) heroEditBadge.classList.remove('hidden');
                 })
                 .catch((err) => {
-                    console.error("사용자 정보를 불러오는 도중 오류 발생:", err);
+                    console.error("사용자 정보 로드 오류:", err);
                     currentUserInfo = {
                         uid: user.uid,
-                        nickname: user.displayName || (user.email ? user.email.split('@')[0] : "가족"),
+                        nickname: user.displayName || "가족",
                         role: "기타 🤍"
                     };
                     headerUserName.textContent = currentUserInfo.nickname;
@@ -273,13 +276,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     dropdownLoggedIn.classList.remove('hidden');
                     authContainer.classList.add('hidden');
 
+                    if (galleryUploadContainer) galleryUploadContainer.classList.remove('hidden');
+
                     if (cachedFamilySnapshot) {
                         renderFamilyCards(cachedFamilySnapshot);
                     }
-
-                    // 메인 이미지 수정 배지 활성화 (폴백 경로)
-                    const heroEditBadge2 = document.getElementById('hero-img-edit-trigger');
-                    if (heroEditBadge2) heroEditBadge2.classList.remove('hidden');
                 });
         } else {
             currentUserInfo = null;
@@ -287,14 +288,16 @@ document.addEventListener('DOMContentLoaded', () => {
             dropdownLoggedOut.classList.remove('hidden');
             dropdownLoggedIn.classList.add('hidden');
 
-            // 로그아웃 상태에 맞춘 가족 구성원 카드 수정 아이콘 제거를 위해 렌더링 갱신
+            // 로그아웃 시 여행 갤러리 등록 폼 감춤
+            if (galleryUploadContainer) galleryUploadContainer.classList.add('hidden');
+
             if (cachedFamilySnapshot) {
                 renderFamilyCards(cachedFamilySnapshot);
             }
 
             // 메인 이미지 수정 배지 비활성화
-            const heroEditBadge3 = document.getElementById('hero-img-edit-trigger');
-            if (heroEditBadge3) heroEditBadge3.classList.add('hidden');
+            const heroEditBadge = document.getElementById('hero-img-edit-trigger');
+            if (heroEditBadge) heroEditBadge.classList.add('hidden');
         }
     });
 
@@ -304,14 +307,16 @@ document.addEventListener('DOMContentLoaded', () => {
         initGuestbookListener();
         initFamilyMembers();
         initSettingsListener();
+        initGalleryListener(); // 갤러리 실시간 리스너 추가
     }
+
+
     // ----------------------------------------------------
     // 1. 테마 스위처 (다크/라이트 모드)
     // ----------------------------------------------------
     const themeToggleBtn = document.getElementById('theme-toggle');
     const body = document.body;
 
-    // 이전 세션 테마 설정 로드 (기본 다크테마)
     const savedTheme = localStorage.getItem('dodo-theme') || 'dark-theme';
     body.className = savedTheme;
 
@@ -323,28 +328,26 @@ document.addEventListener('DOMContentLoaded', () => {
             body.classList.replace('light-theme', 'dark-theme');
             localStorage.setItem('dodo-theme', 'dark-theme');
         }
-        initParticles(); // 테마 전환 시 파티클 컬러 갱신
+        initParticles(); 
     });
 
 
     // ----------------------------------------------------
-    // 2. 스크롤 프로그레스 바 & 네비게이션 Scrollspy
+    // 2. 스크롤 진행 바 & Scrollspy
     // ----------------------------------------------------
     const progressBar = document.getElementById('scroll-progress-bar');
     const navItems = document.querySelectorAll('.nav-item');
     const sections = document.querySelectorAll('section');
 
     window.addEventListener('scroll', () => {
-        // 스크롤 진행 바 업데이트
         const scrollTop = window.scrollY;
         const docHeight = document.documentElement.scrollHeight - window.innerHeight;
         const scrollPercent = (scrollTop / docHeight) * 100;
         progressBar.style.width = scrollPercent + '%';
 
-        // Scrollspy (현재 보고있는 섹션 활성화)
         let currentSectionId = '';
         sections.forEach(section => {
-            const sectionTop = section.offsetTop - 150; // 네비게이션 바 높이 감안
+            const sectionTop = section.offsetTop - 150;
             const sectionHeight = section.clientHeight;
             if (scrollTop >= sectionTop && scrollTop < sectionTop + sectionHeight) {
                 currentSectionId = section.getAttribute('id');
@@ -363,7 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ----------------------------------------------------
-    // 3. 캔버스 파티클 엔진 (마우스 반응형)
+    // 3. 캔버스 파티클 엔진
     // ----------------------------------------------------
     const canvas = document.getElementById('particle-canvas');
     const ctx = canvas.getContext('2d');
@@ -409,29 +412,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         update() {
-            if (this.x > canvas.width || this.x < 0) {
-                this.directionX = -this.directionX;
-            }
-            if (this.y > canvas.height || this.y < 0) {
-                this.directionY = -this.directionY;
-            }
+            if (this.x > canvas.width || this.x < 0) this.directionX = -this.directionX;
+            if (this.y > canvas.height || this.y < 0) this.directionY = -this.directionY;
 
             let dx = mouse.x - this.x;
             let dy = mouse.y - this.y;
             let distance = Math.sqrt(dx * dx + dy * dy);
             if (distance < mouse.radius + this.size) {
-                if (mouse.x < this.x && this.x < canvas.width - this.size * 10) {
-                    this.x += 2;
-                }
-                if (mouse.x > this.x && this.x > this.size * 10) {
-                    this.x -= 2;
-                }
-                if (mouse.y < this.y && this.y < canvas.height - this.size * 10) {
-                    this.y += 2;
-                }
-                if (mouse.y > this.y && this.y > this.size * 10) {
-                    this.y -= 2;
-                }
+                if (mouse.x < this.x && this.x < canvas.width - this.size * 10) this.x += 2;
+                if (mouse.x > this.x && this.x > this.size * 10) this.x -= 2;
+                if (mouse.y < this.y && this.y < canvas.height - this.size * 10) this.y += 2;
+                if (mouse.y > this.y && this.y > this.size * 10) this.y -= 2;
             }
 
             this.x += this.directionX;
@@ -511,7 +502,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ----------------------------------------------------
-    // 5. 구글 스타일 가족 캘린더 엔진 (신규 추가)
+    // 5. 구글 스타일 가족 캘린더 엔진
     // ----------------------------------------------------
     let currentCalDate = new Date();
     const monthYearText = document.getElementById('calendar-month-year');
@@ -519,7 +510,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const prevMonthBtn = document.getElementById('prev-month-btn');
     const nextMonthBtn = document.getElementById('next-month-btn');
 
-    // 모달 엘리먼트
     const calendarModal = document.getElementById('calendar-modal');
     const modalDateTitle = document.getElementById('modal-date-title');
     const eventForm = document.getElementById('event-form');
@@ -528,9 +518,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalEventList = document.getElementById('modal-event-list');
     const modalCloseBtn = document.querySelector('.calendar-modal-close');
     
-    let activeSelectedDateStr = ''; // YYYY-MM-DD 포맷 저장용
+    let activeSelectedDateStr = ''; 
 
-    // Firestore 실시간 일정 로드 및 동기화
     let familyEvents = {};
     function initEventsListener() {
         db.collection('events').onSnapshot((snapshot) => {
@@ -539,6 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 familyEvents[doc.id] = doc.data().events || [];
             });
             renderCalendar();
+            updateAutoTimeline(); // 데이터 갱신 시 타임라인 업데이트 트리거
             if (calendarModal.classList.contains('show') && activeSelectedDateStr) {
                 renderModalEventList();
             }
@@ -546,34 +536,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderCalendar() {
+        if (!calendarGrid) return;
         calendarGrid.innerHTML = '';
         const year = currentCalDate.getFullYear();
         const month = currentCalDate.getMonth();
 
-        // 헤더 텍스트 설정
         monthYearText.textContent = `${year}년 ${month + 1}월`;
 
-        // 이번 달의 1일 요일 및 마지막 날짜 구하기
         const firstDayIndex = new Date(year, month, 1).getDay();
         const lastDayDate = new Date(year, month + 1, 0).getDate();
-        
-        // 이전 달의 마지막 일자 구하기 (앞부분 공백을 채우기 위함)
         const prevLastDayDate = new Date(year, month, 0).getDate();
 
-        // 1. 이전 달 날짜들 렌더링
+        // 1. 이전 달 날짜들
         for (let i = firstDayIndex; i > 0; i--) {
             const dayNum = prevLastDayDate - i + 1;
             const prevMonthDate = new Date(year, month - 1, dayNum);
             createDayCell(prevMonthDate, false);
         }
 
-        // 2. 이번 달 날짜들 렌더링
+        // 2. 이번 달 날짜들
         for (let i = 1; i <= lastDayDate; i++) {
             const currentDayDate = new Date(year, month, i);
             createDayCell(currentDayDate, true);
         }
 
-        // 3. 다음 달 날짜들 렌더링 (그리드가 7 * 6 = 42 칸을 채우도록 함)
+        // 3. 다음 달 날짜들
         const totalCells = 42;
         const currentCellsCount = firstDayIndex + lastDayDate;
         const nextMonthDaysCount = totalCells - currentCellsCount;
@@ -584,7 +571,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 날짜 셀 생성 헬퍼
     function createDayCell(dateObj, isCurrentMonth) {
         const dayCell = document.createElement('div');
         dayCell.className = 'calendar-day';
@@ -594,16 +580,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const date = String(dateObj.getDate()).padStart(2, '0');
         const dateStr = `${year}-${month}-${date}`;
 
-        if (!isCurrentMonth) {
-            dayCell.classList.add('other-month');
-        }
+        if (!isCurrentMonth) dayCell.classList.add('other-month');
 
-        // 요일 구분
         const dayOfWeek = dateObj.getDay();
         if (dayOfWeek === 0) dayCell.classList.add('sun');
         if (dayOfWeek === 6) dayCell.classList.add('sat');
 
-        // 오늘 날짜 하이라이트
         const today = new Date();
         if (dateObj.getFullYear() === today.getFullYear() &&
             dateObj.getMonth() === today.getMonth() &&
@@ -611,15 +593,13 @@ document.addEventListener('DOMContentLoaded', () => {
             dayCell.classList.add('today');
         }
 
-        // 일자 텍스트 생성
         dayCell.innerHTML = `<span class="day-number">${dateObj.getDate()}</span>`;
 
-        // 이 날짜에 등록된 일정 가로 띠 추가 (구글 캘린더 스타일)
         if (familyEvents[dateStr] && familyEvents[dateStr].length > 0) {
             const eventsWrapper = document.createElement('div');
             eventsWrapper.className = 'day-events-list';
             
-            const maxVisibleEvents = 2; // 날짜 칸 크기가 작으므로 최대 2개만 보여줌
+            const maxVisibleEvents = 2; 
             const eventsToShow = familyEvents[dateStr].slice(0, maxVisibleEvents);
             
             eventsToShow.forEach(event => {
@@ -627,7 +607,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 eventBar.className = 'calendar-event-bar';
                 eventBar.style.backgroundColor = event.color;
                 eventBar.textContent = event.title;
-                eventBar.title = event.title; // 호버 시 툴팁 지원
+                eventBar.title = event.title; 
                 eventsWrapper.appendChild(eventBar);
             });
             
@@ -641,7 +621,6 @@ document.addEventListener('DOMContentLoaded', () => {
             dayCell.appendChild(eventsWrapper);
         }
 
-        // 셀 클릭 시 일정 모달 활성화
         dayCell.addEventListener('click', () => {
             openEventModal(dateStr);
         });
@@ -649,7 +628,6 @@ document.addEventListener('DOMContentLoaded', () => {
         calendarGrid.appendChild(dayCell);
     }
 
-    // 이전 달, 다음 달 이동
     prevMonthBtn.addEventListener('click', () => {
         currentCalDate.setMonth(currentCalDate.getMonth() - 1);
         renderCalendar();
@@ -660,11 +638,8 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCalendar();
     });
 
-    // 일정 관리 모달 열기
     function openEventModal(dateStr) {
         activeSelectedDateStr = dateStr;
-        
-        // 모달 타이틀 가독성 있게 변환 (예: 2026년 05월 24일 일정)
         const parts = dateStr.split('-');
         modalDateTitle.textContent = `${parts[0]}년 ${parts[1]}월 ${parts[2]}일 일정 🗓️`;
         
@@ -672,7 +647,6 @@ document.addEventListener('DOMContentLoaded', () => {
         calendarModal.classList.add('show');
     }
 
-    // 모달 닫기
     modalCloseBtn.addEventListener('click', () => {
         calendarModal.classList.remove('show');
     });
@@ -683,7 +657,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 모달 내부 일정 리스트 출력
     function renderModalEventList() {
         modalEventList.innerHTML = '';
         const dayEvents = familyEvents[activeSelectedDateStr] || [];
@@ -698,7 +671,6 @@ document.addEventListener('DOMContentLoaded', () => {
             item.className = 'event-item';
             item.style.borderLeftColor = evt.color;
 
-            // 본인이 작성한 일정만 삭제 가능 (작성자 uid가 없을 시 로그인한 가족 전체에 삭제 권한 허용)
             const isOwner = !evt.uid || (currentUserInfo && (evt.uid === currentUserInfo.uid || evt.author === currentUserInfo.nickname));
             const delBtnHTML = isOwner 
                 ? `<button class="event-del-btn" data-index="${idx}"><i class="fa-regular fa-trash-can"></i></button>`
@@ -711,7 +683,6 @@ document.addEventListener('DOMContentLoaded', () => {
             modalEventList.appendChild(item);
         });
 
-        // 삭제 이벤트 연결
         modalEventList.querySelectorAll('.event-del-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const index = parseInt(btn.getAttribute('data-index'));
@@ -720,7 +691,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 일정 추가 등록 처리
     eventForm.addEventListener('submit', (e) => {
         e.preventDefault();
         if (!checkAuth()) return;
@@ -733,21 +703,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const newEvents = [...currentEvents, { 
             title, 
             color,
-            uid: currentUserInfo ? currentUserInfo.uid : '',
-            author: currentUserInfo ? currentUserInfo.nickname : ''
+            uid: currentUserInfo.uid,
+            author: currentUserInfo.nickname
         }];
 
         db.collection('events').doc(activeSelectedDateStr).set({
             events: newEvents
         }).then(() => {
-            eventTitleInput.value = ''; // 작성폼 초기화
+            eventTitleInput.value = ''; 
         }).catch(err => {
             console.error("Error adding event: ", err);
-            alert("일정 저장에 실패했습니다. 데이터베이스 권한을 확인해주세요! ⚠️\n에러: " + err.message);
+            alert("일정 저장에 실패했습니다. ⚠️");
         });
     });
 
-    // 일정 삭제 처리
     function deleteEvent(index) {
         if (!checkAuth()) return;
         if (confirm('이 일정을 삭제하시겠습니까?')) {
@@ -765,56 +734,308 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    renderCalendar();
-
 
     // ----------------------------------------------------
-    // 6. 추억 갤러리 필터링 & 라이트박스
+    // 6. 다중 여행 사진 업로드 및 갤러리 렌더링 (고도화 추가)
     // ----------------------------------------------------
-    const filterButtons = document.querySelectorAll('.filter-btn');
-    const galleryItems = document.querySelectorAll('.gallery-item');
+    const galleryForm = document.getElementById('gallery-form');
+    const galleryTitle = document.getElementById('gallery-title');
+    const galleryDesc = document.getElementById('gallery-desc');
+    const galleryCategory = document.getElementById('gallery-category');
+    const galleryFiles = document.getElementById('gallery-files');
+    const galleryImgPreviews = document.getElementById('gallery-img-previews');
+    const galleryGrid = document.getElementById('gallery-grid');
 
-    filterButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            filterButtons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+    let compressedGalleryImages = []; // 다중 업로드용 압축 이미지 캐시 배열
 
-            const filterValue = btn.getAttribute('data-filter');
+    // 갤러리 파일 다중 업로드 & 리사이징 압축
+    if (galleryFiles) {
+        galleryFiles.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            galleryImgPreviews.innerHTML = '';
+            compressedGalleryImages = [];
 
-            galleryItems.forEach(item => {
-                const category = item.getAttribute('data-category');
-                if (filterValue === 'all' || category === filterValue) {
-                    item.classList.remove('hide');
-                    setTimeout(() => {
-                        item.style.transform = 'scale(1)';
-                        item.style.opacity = '1';
-                    }, 50);
-                } else {
-                    item.style.transform = 'scale(0.8)';
-                    item.style.opacity = '0';
-                    setTimeout(() => {
-                        item.classList.add('hide');
-                    }, 400);
-                }
+            if (files.length === 0) return;
+
+            files.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        // 여행사진 최적화: 가로 최대 600px, 65% 압축 (용량 극최소화)
+                        const max_width = 600;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > max_width) {
+                            height = Math.round((height * max_width) / width);
+                            width = max_width;
+                        }
+
+                        const canvasTemp = document.createElement('canvas');
+                        canvasTemp.width = width;
+                        canvasTemp.height = height;
+                        const ctxTemp = canvasTemp.getContext('2d');
+                        ctxTemp.drawImage(img, 0, 0, width, height);
+
+                        const base64Str = canvasTemp.toDataURL('image/jpeg', 0.65);
+                        compressedGalleryImages.push(base64Str);
+
+                        // 미리보기 썸네일 노출
+                        const previewItem = document.createElement('div');
+                        previewItem.className = 'gallery-preview-item';
+                        previewItem.innerHTML = `
+                            <img src="${base64Str}" alt="미리보기">
+                            <button type="button" class="del-btn" data-index="${index}">&times;</button>
+                        `;
+                        
+                        // 미리보기 삭제 버튼 바인딩
+                        previewItem.querySelector('.del-btn').addEventListener('click', (ev) => {
+                            ev.stopPropagation();
+                            previewItem.remove();
+                            compressedGalleryImages.splice(index, 1);
+                        });
+
+                        galleryImgPreviews.appendChild(previewItem);
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
             });
+        });
+    }
+
+    // 갤러리 폼 제출 (Firestore 저장)
+    if (galleryForm) {
+        galleryForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!checkAuth()) return;
+
+            const title = galleryTitle.value.trim();
+            const desc = galleryDesc.value.trim();
+            const category = galleryCategory.value;
+
+            if (!title || !desc || compressedGalleryImages.length === 0) {
+                alert("제목, 설명 및 사진을 등록해주세요! 📷");
+                return;
+            }
+
+            const newAlbum = {
+                title,
+                desc,
+                category,
+                images: compressedGalleryImages, // 압축된 다중 base64 이미지 배열
+                author: currentUserInfo.nickname,
+                uid: currentUserInfo.uid,
+                date: new Date().getTime()
+            };
+
+            db.collection('gallery_posts').add(newAlbum).then(() => {
+                galleryForm.reset();
+                galleryImgPreviews.innerHTML = '';
+                compressedGalleryImages = [];
+                alert("소중한 추억 앨범이 등록되었습니다! ✈️");
+            }).catch(err => {
+                console.error("갤러리 저장 에러:", err);
+                alert("갤러리 저장 실패! ⚠️");
+            });
+        });
+    }
+
+    // 기본 정적 앨범 2개 정의 (예비용)
+    const defaultGalleryPosts = [
+        {
+            id: "default_1",
+            category: "travel",
+            title: "가을 숲속 오두막 힐링 여행",
+            desc: "바쁜 일상을 잠시 내려두고 맑은 호수와 붉은 단풍이 가득한 오두막에서 보낸 주말.",
+            images: ["./assets/dodo_gallery_1.png"],
+            author: "DODO Family",
+            date: 1761400000000
+        },
+        {
+            id: "default_2",
+            category: "daily",
+            title: "주말 저녁의 따뜻한 만찬",
+            desc: "벽난로 온기 속에 모여 앉아 서로의 하루를 나누며 웃음 지었던 주말 식사 시간.",
+            images: ["./assets/dodo_gallery_2.png"],
+            author: "DODO Family",
+            date: 1761300000000
+        }
+    ];
+
+    let galleryPosts = [];
+    function initGalleryListener() {
+        db.collection('gallery_posts').orderBy('date', 'desc').onSnapshot(snapshot => {
+            const dbPosts = [];
+            snapshot.forEach(doc => {
+                dbPosts.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+
+            // 기본 로컬 이미지와 병합
+            galleryPosts = [...dbPosts, ...defaultGalleryPosts];
+            renderGallery();
+        }, err => console.error("갤러리 로드 에러:", err));
+    }
+
+    // 갤러리 카드 그리기
+    function renderGallery() {
+        if (!galleryGrid) return;
+        galleryGrid.innerHTML = '';
+
+        galleryPosts.forEach(post => {
+            const item = document.createElement('div');
+            item.className = 'gallery-item glass-card';
+            item.setAttribute('data-category', post.category);
+
+            // 첫 번째 대표 사진 설정
+            const firstImg = post.images && post.images.length > 0 ? post.images[0] : './assets/dodo_hero.png';
+            
+            // 사진이 여러 장일 경우 상단 배지 노출
+            const multiBadgeHTML = post.images && post.images.length > 1
+                ? `<div class="gallery-multi-badge"><i class="fa-regular fa-images"></i> +${post.images.length}장</div>`
+                : '';
+
+            // 삭제 버튼 (본인 글만 노출)
+            const isOwner = currentUserInfo && (post.uid === currentUserInfo.uid);
+            const delBtnHTML = isOwner
+                ? `<button class="delete-btn gallery-del-btn" data-id="${post.id}" style="position: absolute; bottom: 15px; right: 15px; font-size: 0.8rem; background:rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted);"><i class="fa-regular fa-trash-can"></i> 삭제</button>`
+                : '';
+
+            item.innerHTML = `
+                <div class="gallery-img-container" style="position: relative;">
+                    ${multiBadgeHTML}
+                    <img src="${firstImg}" alt="${post.title}">
+                    <div class="gallery-overlay">
+                        <i class="fa-solid fa-magnifying-glass-plus"></i>
+                    </div>
+                </div>
+                <div class="gallery-content" style="position: relative; padding-bottom: 3.5rem;">
+                    <span class="gallery-tag">${post.category === 'travel' ? '가족 여행 ✈️' : '소소한 일상 ☕'}</span>
+                    <h3 class="gallery-item-title">${escapeHTML(post.title)}</h3>
+                    <p class="gallery-item-desc">${escapeHTML(post.desc)}</p>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; font-weight: 600;"><i class="fa-solid fa-user"></i> ${escapeHTML(post.author)}</p>
+                    ${delBtnHTML}
+                </div>
+            `;
+
+            // 클릭 시 슬라이더 라이트박스 연동
+            item.querySelector('.gallery-img-container').addEventListener('click', () => {
+                openLightboxSlider(post.images || [], post.title);
+            });
+
+            // 삭제 이벤트 연결
+            if (isOwner) {
+                item.querySelector('.gallery-del-btn').addEventListener('click', (ev) => {
+                    ev.stopPropagation();
+                    if (confirm("이 앨범을 삭제하시겠습니까?")) {
+                        db.collection('gallery_posts').doc(post.id).delete()
+                            .catch(err => console.error("갤러리 삭제 에러:", err));
+                    }
+                });
+            }
+
+            galleryGrid.appendChild(item);
+        });
+
+        // 갤러리 필터 작동 동기화
+        const activeFilterBtn = document.querySelector('.filter-btn.active');
+        if (activeFilterBtn) {
+            const filterValue = activeFilterBtn.getAttribute('data-filter');
+            applyGalleryFilter(filterValue);
+        }
+    }
+
+    // 갤러리 필터 필터링 전용 유틸
+    function applyGalleryFilter(filterValue) {
+        const items = document.querySelectorAll('.gallery-item');
+        items.forEach(item => {
+            const category = item.getAttribute('data-category');
+            if (filterValue === 'all' || category === filterValue) {
+                item.classList.remove('hide');
+                item.style.transform = 'scale(1)';
+                item.style.opacity = '1';
+            } else {
+                item.style.transform = 'scale(0.8)';
+                item.style.opacity = '0';
+                item.classList.add('hide');
+            }
+        });
+    }
+
+    // 갤러리 필터링 버튼 클릭 연동
+    const galleryFilterBtns = document.querySelectorAll('.filter-btn');
+    galleryFilterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            galleryFilterBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            applyGalleryFilter(btn.getAttribute('data-filter'));
         });
     });
 
+
+    // ----------------------------------------------------
+    // 6-2. 다중 이미지 슬라이더 라이트박스 뷰어 (고도화 추가)
+    // ----------------------------------------------------
     const lightboxModal = document.getElementById('lightbox-modal');
     const lightboxImg = document.getElementById('lightbox-img');
     const lightboxCaption = document.getElementById('lightbox-caption');
+    const lightboxIndexIndicator = document.getElementById('lightbox-index-indicator');
+    const lightboxPrevBtn = document.getElementById('lightbox-prev-btn');
+    const lightboxNextBtn = document.getElementById('lightbox-next-btn');
     const closeBtn = document.querySelector('.close-btn');
 
-    galleryItems.forEach(item => {
-        const imgContainer = item.querySelector('.gallery-img-container');
-        imgContainer.addEventListener('click', () => {
-            const imgSrc = item.querySelector('img').getAttribute('src');
-            const itemTitle = item.querySelector('.gallery-item-title').textContent;
-            
-            lightboxImg.setAttribute('src', imgSrc);
-            lightboxCaption.textContent = itemTitle;
-            lightboxModal.classList.add('show');
-        });
+    let activeSliderImages = []; // 현재 슬라이드할 이미지 목록
+    let activeSliderIndex = 0; // 현재 인덱스
+
+    function openLightboxSlider(images, caption) {
+        activeSliderImages = images;
+        activeSliderIndex = 0;
+
+        if (images.length === 0) return;
+
+        // 라이트박스에 상태 반영
+        lightboxImg.setAttribute('src', images[0]);
+        lightboxCaption.textContent = caption;
+        
+        updateSliderIndicator();
+        lightboxModal.classList.add('show');
+    }
+
+    function updateSliderIndicator() {
+        const total = activeSliderImages.length;
+        if (total <= 1) {
+            // 이미지가 1장일 경우 화살표와 인디케이터 숨김
+            lightboxPrevBtn.style.display = 'none';
+            lightboxNextBtn.style.display = 'none';
+            lightboxIndexIndicator.style.display = 'none';
+        } else {
+            lightboxPrevBtn.style.display = 'flex';
+            lightboxNextBtn.style.display = 'flex';
+            lightboxIndexIndicator.style.display = 'block';
+            lightboxIndexIndicator.textContent = `${activeSliderIndex + 1} / ${total}`;
+        }
+    }
+
+    // 슬라이더 이전 사진 이동
+    lightboxPrevBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (activeSliderImages.length <= 1) return;
+        activeSliderIndex = (activeSliderIndex - 1 + activeSliderImages.length) % activeSliderImages.length;
+        lightboxImg.setAttribute('src', activeSliderImages[activeSliderIndex]);
+        updateSliderIndicator();
+    });
+
+    // 슬라이더 다음 사진 이동
+    lightboxNextBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (activeSliderImages.length <= 1) return;
+        activeSliderIndex = (activeSliderIndex + 1) % activeSliderImages.length;
+        lightboxImg.setAttribute('src', activeSliderImages[activeSliderIndex]);
+        updateSliderIndicator();
     });
 
     closeBtn.addEventListener('click', () => {
@@ -832,7 +1053,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // 7. 사진 업로드형 가족 게시판 로직 (Canvas 압축 & 저장)
     // ----------------------------------------------------
     const boardForm = document.getElementById('board-form');
-    const boardAuthor = document.getElementById('board-author');
     const boardTitle = document.getElementById('board-title');
     const boardFile = document.getElementById('board-file');
     const boardContent = document.getElementById('board-content');
@@ -841,7 +1061,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let compressedImageBase64 = ''; // 압축된 이미지 캐시 변수
 
-    // 이미지 파일을 읽고 Canvas를 이용해 다운스케일링 압축하는 헬퍼 함수
     boardFile.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) {
@@ -855,7 +1074,6 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.onload = function(event) {
             const img = new Image();
             img.onload = function() {
-                // 이미지 리사이징 (최대 너비 600px 기준 종횡비 계산)
                 const max_width = 600;
                 let width = img.width;
                 let height = img.height;
@@ -865,17 +1083,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     width = max_width;
                 }
 
-                // 메모리에 캔버스를 임시 생성하여 리사이즈 드로잉
                 const tempCanvas = document.createElement('canvas');
                 tempCanvas.width = width;
                 tempCanvas.height = height;
                 const tempCtx = tempCanvas.getContext('2d');
                 tempCtx.drawImage(img, 0, 0, width, height);
 
-                // JPEG 포맷에 70% 퀄리티로 압축하여 base64 획득
                 compressedImageBase64 = tempCanvas.toDataURL('image/jpeg', 0.7);
 
-                // 화면에 미리보기 업데이트
                 boardImgPreview.innerHTML = `<img src="${compressedImageBase64}" alt="업로드 이미지 미리보기">`;
                 boardImgPreview.style.display = 'block';
             };
@@ -884,7 +1099,6 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsDataURL(file);
     });
 
-    // Firestore 실시간 게시글 동기화
     let boardPosts = [];
     function initBoardListener() {
         db.collection('board_posts').orderBy('date', 'desc').onSnapshot((snapshot) => {
@@ -896,11 +1110,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
             renderBoardPosts();
+            updateAutoTimeline(); // 데이터 갱신 시 타임라인 업데이트 트리거
         });
     }
 
-    // 게시글 목록 렌더링 함수
     function renderBoardPosts() {
+        if (!boardPostsGrid) return;
         boardPostsGrid.innerHTML = '';
 
         const filteredPosts = activeBoardFilter === 'all'
@@ -926,12 +1141,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 day: '2-digit'
             });
 
-            // 이미지가 존재하는 경우 상단 배너 추가, 없는 경우 기본 심볼 추가
             const imgHeaderHTML = post.image 
                 ? `<div class="post-img-header"><img src="${post.image}" alt="게시글 대표 사진"></div>`
                 : `<div class="post-img-header"><div class="post-no-img"><i class="fa-regular fa-image"></i></div></div>`;
 
-            // 본인 글 여부 판별 (이전 작성글 폴백 적용)
             const isOwner = currentUserInfo && (post.uid === currentUserInfo.uid || (!post.uid && post.author === currentUserInfo.nickname));
             const footerHTML = isOwner 
                 ? `<div class="post-footer" style="display: flex; gap: 10px;">
@@ -961,7 +1174,6 @@ document.addEventListener('DOMContentLoaded', () => {
             boardPostsGrid.appendChild(postCard);
         });
 
-        // 게시판 삭제 이벤트 위임
         boardPostsGrid.querySelectorAll('.board-post-del-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const id = btn.getAttribute('data-id');
@@ -969,7 +1181,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // 게시판 수정 이벤트 위임
         boardPostsGrid.querySelectorAll('.board-post-edit-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const id = btn.getAttribute('data-id');
@@ -978,7 +1189,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 게시판 필터 버튼 이벤트 바인딩
     const boardFilterBtns = document.querySelectorAll('.board-filter-btn');
     boardFilterBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -993,15 +1203,12 @@ document.addEventListener('DOMContentLoaded', () => {
         boardForm.reset();
         boardForm.removeAttribute('data-edit-id');
         
-        // 이야기 등록 타이틀 복구
         const formTitle = boardForm.parentNode.querySelector('h3');
         if (formTitle) formTitle.textContent = '이야기 등록하기';
         
-        // 등록 버튼 텍스트 복구
         const submitBtn = boardForm.querySelector('button[type="submit"]');
         if (submitBtn) submitBtn.innerHTML = '등록하기 <i class="fa-solid fa-pen-nib"></i>';
         
-        // 수정 취소 버튼 제거
         const cancelBtn = document.getElementById('board-edit-cancel-btn');
         if (cancelBtn) cancelBtn.remove();
         
@@ -1017,20 +1224,16 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(doc => {
                 if (doc.exists) {
                     const post = doc.data();
-                    
-                    // 작성자 본인 확인
                     const isOwner = currentUserInfo && (post.uid === currentUserInfo.uid || (!post.uid && post.author === currentUserInfo.nickname));
                     if (!isOwner) {
                         alert("작성자 본인만 수정할 수 있습니다! 🔐");
                         return;
                     }
                     
-                    // 폼 내용 채우기
                     boardForm.setAttribute('data-edit-id', id);
                     boardTitle.value = post.title || '';
                     boardContent.value = post.content || '';
                     
-                    // 이미지 미리보기 설정
                     if (post.image) {
                         compressedImageBase64 = post.image;
                         boardImgPreview.innerHTML = `<img src="${compressedImageBase64}" alt="업로드 이미지 미리보기">`;
@@ -1041,15 +1244,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         boardImgPreview.innerHTML = '';
                     }
                     
-                    // 이야기 수정 타이틀 변경
                     const formTitle = boardForm.parentNode.querySelector('h3');
                     if (formTitle) formTitle.innerHTML = '이야기 수정하기 ✏️';
                     
-                    // 등록 버튼 텍스트 변경
                     const submitBtn = boardForm.querySelector('button[type="submit"]');
                     if (submitBtn) submitBtn.innerHTML = '수정 완료 <i class="fa-solid fa-check"></i>';
                     
-                    // 수정 취소 버튼 추가 (없을 경우에만)
                     if (!document.getElementById('board-edit-cancel-btn')) {
                         const cancelBtn = document.createElement('button');
                         cancelBtn.type = 'button';
@@ -1061,14 +1261,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         boardForm.appendChild(cancelBtn);
                     }
                     
-                    // 폼으로 스크롤 이동
                     boardForm.scrollIntoView({ behavior: 'smooth' });
                 }
             })
             .catch(err => console.error("Error getting post details:", err));
     }
 
-    // 게시글 등록 및 수정 제출
     boardForm.addEventListener('submit', (e) => {
         e.preventDefault();
         if (!checkAuth()) return;
@@ -1083,7 +1281,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const editId = boardForm.getAttribute('data-edit-id');
 
         if (editId) {
-            // 수정 업데이트 진행
             db.collection('board_posts').doc(editId).update({
                 title,
                 content,
@@ -1092,10 +1289,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 resetBoardForm();
             }).catch(err => {
                 console.error("Error updating post: ", err);
-                alert("게시글 수정에 실패했습니다. 데이터베이스 권한을 확인해주세요! ⚠️\n에러: " + err.message);
+                alert("게시글 수정 실패! ⚠️");
             });
         } else {
-            // 신규 게시글 저장
             const newPost = {
                 author,
                 role,
@@ -1110,12 +1306,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 resetBoardForm();
             }).catch(err => {
                 console.error("Error adding post: ", err);
-                alert("게시글 저장에 실패했습니다. 데이터베이스 권한을 확인해주세요! ⚠️\n에러: " + err.message);
+                alert("게시글 저장 실패! ⚠️");
             });
         }
     });
 
-    // 게시글 삭제
     function deleteBoardPost(id) {
         if (!checkAuth()) return;
         if (confirm('이 게시글을 정말로 삭제할까요?')) {
@@ -1124,13 +1319,150 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 초기 게시판 출력
-    renderBoardPosts();
-
 
     // ----------------------------------------------------
-    // 8. 스크롤 트리거 타임라인 애니메이션 (Intersection Observer)
+    // 8. AI 룰 기반 실시간 자동 타임라인 갱신 엔진 (고도화 추가)
     // ----------------------------------------------------
+    const timelineGridDynamic = document.getElementById('timeline-grid-dynamic');
+
+    function updateAutoTimeline() {
+        if (!timelineGridDynamic) return;
+        timelineGridDynamic.innerHTML = '';
+
+        let combinedTimelineData = [];
+
+        // 1) 캘린더 일정 데이터 파싱 & 병합
+        for (const dateKey in familyEvents) {
+            const events = familyEvents[dateKey];
+            events.forEach(evt => {
+                combinedTimelineData.push({
+                    title: `달력 일정: ${evt.title}`,
+                    content: `${dateKey}에 예정된 DODO 가족의 일정입니다. 작성자: ${evt.author || '가족'}`,
+                    date: new Date(dateKey + 'T00:00:00').getTime(),
+                    type: 'calendar',
+                    rawText: evt.title + ' ' + (evt.author || '')
+                });
+            });
+        }
+
+        // 2) 소식 게시글 데이터 병합
+        boardPosts.forEach(post => {
+            combinedTimelineData.push({
+                title: post.title,
+                content: post.content,
+                date: post.date,
+                type: 'board',
+                image: post.image,
+                author: post.author,
+                rawText: post.title + ' ' + post.content + ' ' + post.author
+            });
+        });
+
+        // 3) 방명록 메시지 데이터 병합
+        messages.forEach(msg => {
+            combinedTimelineData.push({
+                title: `${msg.author}님의 방명록 한마디 💌`,
+                content: msg.message,
+                date: msg.date,
+                type: 'guestbook',
+                sticker: msg.sticker,
+                rawText: msg.message + ' ' + msg.author
+            });
+        });
+
+        // 날짜 역순(최신순) 정렬
+        combinedTimelineData.sort((a, b) => b.date - a.date);
+
+        if (combinedTimelineData.length === 0) {
+            timelineGridDynamic.innerHTML = '<p class="no-messages" style="padding: 2rem;">타임라인에 등록할 데이터가 아직 없습니다.</p>';
+            return;
+        }
+
+        // 지능형 AI 텍스트 분석 매핑 규칙
+        const travelKeywords = ['여행', '캠핑', '바다', '산', '오두막', '제주', '해외', '나들이', '소풍', '놀러', '비행기', '휴가'];
+        const celebKeywords = ['생신', '생일', '결혼', '축하', '기념일', '파티', '돌잔치', '환갑', '칠순', '선물', '주년', '개설', '오픈', '탄생'];
+        const petKeywords = ['도도', '고양이', '강아지', '반려묘', '츄르', '야옹', '동물', '산책', '막둥이'];
+        const studyKeywords = ['공부', '시험', '합격', '취업', '학교', '입학', '졸업', '자격증', '성적', '상장', 'IT', '코딩', '마스터'];
+        const foodKeywords = ['식사', '맛집', '저녁', '만찬', '요리', '외식', '카페', '커피', '베이킹', '디너', '먹'];
+
+        combinedTimelineData.forEach((item, index) => {
+            const dateStr = new Date(item.date).toLocaleDateString('ko-KR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+
+            // 기본값 설정 (가족 소식)
+            let iconClass = 'fa-heart-pulse';
+            let bgClass = 'bg-blue';
+            let themeText = '가족 소식 🤍';
+
+            // AI 판단 분석 (키워드 매칭)
+            const textToAnalyze = item.rawText.toLowerCase();
+
+            if (travelKeywords.some(kw => textToAnalyze.includes(kw))) {
+                iconClass = 'fa-campground';
+                bgClass = 'bg-orange';
+                themeText = '여행 및 추억 🏕️';
+            } else if (celebKeywords.some(kw => textToAnalyze.includes(kw))) {
+                iconClass = 'fa-cake-candles';
+                bgClass = 'bg-pink';
+                themeText = '기념일 및 파티 🎉';
+            } else if (petKeywords.some(kw => textToAnalyze.includes(kw))) {
+                iconClass = 'fa-cat';
+                bgClass = 'bg-purple';
+                themeText = '반려가족 도도 🐱';
+            } else if (studyKeywords.some(kw => textToAnalyze.includes(kw))) {
+                iconClass = 'fa-graduation-cap';
+                bgClass = 'bg-blue';
+                themeText = '학업 및 성취 🎓';
+            } else if (foodKeywords.some(kw => textToAnalyze.includes(kw))) {
+                iconClass = 'fa-utensils';
+                bgClass = 'bg-green';
+                themeText = '가족 만찬 🍽️';
+            }
+
+            const leftOrRightClass = index % 2 === 0 ? 'left-item' : 'right-item';
+            
+            // 이미지 배너 HTML
+            const imgHTML = item.image ? `<div style="width:100%; height:120px; overflow:hidden; border-radius:10px; margin-bottom:10px;"><img src="${item.image}" style="width:100%; height:100%; object-fit:cover;"></div>` : '';
+            
+            // 방명록 스티커 HTML
+            const stickerHTML = item.sticker ? `<span style="font-size: 1.5rem; float: right; margin-top: -5px;">${item.sticker}</span>` : '';
+
+            const timelineCardHTML = `
+                <div class="timeline-item ${leftOrRightClass} show">
+                    <div class="timeline-dot ${bgClass}"></div>
+                    <div class="timeline-card glass-card">
+                        <span class="timeline-date">${dateStr} [${themeText}]</span>
+                        ${stickerHTML}
+                        <h3 class="timeline-title"><i class="fa-solid ${iconClass}" style="margin-right: 6px; color:var(--primary-color);"></i> ${escapeHTML(item.title)}</h3>
+                        ${imgHTML}
+                        <p>${escapeHTML(item.content).replace(/\n/g, '<br>')}</p>
+                    </div>
+                </div>
+            `;
+            
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = timelineCardHTML.trim();
+            timelineGridDynamic.appendChild(tempDiv.firstChild);
+        });
+
+        // 새로고침 시 관찰자 등록
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('show');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('#timeline-grid-dynamic .timeline-item').forEach(item => {
+            observer.observe(item);
+        });
+    }
+
+    // 스크롤 트리거 타임라인 애니메이션 (구버전은 비활성화)
     const timelineItems = document.querySelectorAll('.timeline-item');
     const observerOptions = {
         threshold: 0.1,
@@ -1155,11 +1487,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 9. 가상 방명록 로직
     // ----------------------------------------------------
     const guestbookForm = document.getElementById('guestbook-form');
-    const authorInput = document.getElementById('author-input');
     const messageInput = document.getElementById('message-input');
     const guestbookList = document.getElementById('guestbook-list');
 
-    // Firestore 실시간 방명록 동기화
     let messages = [];
     function initGuestbookListener() {
         db.collection('messages').orderBy('date', 'desc').onSnapshot((snapshot) => {
@@ -1176,14 +1506,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     sticker: data.sticker,
                     date: data.date,
                     likes: data.likes || 0,
-                    liked: likedMessages.includes(msgId)
+                    liked: likedMessages.includes(msgId),
+                    uid: data.uid
                 });
             });
             renderMessages();
+            updateAutoTimeline(); // 데이터 갱신 시 타임라인 업데이트 트리거
         });
     }
 
     function renderMessages() {
+        if (!guestbookList) return;
         guestbookList.innerHTML = '';
 
         if (messages.length === 0) {
@@ -1207,7 +1540,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 minute: '2-digit'
             });
 
-            // 본인 글 여부 판별 (이전 작성글 폴백 적용)
             const isOwner = currentUserInfo && (msg.uid === currentUserInfo.uid || (!msg.uid && msg.author === currentUserInfo.nickname));
             const actionsHTML = isOwner 
                 ? `<div class="guest-actions" style="display: flex; gap: 8px; margin-left: 10px;">
@@ -1245,7 +1577,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // 방명록 삭제 버튼 바인딩
         guestbookList.querySelectorAll('.msg-del-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const id = btn.getAttribute('data-id');
@@ -1253,7 +1584,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // 방명록 수정 버튼 바인딩
         guestbookList.querySelectorAll('.msg-edit-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const id = btn.getAttribute('data-id');
@@ -1278,15 +1608,12 @@ document.addEventListener('DOMContentLoaded', () => {
         guestbookForm.reset();
         guestbookForm.removeAttribute('data-edit-id');
 
-        // 메시지 작성 타이틀 복구
         const formTitle = guestbookForm.parentNode.querySelector('h3');
         if (formTitle) formTitle.textContent = '메시지 작성하기';
 
-        // 등록 버튼 텍스트 복구
         const submitBtn = guestbookForm.querySelector('button[type="submit"]');
         if (submitBtn) submitBtn.innerHTML = '등록하기 <i class="fa-solid fa-paper-plane"></i>';
 
-        // 수정 취소 버튼 제거
         const cancelBtn = document.getElementById('guestbook-edit-cancel-btn');
         if (cancelBtn) cancelBtn.remove();
 
@@ -1301,33 +1628,26 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(doc => {
                 if (doc.exists) {
                     const msg = doc.data();
-
-                    // 작성자 본인 확인
                     const isOwner = currentUserInfo && (msg.uid === currentUserInfo.uid || (!msg.uid && msg.author === currentUserInfo.nickname));
                     if (!isOwner) {
                         alert("작성자 본인만 수정할 수 있습니다! 🔐");
                         return;
                     }
 
-                    // 폼 내용 채우기
                     guestbookForm.setAttribute('data-edit-id', id);
                     messageInput.value = msg.message || '';
 
-                    // 스티커 라디오 버튼 설정
                     const stickerInput = document.querySelector(`input[name="sticker"][value="${msg.sticker}"]`);
                     if (stickerInput) {
                         stickerInput.checked = true;
                     }
 
-                    // 메시지 수정 타이틀 변경
                     const formTitle = guestbookForm.parentNode.querySelector('h3');
                     if (formTitle) formTitle.innerHTML = '메시지 수정하기 ✏️';
 
-                    // 등록 버튼 텍스트 변경
                     const submitBtn = guestbookForm.querySelector('button[type="submit"]');
                     if (submitBtn) submitBtn.innerHTML = '수정 완료 <i class="fa-solid fa-check"></i>';
 
-                    // 수정 취소 버튼 추가 (없을 경우에만)
                     if (!document.getElementById('guestbook-edit-cancel-btn')) {
                         const cancelBtn = document.createElement('button');
                         cancelBtn.type = 'button';
@@ -1339,14 +1659,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         guestbookForm.appendChild(cancelBtn);
                     }
 
-                    // 폼으로 스크롤 이동
                     guestbookForm.scrollIntoView({ behavior: 'smooth' });
                 }
             })
             .catch(err => console.error("Error getting message details:", err));
     }
 
-    // 방명록 등록 및 수정 제출
     guestbookForm.addEventListener('submit', (e) => {
         e.preventDefault();
         if (!checkAuth()) return;
@@ -1361,7 +1679,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const editId = guestbookForm.getAttribute('data-edit-id');
 
         if (editId) {
-            // 수정 업데이트 진행
             db.collection('messages').doc(editId).update({
                 message,
                 sticker: selectedSticker
@@ -1369,10 +1686,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 resetGuestbookForm();
             }).catch(err => {
                 console.error("Error updating message: ", err);
-                alert("방명록 수정에 실패했습니다. 데이터베이스 권한을 확인해주세요! ⚠️\n에러: " + err.message);
+                alert("방명록 수정 실패! ⚠️");
             });
         } else {
-            // 신규 방명록 등록
             const newMessage = {
                 author,
                 role,
@@ -1387,7 +1703,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 resetGuestbookForm();
             }).catch(err => {
                 console.error("Error adding message: ", err);
-                alert("방명록 저장에 실패했습니다. 데이터베이스 권한을 확인해주세요! ⚠️\n에러: " + err.message);
+                alert("방명록 저장 실패! ⚠️");
             });
         }
     });
@@ -1433,8 +1749,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+
     // ----------------------------------------------------
-    // 13. 모바일 퀵 네비게이션 제어 (신규 추가)
+    // 13. 모바일 퀵 네비게이션 제어
     // ----------------------------------------------------
     const mobileNavBtn = document.getElementById('mobile-nav-btn');
     const mobileNavDropdown = document.getElementById('mobile-nav-dropdown');
@@ -1445,7 +1762,6 @@ document.addEventListener('DOMContentLoaded', () => {
             mobileNavDropdown.classList.toggle('hidden');
         });
 
-        // 퀵 메뉴 링크 클릭 시 부드럽게 이동하고 닫기
         mobileNavDropdown.querySelectorAll('.mobile-dropdown-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -1465,14 +1781,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // 바깥 영역 클릭 시 자동으로 닫기
         document.addEventListener('click', () => {
             mobileNavDropdown.classList.add('hidden');
         });
     }
 
+
     // ----------------------------------------------------
-    // 14. 가족 구성원 프로필 Firestore 연동 및 관리 (신규 추가)
+    // 14. 가족 구성원 프로필 Firestore 연동 및 관리
     // ----------------------------------------------------
     const familyGrid = document.getElementById('family-grid');
     const familyModal = document.getElementById('family-modal');
@@ -1480,7 +1796,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const familyEditForm = document.getElementById('family-edit-form');
     const dropdownManageFamilyBtn = document.getElementById('dropdown-manage-family-btn');
 
-    // 기본 시딩(Seeding) 데이터 정의
     const defaultFamilyData = [
         {
             id: "daddy",
@@ -1540,7 +1855,6 @@ document.addEventListener('DOMContentLoaded', () => {
             familyGrid.appendChild(memberCard);
         });
 
-        // 카드 클릭 시 뒤집기 기능 바인딩
         bindCardFlipInteractions();
     }
 
@@ -1548,7 +1862,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const membersRef = db.collection('family_members');
 
         membersRef.orderBy('order').onSnapshot(snapshot => {
-            // 1. 만약 Firestore에 데이터가 아예 없다면 기본값 시딩 수행
             if (snapshot.empty) {
                 const batch = db.batch();
                 defaultFamilyData.forEach(item => {
@@ -1561,20 +1874,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // 스냅샷 캐시 저장
             cachedFamilySnapshot = snapshot;
-
-            // 2. 받아온 실시간 데이터로 카드 렌더링
             renderFamilyCards(snapshot);
         }, err => console.error("가족 구성원 정보 로드 에러:", err));
     }
 
-    // 카드 HTML 엘리먼트 생성 헬퍼
     function createMemberCardHTML(id, data) {
         const wrapper = document.createElement('div');
         wrapper.className = 'member-card-wrapper';
         
-        // 로그인 시에만 연필 모양 수정 버튼 렌더링
         const editBtnHTML = currentUserInfo 
             ? `<div class="member-edit-btn" data-id="${id}" title="프로필 수정"><i class="fa-solid fa-pen-to-square"></i></div>` 
             : '';
@@ -1601,12 +1909,11 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        // 수정 버튼 클릭 이벤트 처리
         if (currentUserInfo) {
             const editBtn = wrapper.querySelector('.member-edit-btn');
             if (editBtn) {
                 editBtn.addEventListener('click', (e) => {
-                    e.stopPropagation(); // 카드 뒤집기 방지
+                    e.stopPropagation(); 
                     openFamilyEditModal(id, data);
                 });
             }
@@ -1615,7 +1922,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return wrapper;
     }
 
-    // 카드 플립 인터랙션 바인딩
     function bindCardFlipInteractions() {
         const cards = document.querySelectorAll('.member-card-wrapper');
         cards.forEach(card => {
@@ -1625,7 +1931,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 수정 모달 제어
     function openFamilyEditModal(id, data) {
         if (!checkAuth()) return;
         
@@ -1636,12 +1941,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('edit-member-comment').value = data.comment || '';
         document.getElementById('edit-member-like').value = data.like || '';
 
-        // 아이콘 선택 매핑 설정 (iconClass와 iconBg를 합친 밸류 매칭)
         const selectIcon = document.getElementById('edit-member-icon');
         if (selectIcon) {
             const iconVal = `${data.iconClass || 'fa-user-tie'}|${data.iconBg || 'bg-blue'}`;
             
-            // 옵션 순회하여 매칭
             for (let i = 0; i < selectIcon.options.length; i++) {
                 if (selectIcon.options[i].value === iconVal) {
                     selectIcon.selectedIndex = i;
@@ -1655,7 +1958,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // 가족 모달 닫기
     if (familyModalClose) {
         familyModalClose.addEventListener('click', () => {
             familyModal.classList.remove('show');
@@ -1669,7 +1971,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 드롭다운 [가족 관리] 클릭 시 아빠(첫 번째 구성원)의 편집 창을 디폴트로 열어 줍니다.
     if (dropdownManageFamilyBtn) {
         dropdownManageFamilyBtn.addEventListener('click', () => {
             db.collection('family_members').orderBy('order').limit(1).get()
@@ -1685,7 +1986,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 가족 프로필 수정 폼 제출
     if (familyEditForm) {
         familyEditForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -1717,27 +2017,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    renderMessages();
 
     // ----------------------------------------------------
-    // 15. 메인 배너 이미지 Firestore 동적 관리 (신규 추가)
+    // 15. 메인 배너 이미지 Firestore 동적 관리 (동기 캐싱 추가)
     // ----------------------------------------------------
     const heroDisplayImg = document.getElementById('hero-display-img');
     const heroEditTrigger = document.getElementById('hero-img-edit-trigger');
     const heroImgFile = document.getElementById('hero-img-file');
 
-    // Firestore settings 컬렉션에서 메인 이미지 실시간 감시
     function initSettingsListener() {
         db.collection('settings').doc('main_image').onSnapshot((doc) => {
             if (doc.exists && doc.data().url) {
-                heroDisplayImg.setAttribute('src', doc.data().url);
+                const imgUrl = doc.data().url;
+                heroDisplayImg.setAttribute('src', imgUrl);
+                localStorage.setItem('dodo-hero-image-cache', imgUrl); // 초고속 로드용 로컬스토리지 캐시 최신화
             } else {
                 heroDisplayImg.setAttribute('src', './assets/dodo_hero.png');
+                localStorage.removeItem('dodo-hero-image-cache');
             }
         }, err => console.error("메인 이미지 설정 로드 에러:", err));
     }
 
-    // 사진 변경 배지 클릭 시 파일 선택 창 열기
     if (heroEditTrigger && heroImgFile) {
         heroEditTrigger.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -1745,7 +2045,6 @@ document.addEventListener('DOMContentLoaded', () => {
             heroImgFile.click();
         });
 
-        // 파일 선택 후 캔버스 압축 및 Firestore 저장
         heroImgFile.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -1754,7 +2053,6 @@ document.addEventListener('DOMContentLoaded', () => {
             reader.onload = function(event) {
                 const img = new Image();
                 img.onload = function() {
-                    // 최대 가로폭 1000px 리사이징
                     const max_width = 1000;
                     let width = img.width;
                     let height = img.height;
@@ -1770,22 +2068,21 @@ document.addEventListener('DOMContentLoaded', () => {
                     const tempCtx = tempCanvas.getContext('2d');
                     tempCtx.drawImage(img, 0, 0, width, height);
 
-                    // JPEG 75% 압축
                     const compressedBase64 = tempCanvas.toDataURL('image/jpeg', 0.75);
 
-                    // Firestore에 저장
+                    // Firestore 업로드 및 로컬 캐싱 즉시 반영
                     db.collection('settings').doc('main_image').set({
                         url: compressedBase64,
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                         updatedBy: currentUserInfo ? currentUserInfo.nickname : 'unknown'
                     }).then(() => {
+                        localStorage.setItem('dodo-hero-image-cache', compressedBase64); // 캐시 즉시 업데이트
                         alert("메인 이미지가 성공적으로 변경되었습니다! 🎉");
                     }).catch(err => {
                         console.error("메인 이미지 저장 에러:", err);
-                        alert("이미지 저장에 실패했습니다. 데이터베이스 권한을 확인해주세요! ⚠️\n에러: " + err.message);
+                        alert("이미지 저장 실패! ⚠️");
                     });
 
-                    // 파일 입력 필드 리셋
                     heroImgFile.value = '';
                 };
                 img.src = event.target.result;
@@ -1794,6 +2091,5 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 실시간 Firestore 데이터베이스 리스너 등록
     initRealtimeDbListeners();
 });

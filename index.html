@@ -6,13 +6,13 @@
     <title>DODO Family Space | 따뜻한 우리 가족의 이야기</title>
     
     <!-- SEO Meta Tags -->
-    <meta name="description" content="최신 트렌드와 화려한 비주얼로 담아낸 DODO 가족의 소중한 일상, 여행 정보, 일정 달력 및 사진 게시판이 있는 우리들만의 프리미엄 공간입니다.">
+    <meta name="description" content="최신 트렌드와 화려한 비주얼로 담아낸 DODO 가족의 소중한 일상, 여행 정보, 일정 달력, 사진 게시판 및 여행 갤러리가 있는 우리들만의 프리미엄 공간입니다.">
     <meta name="keywords" content="DODO, 가족홈페이지, DODO가족, 가족앨범, 가족게시판, 가족달력, 방명록, 인터랙티브홈페이지">
     <meta name="author" content="DODO Family">
     
     <!-- Open Graph (SNS 공유용) -->
     <meta property="og:title" content="DODO Family Space">
-    <meta property="og:description" content="따뜻한 추억, 일정 관리 달력, 사진 게시판이 함께하는 DODO 가족의 홈페이지에 놀러오세요!">
+    <meta property="og:description" content="따뜻한 추억, 일정 관리 달력, 사진 게시판, 자동 타임라인이 함께하는 DODO 가족의 홈페이지에 놀러오세요!">
     <meta property="og:image" content="./assets/dodo_hero.png">
     <meta property="og:type" content="website">
     
@@ -24,7 +24,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=1.0.7">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body class="dark-theme">
     <!-- 스크롤 진행 바 -->
@@ -35,26 +35,82 @@
     <!-- 배경 Canvas 파티클 -->
     <canvas id="particle-canvas"></canvas>
 
-    <!-- 로그인 / 회원가입 화면 -->
-    <div id="auth-container" class="auth-wrapper hidden">
-        <div class="auth-card glass-card" style="position: relative;">
-            <button id="auth-close-btn" class="auth-close-btn" style="position: absolute; top: 15px; right: 20px; background: transparent; border: none; font-size: 2rem; font-weight: 700; color: var(--text-muted); cursor: pointer; transition: var(--transition-quick);">&times;</button>
-            <div class="auth-header">
-                <h2>DODO<span>.family</span></h2>
-                <p>우리 가족만의 실시간 소통 아지트</p>
-            </div>
+    <!-- 네비게이션 바 -->
+    <header id="main-header">
+        <div class="header-container">
+            <a href="#" class="logo">DODO<span>.family</span></a>
+            <nav class="nav-links">
+                <a href="#hero" class="nav-item active"><i class="fa-solid fa-house"></i> Home</a>
+                <a href="#family" class="nav-item"><i class="fa-solid fa-users"></i> Family</a>
+                <a href="#calendar" class="nav-item"><i class="fa-solid fa-calendar-days"></i> Calendar</a>
+                <a href="#gallery" class="nav-item"><i class="fa-solid fa-images"></i> Gallery</a>
+                <a href="#board" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Board</a>
+                <a href="#timeline" class="nav-item"><i class="fa-solid fa-timeline"></i> Timeline</a>
+                <a href="#guestbook" class="nav-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
+            </nav>
             
-            <!-- 1) 웰컴 화면 (초기 화면) -->
-            <div id="auth-welcome" class="auth-sub-screen">
-                <div class="welcome-visual" style="text-align: center; margin: 1.5rem 0; font-size: 3rem; color: var(--primary-color);">
-                    <i class="fa-solid fa-sparkles welcome-icon"></i>
+            <div class="header-actions" style="display: flex; gap: 10px; align-items: center;">
+                <!-- 사용자 프로필 드롭다운 버튼 -->
+                <div class="profile-menu-container" style="position: relative;">
+                    <button id="auth-menu-btn" class="theme-btn" aria-label="프로필 메뉴" style="width: auto; padding: 0 1rem; border-radius: 20px; font-size: 0.9rem; font-weight: 700; display: flex; gap: 6px; align-items: center;">
+                        <i class="fa-solid fa-user-circle" style="font-size: 1.2rem;"></i>
+                        <span id="header-user-name">Login</span>
+                    </button>
+                    <!-- 로그인 상태 드롭다운 -->
+                    <div id="profile-dropdown" class="profile-dropdown glass-card hidden" style="position: absolute; right: 0; top: 55px; width: 220px; z-index: 1002; padding: 1rem; display: flex; flex-direction: column; gap: 10px;">
+                        <div id="dropdown-logged-in" class="hidden">
+                            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 2px;">반갑습니다!</p>
+                            <h4 id="dropdown-user-nickname" style="font-size: 1.1rem; font-weight: 700; margin-bottom: 4px;">가족 구성원</h4>
+                            <span id="dropdown-user-role" class="hero-badge" style="font-size: 0.75rem; padding: 2px 8px; margin-bottom: 12px; display: inline-block;">멤버</span>
+                            <hr style="border: 0; border-top: 1px solid var(--card-border); margin-bottom: 8px;">
+                            <button id="dropdown-manage-family-btn" class="btn btn-secondary w-100" style="padding: 0.5rem; font-size: 0.85rem; margin-bottom: 6px;"><i class="fa-solid fa-users-gear"></i> 가족 정보 관리</button>
+                            <button id="dropdown-logout-btn" class="btn btn-primary w-100" style="padding: 0.5rem; font-size: 0.85rem; background: var(--accent-gradient); box-shadow: none;"><i class="fa-solid fa-right-from-bracket"></i> 로그아웃</button>
+                        </div>
+                        <div id="dropdown-logged-out">
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; text-align: center;">로그인하시면 글이나 일정을 기록하고 수정할 수 있어요!</p>
+                            <button id="dropdown-login-btn" class="btn btn-primary w-100" style="padding: 0.5rem; font-size: 0.85rem; margin-bottom: 6px;"><i class="fa-solid fa-right-to-bracket"></i> 로그인</button>
+                            <button id="dropdown-signup-btn" class="btn btn-secondary w-100" style="padding: 0.5rem; font-size: 0.85rem;"><i class="fa-solid fa-user-plus"></i> 회원가입</button>
+                        </div>
+                    </div>
                 </div>
-                <p class="welcome-desc" style="text-align: center; color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 2rem;">
-                    가족 구성원 전용 클라우드 공간입니다.<br>로그인 또는 회원가입 후 입장해 주세요.
-                </p>
-                <div class="welcome-buttons" style="display: flex; flex-direction: column; gap: 1rem;">
-                    <button id="btn-go-login" class="btn btn-primary w-100">로그인하기 <i class="fa-solid fa-right-to-bracket"></i></button>
-                    <button id="btn-go-signup" class="btn btn-secondary w-100">회원가입하기 <i class="fa-solid fa-user-plus"></i></button>
+                
+                <!-- 테마 스위치 -->
+                <button id="theme-toggle" aria-label="테마 전환" class="theme-btn">
+                    <i class="fa-solid fa-sun"></i>
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+                
+                <!-- 모바일 퀵 내비게이션 단추 -->
+                <button id="mobile-nav-btn" class="theme-btn" aria-label="모바일 메뉴" style="display: none;">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 모바일 퀵 메뉴 드롭다운 -->
+    <div id="mobile-nav-dropdown" class="mobile-nav-dropdown glass-card hidden" style="position: fixed; right: 20px; top: 75px; z-index: 999; width: 180px; padding: 0.8rem; display: flex; flex-direction: column; gap: 8px;">
+        <a href="#hero" class="mobile-dropdown-item"><i class="fa-solid fa-house"></i> Home</a>
+        <a href="#family" class="mobile-dropdown-item"><i class="fa-solid fa-users"></i> Family</a>
+        <a href="#calendar" class="mobile-dropdown-item"><i class="fa-solid fa-calendar-days"></i> Calendar</a>
+        <a href="#gallery" class="mobile-dropdown-item"><i class="fa-solid fa-images"></i> Gallery</a>
+        <a href="#board" class="mobile-dropdown-item"><i class="fa-solid fa-clipboard-list"></i> Board</a>
+        <a href="#timeline" class="mobile-dropdown-item"><i class="fa-solid fa-timeline"></i> Timeline</a>
+        <a href="#guestbook" class="mobile-dropdown-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
+    </div>
+
+    <!-- 회원가입 & 로그인 인증 모달 컨테이너 -->
+    <div id="auth-container" class="auth-modal-overlay hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 12, 27, 0.9); backdrop-filter: blur(12px); z-index: 1100; display: flex; align-items: center; justify-content: center;">
+        <div class="auth-modal-content glass-card" style="width: 90%; max-width: 420px; padding: 2.5rem; position: relative;">
+            <span id="auth-close-btn" style="position: absolute; right: 20px; top: 15px; font-size: 1.8rem; cursor: pointer; color: var(--text-muted); transition: var(--transition-quick);">&times;</span>
+            
+            <!-- 1) 로그인/회원가입 웰컴 화면 -->
+            <div id="auth-welcome" class="auth-sub-screen">
+                <h3 style="font-size: 1.6rem; font-weight: 800; text-align: center; margin-bottom: 0.5rem; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">DODO 가족 인증</h3>
+                <p style="text-align: center; font-size: 0.9rem; color: var(--text-muted); margin-bottom: 2rem;">가족 아지트 입장을 위해 인증이 필요합니다 🔐</p>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <button id="btn-go-login" class="btn btn-primary w-100" style="padding: 1rem;"><i class="fa-solid fa-right-to-bracket"></i> 로그인 화면으로</button>
+                    <button id="btn-go-signup" class="btn btn-secondary w-100" style="padding: 1rem;"><i class="fa-solid fa-user-plus"></i> 가족 계정 만들기</button>
                 </div>
             </div>
 
@@ -90,97 +146,32 @@
                         <input type="password" id="signup-password" placeholder="비밀번호 입력" required>
                     </div>
                     <div class="form-group">
-                        <label for="signup-nickname"><i class="fa-solid fa-user"></i> 가족 구성원 닉네임</label>
-                        <input type="text" id="signup-nickname" placeholder="예: 길동, 미림" required>
+                        <label for="signup-nickname"><i class="fa-solid fa-signature"></i> 호칭/이름</label>
+                        <input type="text" id="signup-nickname" placeholder="예: 첫째, 아빠, 엄마" required>
                     </div>
                     <div class="form-group">
-                        <label for="signup-role"><i class="fa-solid fa-users-viewfinder"></i> 가족 역할 선택</label>
-                        <select id="signup-role" required>
-                            <option value="" disabled selected>내 역할 선택</option>
+                        <label for="signup-role"><i class="fa-solid fa-user-tag"></i> 역할 스티커 선택</label>
+                        <select id="signup-role" style="width: 100%; padding: 0.8rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; color: var(--text-color);">
                             <option value="아빠 👨">아빠 👨</option>
                             <option value="엄마 👩">엄마 👩</option>
                             <option value="첫째 👦">첫째 👦</option>
                             <option value="둘째 👧">둘째 👧</option>
                             <option value="막둥이 🐱">막둥이 🐱</option>
-                            <option value="기타 🤍">기타 🤍</option>
+                            <option value="친척 🤍">친척 🤍</option>
+                            <option value="손님 👤">손님 👤</option>
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">가입 완료하기 <i class="fa-solid fa-user-plus"></i></button>
+                    <button type="submit" class="btn btn-primary w-100">가입 완료 <i class="fa-solid fa-user-plus"></i></button>
                 </form>
                 <p class="auth-switch-text" style="text-align: center; font-size: 0.85rem; color: var(--text-muted); margin-top: 1.5rem;">이미 계정이 있으신가요? <a href="#" id="link-to-login" style="color: var(--primary-color); font-weight: 700; text-decoration: none;">로그인</a></p>
             </div>
-
-            <!-- 에러 메시지 표시 -->
-            <div id="auth-error-msg" class="auth-error hidden"></div>
+            
+            <!-- 공통 인증 에러 메시지창 -->
+            <div id="auth-error-msg" class="hidden" style="margin-top: 15px; padding: 10px; border-radius: 10px; background: rgba(232, 67, 147, 0.15); color: #e84393; font-size: 0.85rem; text-align: center; border: 1px solid rgba(232, 67, 147, 0.3);">
+                오류 내용 표시 영역
+            </div>
         </div>
     </div>
-
-    <!-- 메인 앱 콘텐츠 -->
-    <div id="app-content">
-
-    <!-- 네비게이션 바 -->
-    <header id="main-header">
-        <div class="header-container">
-            <a href="#" class="logo">DODO<span>.family</span></a>
-            <nav class="nav-links">
-                <a href="#hero" class="nav-item active"><i class="fa-solid fa-house"></i> Home</a>
-                <a href="#family" class="nav-item"><i class="fa-solid fa-users"></i> Family</a>
-                <a href="#calendar" class="nav-item"><i class="fa-solid fa-calendar-days"></i> Calendar</a>
-                <a href="#gallery" class="nav-item"><i class="fa-solid fa-images"></i> Gallery</a>
-                <a href="#board" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Board</a>
-                <a href="#timeline" class="nav-item"><i class="fa-solid fa-timeline"></i> Timeline</a>
-                <a href="#guestbook" class="nav-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
-            </nav>
-            
-            <!-- 모바일 퀵 네비게이션 드롭다운 메뉴 (신규 추가) -->
-            <div class="mobile-nav-container" id="mobile-nav-container">
-                <button id="mobile-nav-btn" class="mobile-nav-btn" title="네비게이션 메뉴">
-                    <i class="fa-solid fa-compass"></i> Menu
-                </button>
-                <div id="mobile-nav-dropdown" class="mobile-nav-dropdown-content hidden">
-                    <a href="#hero" class="mobile-dropdown-item"><i class="fa-solid fa-house"></i> Home</a>
-                    <a href="#family" class="mobile-dropdown-item"><i class="fa-solid fa-users"></i> Family</a>
-                    <a href="#calendar" class="mobile-dropdown-item"><i class="fa-solid fa-calendar-days"></i> Calendar</a>
-                    <a href="#gallery" class="mobile-dropdown-item"><i class="fa-solid fa-images"></i> Gallery</a>
-                    <a href="#board" class="mobile-dropdown-item"><i class="fa-solid fa-clipboard-list"></i> Board</a>
-                    <a href="#timeline" class="mobile-dropdown-item"><i class="fa-solid fa-timeline"></i> Timeline</a>
-                    <a href="#guestbook" class="mobile-dropdown-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
-                </div>
-            </div>
-
-            <div class="header-actions">
-                <!-- 로그인 상태 표시 및 제어용 사용자 프로필 버튼 -->
-                <div class="user-profile-menu" style="position: relative; display: inline-block;">
-                    <button id="auth-menu-btn" class="profile-menu-btn" title="로그인 상태" style="background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-color); cursor: pointer; padding: 0.5rem 1rem; border-radius: 20px; display: flex; align-items: center; gap: 0.5rem; font-family: inherit; font-size: 0.85rem; font-weight: 700; transition: var(--transition-quick); white-space: nowrap;">
-                        <i class="fa-solid fa-circle-user" style="font-size: 1.1rem; color: var(--primary-color);"></i>
-                        <span id="header-user-name" class="header-user-name-text">Login</span>
-                    </button>
-                    <div id="profile-dropdown" class="profile-dropdown-content hidden" style="position: absolute; right: 0; top: 110%; width: 200px; padding: 10px; z-index: 1010;">
-                        <!-- 로그인 전 -->
-                        <div id="dropdown-logged-out">
-                            <button id="dropdown-login-btn" class="dropdown-item-btn" style="width: 100%; text-align: left; padding: 0.6rem 0.8rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; transition: var(--transition-quick);"><i class="fa-solid fa-right-to-bracket"></i> 로그인</button>
-                            <button id="dropdown-signup-btn" class="dropdown-item-btn" style="width: 100%; text-align: left; padding: 0.6rem 0.8rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; transition: var(--transition-quick);"><i class="fa-solid fa-user-plus"></i> 회원가입</button>
-                        </div>
-                        <!-- 로그인 후 -->
-                        <div id="dropdown-logged-in" class="hidden">
-                            <div class="user-profile-summary" style="padding: 0.5rem 0.8rem; display: flex; flex-direction: column; gap: 4px;">
-                                <span class="user-name-text" id="dropdown-user-nickname" style="font-weight: 700; font-size: 0.95rem; color: var(--text-color);">가족</span>
-                                <span class="user-role-badge" id="dropdown-user-role" style="font-size: 0.75rem; color: var(--primary-color); font-weight: 600;">역할</span>
-                            </div>
-                            <div class="dropdown-divider" style="height: 1px; background: var(--card-border); margin: 6px 0;"></div>
-                            <button id="dropdown-manage-family-btn" class="dropdown-item-btn" style="width: 100%; text-align: left; padding: 0.6rem 0.8rem; background: transparent; border: none; color: var(--text-color); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; transition: var(--transition-quick);"><i class="fa-solid fa-users-gear"></i> 가족 관리</button>
-                            <button id="dropdown-logout-btn" class="dropdown-item-btn logout-color" style="width: 100%; text-align: left; padding: 0.6rem 0.8rem; background: transparent; border: none; color: #ff7675; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; border-radius: 8px; font-weight: 600; font-size: 0.85rem; transition: var(--transition-quick);"><i class="fa-solid fa-right-from-bracket"></i> 로그아웃</button>
-                        </div>
-                    </div>
-                </div>
-
-                <button id="theme-toggle" aria-label="테마 전환" class="theme-btn">
-                    <i class="fa-solid fa-sun"></i>
-                    <i class="fa-solid fa-moon"></i>
-                </button>
-            </div>
-        </div>
-    </header>
 
     <main>
         <!-- 1. 히어로 섹션 -->
@@ -198,6 +189,16 @@
                 <div class="hero-visual-content">
                     <div class="glass-frame" id="hero-img-frame">
                         <img src="./assets/dodo_hero.png" alt="DODO 가족 일러스트" class="hero-img" id="hero-display-img">
+                        <!-- 인라인 스크립트: 페이지가 렌더링을 그리기 전 최신 저장 캐시를 최우선 적용해 깜빡임 제로 실현 -->
+                        <script>
+                            (function() {
+                                var cachedHero = localStorage.getItem('dodo-hero-image-cache');
+                                if (cachedHero) {
+                                    document.getElementById('hero-display-img').src = cachedHero;
+                                }
+                            })();
+                        </script>
+                        
                         <!-- 로그인 상태 시 사진 변경 버튼 노출 -->
                         <div id="hero-img-edit-trigger" class="hero-edit-badge hidden">
                             <i class="fa-solid fa-camera"></i> 사진 변경
@@ -221,13 +222,13 @@
                     <h2 class="section-title">가족 구성원 소개</h2>
                     <p class="section-subtitle">DODO 패밀리의 든든하고 사랑스러운 멤버들을 소개합니다.</p>
                 </div>
-                <div class="family-grid" id="family-grid">
-                    <!-- JS 코드를 통해 Firestore의 가족 구성원 데이터가 실시간 렌더링됩니다. -->
+                <div id="family-grid" class="family-grid">
+                    <!-- JS 코드로 Firestore 데이터에 연동되어 프로필 카드가 실시간 빌드됩니다. -->
                 </div>
             </div>
         </section>
 
-        <!-- 3. 가족 캘린더 섹션 (신규 추가) -->
+        <!-- 3. 가족 캘린더 섹션 -->
         <section id="calendar" class="section">
             <div class="container">
                 <div class="section-header">
@@ -262,12 +263,52 @@
             </div>
         </section>
 
-        <!-- 4. 추억 갤러리 섹션 -->
+        <!-- 4. 추억 갤러리 섹션 (다중 여행 사진 등록 폼 및 동적 렌더링 지원) -->
         <section id="gallery" class="section">
             <div class="container">
                 <div class="section-header">
                     <h2 class="section-title">추억 갤러리</h2>
                     <p class="section-subtitle">가족이 함께 나누었던 소중한 발자취와 따뜻한 순간들입니다.</p>
+                </div>
+                
+                <!-- 1) 여행 갤러리 등록 폼 (로그인한 멤버에게만 JS로 토글 표시) -->
+                <div id="gallery-upload-container" class="gallery-upload-container glass-card hidden" style="margin-bottom: 3rem; padding: 2.5rem; width: 100%;">
+                    <h3 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 1.5rem;"><i class="fa-solid fa-camera-retro"></i> 새 여행 추억 등록하기 (다중 사진 지원)</h3>
+                    <form id="gallery-form" class="gallery-form-grid">
+                        <div class="form-left-col">
+                            <div class="form-group">
+                                <label for="gallery-title"><i class="fa-solid fa-heading"></i> 앨범 제목</label>
+                                <input type="text" id="gallery-title" placeholder="예: 제주도 가족 여행, 봄맞이 벚꽃 나들이" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="gallery-desc"><i class="fa-solid fa-align-left"></i> 여행 설명/한줄평</label>
+                                <textarea id="gallery-desc" rows="4" placeholder="당시 나누었던 이야기나 즐거웠던 기억을 짧게 기록해보세요..." required></textarea>
+                            </div>
+                        </div>
+                        <div class="form-right-col">
+                            <div class="form-group">
+                                <label for="gallery-category"><i class="fa-solid fa-tag"></i> 앨범 성격</label>
+                                <select id="gallery-category" style="width: 100%; padding: 0.8rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; color: var(--text-color); font-family: inherit;">
+                                    <option value="travel">가족 여행 ✈️</option>
+                                    <option value="daily">소소한 일상 ☕</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label><i class="fa-solid fa-images"></i> 여행 사진 선택 (여러 장 동시 첨부 가능)</label>
+                                <div class="file-upload-wrapper">
+                                    <input type="file" id="gallery-files" accept="image/*" multiple required>
+                                    <div class="file-upload-btn">
+                                        <i class="fa-solid fa-cloud-arrow-up"></i> 여러 장의 사진 선택하기
+                                    </div>
+                                </div>
+                                <!-- 여러 장 업로드 시 썸네일 미리보기 컨테이너 -->
+                                <div id="gallery-img-previews" class="gallery-img-previews-container">
+                                    <!-- 동적 이미지 썸네일 노출 -->
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100" style="margin-top: 1rem;">추억 등록하기 <i class="fa-solid fa-check"></i></button>
+                        </div>
+                    </form>
                 </div>
                 
                 <div class="gallery-filter-buttons">
@@ -276,41 +317,14 @@
                     <button class="filter-btn" data-filter="daily">소소한 일상</button>
                 </div>
 
-                <div class="gallery-grid">
-                    <!-- 아이템 1 -->
-                    <div class="gallery-item glass-card" data-category="travel">
-                        <div class="gallery-img-container">
-                            <img src="./assets/dodo_gallery_1.png" alt="숲속 숲길 여행">
-                            <div class="gallery-overlay">
-                                <i class="fa-solid fa-magnifying-glass-plus"></i>
-                            </div>
-                        </div>
-                        <div class="gallery-content">
-                            <span class="gallery-tag">가족 여행</span>
-                            <h3 class="gallery-item-title">가을 숲속 오두막 힐링 여행</h3>
-                            <p class="gallery-item-desc">바쁜 일상을 잠시 내려두고 맑은 호수와 붉은 단풍이 가득한 오두막에서 보낸 주말.</p>
-                        </div>
-                    </div>
-
-                    <!-- 아이템 2 -->
-                    <div class="gallery-item glass-card" data-category="daily">
-                        <div class="gallery-img-container">
-                            <img src="./assets/dodo_gallery_2.png" alt="맛있는 저녁 식사">
-                            <div class="gallery-overlay">
-                                <i class="fa-solid fa-magnifying-glass-plus"></i>
-                            </div>
-                        </div>
-                        <div class="gallery-content">
-                            <span class="gallery-tag">소소한 일상</span>
-                            <h3 class="gallery-item-title">주말 저녁의 따뜻한 만찬</h3>
-                            <p class="gallery-item-desc">벽난로 온기 속에 모여 앉아 서로의 하루를 나누며 웃음 지었던 주말 식사 시간.</p>
-                        </div>
-                    </div>
+                <!-- 동적으로 채워질 갤러리 그리드 -->
+                <div id="gallery-grid" class="gallery-grid">
+                    <!-- JS 코드로 Firestore 갤러리 데이터 및 예제 데이터가 바인딩됩니다. -->
                 </div>
             </div>
         </section>
 
-        <!-- 5. 사진 업로드형 게시판 섹션 (신규 추가) -->
+        <!-- 5. 사진 업로드형 게시판 섹션 -->
         <section id="board" class="section">
             <div class="container">
                 <div class="section-header">
@@ -372,45 +386,20 @@
             </div>
         </section>
 
-        <!-- 6. 타임라인 섹션 -->
+        <!-- 6. 타임라인 섹션 (AI 기반 실시간 결합 갱신형 엔진 탑재) -->
         <section id="timeline" class="section">
             <div class="container">
                 <div class="section-header">
                     <h2 class="section-title">가족 타임라인</h2>
-                    <p class="section-subtitle">DODO 가족이 걸어온 반짝이는 여정들을 되짚어봅니다.</p>
+                    <p class="section-subtitle">일정, 소식 게시글, 방명록 데이터를 AI 룰 엔진이 감지하여 실시간 타임라인을 자동 구성합니다.</p>
                 </div>
 
                 <div class="timeline-container">
                     <div class="timeline-line"></div>
-
-                    <!-- 타임라인 아이템 1 -->
-                    <div class="timeline-item left-item">
-                        <div class="timeline-dot bg-blue"></div>
-                        <div class="timeline-card glass-card">
-                            <span class="timeline-date">2026. 05. 24</span>
-                            <h3 class="timeline-title">DODO 패밀리 온라인 홈 개설! 🎉</h3>
-                            <p>가족의 소중한 순간들을 기록하고 공유할 수 있는 특별한 홈 스페이스가 정식으로 탄생했습니다!</p>
-                        </div>
-                    </div>
-
-                    <!-- 타임라인 아이템 2 -->
-                    <div class="timeline-item right-item">
-                        <div class="timeline-dot bg-pink"></div>
-                        <div class="timeline-card glass-card">
-                            <span class="timeline-date">2026. 02. 15</span>
-                            <h3 class="timeline-title">막둥이 도도와의 첫 만남 🐱</h3>
-                            <p>추운 겨울날, 우리 가족의 새로운 마스코트 고양이 '도도'가 집안에 온기를 더해주게 되었습니다.</p>
-                        </div>
-                    </div>
-
-                    <!-- 타임라인 아이템 3 -->
-                    <div class="timeline-item left-item">
-                        <div class="timeline-dot bg-orange"></div>
-                        <div class="timeline-card glass-card">
-                            <span class="timeline-date">2025. 10. 10</span>
-                            <h3 class="timeline-title">단풍 숲속 캠핑의 추억 🍁</h3>
-                            <p>숲속 오두막으로 다 같이 캠핑을 떠나 모닥불 앞에서 밤새 도란도란 이야기를 나누었습니다.</p>
-                        </div>
+                    
+                    <!-- JS 코드를 통해 게시글, 일정 등이 실시간으로 통합 분석되어 정렬 렌더링됩니다. -->
+                    <div id="timeline-grid-dynamic" style="width: 100%; display: flex; flex-direction: column;">
+                        <!-- 동적 카드들 -->
                     </div>
                 </div>
             </div>
@@ -470,16 +459,23 @@
         </section>
     </main>
 
-    <!-- 갤러리 라이트박스 모달 -->
+    <!-- 갤러리 라이트박스 모달 (다중 이미지 슬라이더 지원 구조) -->
     <div id="lightbox-modal" class="lightbox">
         <span class="close-btn">&times;</span>
         <div class="lightbox-content-wrapper">
-            <img class="lightbox-content" id="lightbox-img">
-            <div id="lightbox-caption"></div>
+            <!-- 좌우 내비게이션 슬라이더 버튼 -->
+            <button id="lightbox-prev-btn" class="lightbox-nav-btn prev" aria-label="이전 사진"><i class="fa-solid fa-chevron-left"></i></button>
+            <img class="lightbox-content" id="lightbox-img" src="" alt="확대 보기">
+            <button id="lightbox-next-btn" class="lightbox-nav-btn next" aria-label="다음 사진"><i class="fa-solid fa-chevron-right"></i></button>
+            
+            <div class="lightbox-footer" style="margin-top: 1rem; width: 100%; display: flex; justify-content: space-between; align-items: center; color: white;">
+                <div id="lightbox-caption" style="font-size: 1.1rem; font-weight: 600;"></div>
+                <div id="lightbox-index-indicator" style="font-size: 0.9rem; opacity: 0.8; font-weight: 700; background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 20px;">1 / 1</div>
+            </div>
         </div>
     </div>
 
-    <!-- 달력 일정 관리 모달 (신규 추가) -->
+    <!-- 달력 일정 관리 모달 -->
     <div id="calendar-modal" class="calendar-modal-overlay">
         <div class="calendar-modal-content glass-card">
             <span class="calendar-modal-close">&times;</span>
@@ -516,7 +512,7 @@
         </div>
     </div>
 
-    <!-- 가족 구성원 관리/수정 모달 (신규 추가) -->
+    <!-- 가족 구성원 관리/수정 모달 -->
     <div id="family-modal" class="calendar-modal-overlay">
         <div class="calendar-modal-content glass-card" style="max-width: 500px;">
             <span class="family-modal-close" id="family-modal-close" style="position: absolute; right: 20px; top: 15px; font-size: 1.8rem; cursor: pointer; color: var(--text-muted); transition: var(--transition-quick);">&times;</span>
@@ -563,9 +559,9 @@
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100" style="padding: 0.9rem; border-radius: 15px; font-weight: 700; font-size: 1rem;"><i class="fa-solid fa-floppy-disk"></i> 저장하여 반영하기</button>
-              </form>
-          </div>
-      </div>
+            </form>
+        </div>
+    </div>
 
     <!-- 푸터 -->
     <footer id="main-footer">
@@ -584,6 +580,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
-    <script src="app.js?v=1.0.7"></script>
+    <script src="app.js?v=1.0.8"></script>
 </body>
 </html>
