@@ -383,11 +383,123 @@ body.light-theme .glass-frame {
     box-shadow: 0 20px 40px rgba(108, 92, 231, 0.15);
 }
 
-.hero-img {
-    max-width: 100%;
-    height: auto;
+.hero-slider-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.hero-slider-track {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.hero-slide {
+    width: 100%;
+    height: 100%;
+    flex-shrink: 0;
+}
+
+.hero-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
     border-radius: 20px;
     display: block;
+}
+
+.hero-slider-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(15, 12, 27, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: var(--transition-quick);
+    z-index: 4;
+}
+
+.hero-slider-btn:hover {
+    background: var(--primary-gradient);
+    border-color: transparent;
+    transform: translateY(-50%) scale(1.1);
+}
+
+.hero-slider-btn.prev { left: 15px; }
+.hero-slider-btn.next { right: 15px; }
+
+.hero-slider-dots {
+    position: absolute;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 4;
+}
+
+.hero-slider-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    transition: var(--transition-quick);
+}
+
+.hero-slider-dot.active {
+    background: white;
+    width: 18px;
+    border-radius: 4px;
+}
+
+/* 배경 이미지 관리 썸네일 아이템 */
+.hero-thumbnail-item {
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    aspect-ratio: 1;
+    border: 2px solid var(--card-border);
+    background: rgba(0,0,0,0.2);
+}
+
+.hero-thumbnail-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.hero-thumbnail-item .del-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(255, 118, 117, 0.9);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-quick);
+}
+
+.hero-thumbnail-item .del-btn:hover {
+    background: #ff7675;
+    transform: scale(1.1);
 }
 
 /* 히어로 이미지 수정 뱃지 */
@@ -1931,6 +2043,11 @@ body.light-theme .guest-sticker {
     .hero-container {
         padding-top: 10px !important;
         gap: 1rem !important;
+    }
+
+    /* 모바일에서는 겹치는 스크롤 안내 가이드 숨김 */
+    .scroll-down-indicator {
+        display: none !important;
     }
 
     /* 전역 가로스크롤 방지 장치 */

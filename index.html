@@ -187,27 +187,41 @@
                     </div>
                 </div>
                 <div class="hero-visual-content">
-                    <div class="glass-frame" id="hero-img-frame">
-                        <!-- src를 1px 투명 이미지로 기본 설정하여 이전 기본 이미지 노출 현상을 사전 차단 -->
-                        <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="DODO 가족 일러스트" class="hero-img" id="hero-display-img">
-                        <!-- 인라인 스크립트: 파싱 시점에 즉시 캐시 판단하여 단 1회 로드 진행 -->
+                    <div class="glass-frame" id="hero-img-frame" style="width: 100%; max-width: 480px; aspect-ratio: 4/3; overflow: hidden; padding: 0.5rem; position: relative;">
+                        <div class="hero-slider-container" style="width: 100%; height: 100%; overflow: hidden; position: relative; border-radius: 20px;">
+                            <div class="hero-slider-track" id="hero-slider-track" style="display: flex; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);">
+                                <!-- 동적으로 여러 이미지 슬라이드가 추가됨 -->
+                            </div>
+                            <button id="hero-prev-btn" class="hero-slider-btn prev" aria-label="이전 배경 사진"><i class="fa-solid fa-chevron-left"></i></button>
+                            <button id="hero-next-btn" class="hero-slider-btn next" aria-label="다음 배경 사진"><i class="fa-solid fa-chevron-right"></i></button>
+                            <div class="hero-slider-dots" id="hero-slider-dots"></div>
+                        </div>
+                        
+                        <!-- 캐시 기반 초기 렌더링 스크립트: 1px 투명 이미지 노출 막고 캐시 데이터(배열 JSON)의 첫 이미지를 즉시 채움 -->
                         <script>
                             (function() {
-                                var imgEl = document.getElementById('hero-display-img');
-                                var cachedHero = localStorage.getItem('dodo-hero-image-cache');
-                                if (cachedHero) {
-                                    imgEl.src = cachedHero;
-                                } else {
-                                    imgEl.src = "./assets/dodo_hero.png";
+                                try {
+                                    var cachedHeroJson = localStorage.getItem('dodo-hero-images-cache');
+                                    var initialImg = "./assets/dodo_hero.png";
+                                    if (cachedHeroJson) {
+                                        var cachedArr = JSON.parse(cachedHeroJson);
+                                        if (cachedArr && cachedArr.length > 0) {
+                                            initialImg = cachedArr[0];
+                                        }
+                                    }
+                                    var trackEl = document.getElementById('hero-slider-track');
+                                    var slideHtml = '<div class="hero-slide" style="width:100%; height:100%; flex-shrink:0;"><img src="' + initialImg + '" style="width:100%; height:100%; object-fit:cover; border-radius:20px; display:block;"></div>';
+                                    trackEl.innerHTML = slideHtml;
+                                } catch (e) {
+                                    console.error(e);
                                 }
                             })();
                         </script>
                         
-                        <!-- 로그인 상태 시 사진 변경 버튼 노출 -->
+                        <!-- 로그인 상태 시 배경 사진 관리 버튼 노출 -->
                         <div id="hero-img-edit-trigger" class="hero-edit-badge hidden">
-                            <i class="fa-solid fa-camera"></i> 사진 변경
+                            <i class="fa-solid fa-images"></i> 배경 사진 관리
                         </div>
-                        <input type="file" id="hero-img-file" accept="image/*" style="display: none;">
                     </div>
                 </div>
             </div>
@@ -309,6 +323,12 @@
                                 <div id="gallery-img-previews" class="gallery-img-previews-container">
                                     <!-- 동적 이미지 썸네일 노출 -->
                                 </div>
+                                <div class="form-group" style="margin-top: 12px; display: flex; align-items: center; gap: 8px;">
+                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 0.85rem; font-weight: 700; color: var(--text-color);">
+                                        <input type="checkbox" id="gallery-is-private" checked style="width: 18px; height: 18px; accent-color: var(--primary-color);">
+                                        <span>가족에게만 공개 (로그인 필요) 🔐</span>
+                                    </label>
+                                </div>
                             </div>
                             <button type="submit" class="btn btn-primary w-100" style="margin-top: 1rem;">추억 등록하기 <i class="fa-solid fa-check"></i></button>
                         </div>
@@ -356,6 +376,12 @@
                                 <!-- 업로드 이미지 썸네일 미리보기 -->
                                 <div id="board-img-preview" class="image-preview-box">
                                     <!-- JS를 통해 프리뷰 이미지가 들어갑니다 -->
+                                </div>
+                                <div class="form-group" style="margin-top: 12px; display: flex; align-items: center; gap: 8px;">
+                                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-size: 0.85rem; font-weight: 700; color: var(--text-color);">
+                                        <input type="checkbox" id="board-is-private" checked style="width: 18px; height: 18px; accent-color: var(--primary-color);">
+                                        <span>가족에게만 공개 (로그인 필요) 🔐</span>
+                                    </label>
                                 </div>
                             </div>
                             <div class="form-group">
@@ -567,6 +593,27 @@
         </div>
     </div>
 
+    <!-- 배경 사진 관리/수정 모달 -->
+    <div id="hero-manager-modal" class="calendar-modal-overlay">
+        <div class="calendar-modal-content glass-card" style="max-width: 500px; padding: 2rem; position: relative;">
+            <span class="family-modal-close" id="hero-manager-close" style="position: absolute; right: 20px; top: 15px; font-size: 1.8rem; cursor: pointer; color: var(--text-muted); transition: var(--transition-quick);">&times;</span>
+            <h3 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 1.5rem; background: linear-gradient(135deg, var(--text-color), var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"><i class="fa-solid fa-images"></i> 배경 사진 관리 (최대 10개)</h3>
+            
+            <!-- 현재 슬라이더 이미지 목록 그리드 -->
+            <div id="hero-images-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.5rem; max-height: 240px; overflow-y: auto; padding-right: 4px;">
+                <!-- 동적으로 등록된 이미지 썸네일과 삭제 단추가 들어감 -->
+            </div>
+            
+            <!-- 배경 사진 업로드 트리거 -->
+            <div id="hero-upload-dropzone" style="border: 2px dashed var(--input-border); border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer; background: var(--input-bg); transition: var(--transition-quick);">
+                <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; color: var(--primary-color); margin-bottom: 8px; display: block;"></i>
+                <span style="font-size: 0.9rem; font-weight: 700; color: var(--text-color);">클릭하여 새 배경 사진 추가하기</span>
+                <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-top: 4px;">가로 최대 1000px, 용량 자동 압축 최적화</span>
+                <input type="file" id="hero-slider-file-input" accept="image/*" style="display: none;">
+            </div>
+        </div>
+    </div>
+ 
     <!-- 푸터 -->
     <footer id="main-footer">
         <div class="footer-container">

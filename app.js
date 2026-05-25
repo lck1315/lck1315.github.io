@@ -818,6 +818,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const title = galleryTitle.value.trim();
             const desc = galleryDesc.value.trim();
             const category = galleryCategory.value;
+            const isPrivate = document.getElementById('gallery-is-private').checked;
 
             if (!title || !desc || compressedGalleryImages.length === 0) {
                 alert("제목, 설명 및 사진을 등록해주세요! 📷");
@@ -831,7 +832,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 images: compressedGalleryImages, // 압축된 다중 base64 이미지 배열
                 author: currentUserInfo.nickname,
                 uid: currentUserInfo.uid,
-                date: new Date().getTime()
+                date: new Date().getTime(),
+                isPrivate: isPrivate
             };
 
             db.collection('gallery_posts').add(newAlbum).then(() => {
@@ -846,7 +848,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 기본 정적 앨범 2개 정의 (예비용)
+    // 기본 정적 앨범 2개 정의 (가족에게만 공개되도록 isPrivate: true 설정)
     const defaultGalleryPosts = [
         {
             id: "default_1",
@@ -855,7 +857,8 @@ document.addEventListener('DOMContentLoaded', () => {
             desc: "바쁜 일상을 잠시 내려두고 맑은 호수와 붉은 단풍이 가득한 오두막에서 보낸 주말.",
             images: ["./assets/dodo_gallery_1.png"],
             author: "DODO Family",
-            date: 1761400000000
+            date: 1761400000000,
+            isPrivate: true
         },
         {
             id: "default_2",
@@ -864,7 +867,8 @@ document.addEventListener('DOMContentLoaded', () => {
             desc: "벽난로 온기 속에 모여 앉아 서로의 하루를 나누며 웃음 지었던 주말 식사 시간.",
             images: ["./assets/dodo_gallery_2.png"],
             author: "DODO Family",
-            date: 1761300000000
+            date: 1761300000000,
+            isPrivate: true
         }
     ];
 
@@ -890,7 +894,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!galleryGrid) return;
         galleryGrid.innerHTML = '';
 
-        galleryPosts.forEach(post => {
+        // 비로그인 상태일 때는 공개(isPrivate === false) 글만 노출
+        const visibleGalleryPosts = currentUserInfo
+            ? galleryPosts
+            : galleryPosts.filter(post => post.isPrivate === false);
+
+        if (visibleGalleryPosts.length === 0) {
+            galleryGrid.innerHTML = `
+                <div class="no-posts" style="grid-column: 1 / -1; width: 100%; text-align: center; padding: 4rem;">
+                    <p><i class="fa-solid fa-lock" style="font-size: 2.5rem; display: block; margin-bottom: 1rem; color: var(--primary-color);"></i>
+                    로그인하시면 DODO 가족의 소중한 추억 앨범들을 보실 수 있습니다. 🔐</p>
+                </div>
+            `;
+            return;
+        }
+
+        visibleGalleryPosts.forEach(post => {
             const item = document.createElement('div');
             item.className = 'gallery-item glass-card';
             item.setAttribute('data-category', post.category);
@@ -1122,14 +1141,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!boardPostsGrid) return;
         boardPostsGrid.innerHTML = '';
 
-        const filteredPosts = activeBoardFilter === 'all'
+        // 비로그인 상태일 때는 공개(isPrivate === false) 글만 조회 가능
+        const visiblePosts = currentUserInfo
             ? boardPosts
-            : boardPosts.filter(post => post.role === activeBoardFilter);
+            : boardPosts.filter(post => post.isPrivate === false);
+
+        const filteredPosts = activeBoardFilter === 'all'
+            ? visiblePosts
+            : visiblePosts.filter(post => post.role === activeBoardFilter);
 
         if (filteredPosts.length === 0) {
             boardPostsGrid.innerHTML = `
                 <div class="no-posts">
-                    <p><i class="fa-regular fa-folder-open"></i> 아직 등록된 게시글이 없어요. 사진과 글을 올려보세요!</p>
+                    <p><i class="fa-solid fa-lock" style="font-size: 2.5rem; display: block; margin-bottom: 1rem; color: var(--primary-color);"></i>
+                    로그인하시면 DODO 가족 소식 게시글을 읽고 작성하실 수 있습니다. 🔐</p>
                 </div>
             `;
             return;
@@ -1238,6 +1263,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     boardForm.setAttribute('data-edit-id', id);
                     boardTitle.value = post.title || '';
                     boardContent.value = post.content || '';
+                    document.getElementById('board-is-private').checked = post.isPrivate !== false;
                     
                     if (post.image) {
                         compressedImageBase64 = post.image;
@@ -1280,6 +1306,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const role = currentUserInfo.role;
         const title = boardTitle.value.trim();
         const content = boardContent.value.trim();
+        const isPrivate = document.getElementById('board-is-private').checked;
 
         if (!author || !title || !content) return;
 
@@ -1289,7 +1316,8 @@ document.addEventListener('DOMContentLoaded', () => {
             db.collection('board_posts').doc(editId).update({
                 title,
                 content,
-                image: compressedImageBase64
+                image: compressedImageBase64,
+                isPrivate: isPrivate
             }).then(() => {
                 resetBoardForm();
             }).catch(err => {
@@ -1304,7 +1332,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 content,
                 image: compressedImageBase64,
                 date: new Date().getTime(),
-                uid: currentUserInfo.uid
+                uid: currentUserInfo.uid,
+                isPrivate: isPrivate
             };
 
             db.collection('board_posts').add(newPost).then(() => {
@@ -1336,44 +1365,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let combinedTimelineData = [];
 
-        // 1) 캘린더 일정 데이터 파싱 & 병합
-        for (const dateKey in familyEvents) {
-            const events = familyEvents[dateKey];
-            events.forEach(evt => {
+        // 1) 캘린더 일정 데이터 파싱 & 병합 (일정은 로그인 한 사람만 조회 가능)
+        if (currentUserInfo) {
+            for (const dateKey in familyEvents) {
+                const events = familyEvents[dateKey];
+                events.forEach(evt => {
+                    combinedTimelineData.push({
+                        title: `달력 일정: ${evt.title}`,
+                        content: `${dateKey}에 예정된 DODO 가족의 일정입니다. 작성자: ${evt.author || '가족'}`,
+                        date: new Date(dateKey + 'T00:00:00').getTime(),
+                        type: 'calendar',
+                        rawText: evt.title + ' ' + (evt.author || '')
+                    });
+                });
+            }
+        }
+
+        // 2) 소식 게시글 데이터 병합 (비로그인은 공개글만)
+        boardPosts.forEach(post => {
+            if (currentUserInfo || post.isPrivate === false) {
                 combinedTimelineData.push({
-                    title: `달력 일정: ${evt.title}`,
-                    content: `${dateKey}에 예정된 DODO 가족의 일정입니다. 작성자: ${evt.author || '가족'}`,
-                    date: new Date(dateKey + 'T00:00:00').getTime(),
-                    type: 'calendar',
-                    rawText: evt.title + ' ' + (evt.author || '')
+                    title: post.title,
+                    content: post.content,
+                    date: post.date,
+                    type: 'board',
+                    image: post.image,
+                    author: post.author,
+                    rawText: post.title + ' ' + post.content + ' ' + post.author
+                });
+            }
+        });
+
+        // 3) 방명록 메시지 데이터 병합 (방명록은 로그인 한 사람만 조회 가능)
+        if (currentUserInfo) {
+            messages.forEach(msg => {
+                combinedTimelineData.push({
+                    title: `${msg.author}님의 방명록 한마디 💌`,
+                    content: msg.message,
+                    date: msg.date,
+                    type: 'guestbook',
+                    sticker: msg.sticker,
+                    rawText: msg.message + ' ' + msg.author
                 });
             });
         }
-
-        // 2) 소식 게시글 데이터 병합
-        boardPosts.forEach(post => {
-            combinedTimelineData.push({
-                title: post.title,
-                content: post.content,
-                date: post.date,
-                type: 'board',
-                image: post.image,
-                author: post.author,
-                rawText: post.title + ' ' + post.content + ' ' + post.author
-            });
-        });
-
-        // 3) 방명록 메시지 데이터 병합
-        messages.forEach(msg => {
-            combinedTimelineData.push({
-                title: `${msg.author}님의 방명록 한마디 💌`,
-                content: msg.message,
-                date: msg.date,
-                type: 'guestbook',
-                sticker: msg.sticker,
-                rawText: msg.message + ' ' + msg.author
-            });
-        });
 
         // 날짜 역순(최신순) 정렬
         combinedTimelineData.sort((a, b) => b.date - a.date);
@@ -1523,6 +1558,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderMessages() {
         if (!guestbookList) return;
         guestbookList.innerHTML = '';
+
+        if (!currentUserInfo) {
+            guestbookList.innerHTML = `
+                <div class="no-messages">
+                    <p><i class="fa-solid fa-lock" style="font-size: 2rem; display: block; margin-bottom: 1rem; color: var(--primary-color);"></i>
+                    로그인하시면 가족들이 남긴 따뜻한 한마디를 읽어볼 수 있습니다. 🔐</p>
+                </div>
+            `;
+            return;
+        }
 
         if (messages.length === 0) {
             guestbookList.innerHTML = `
@@ -2024,33 +2069,176 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ----------------------------------------------------
-    // 15. 메인 배너 이미지 Firestore 동적 관리 (동기 캐싱 추가)
+    // 15. 메인 배너 이미지 10장 슬라이더 & 관리자 모달 (고도화)
     // ----------------------------------------------------
-    const heroDisplayImg = document.getElementById('hero-display-img');
+    const heroSliderTrack = document.getElementById('hero-slider-track');
+    const heroSliderDots = document.getElementById('hero-slider-dots');
+    const heroPrevBtn = document.getElementById('hero-prev-btn');
+    const heroNextBtn = document.getElementById('hero-next-btn');
     const heroEditTrigger = document.getElementById('hero-img-edit-trigger');
-    const heroImgFile = document.getElementById('hero-img-file');
+    
+    // 관리 모달 요소들
+    const heroManagerModal = document.getElementById('hero-manager-modal');
+    const heroManagerClose = document.getElementById('hero-manager-close');
+    const heroImagesGrid = document.getElementById('hero-images-grid');
+    const heroUploadDropzone = document.getElementById('hero-upload-dropzone');
+    const heroSliderFileInput = document.getElementById('hero-slider-file-input');
+
+    let heroImages = ["./assets/dodo_hero.png"]; // 메모리 내 이미지 목록
+    let heroSliderIndex = 0;
+    let heroSliderInterval = null;
 
     function initSettingsListener() {
+        // 메인 이미지 목록을 settings/main_image 문서 내 images 배열에서 실시간 수신
         db.collection('settings').doc('main_image').onSnapshot((doc) => {
-            if (doc.exists && doc.data().url) {
-                const imgUrl = doc.data().url;
-                heroDisplayImg.setAttribute('src', imgUrl);
-                localStorage.setItem('dodo-hero-image-cache', imgUrl); // 초고속 로드용 로컬스토리지 캐시 최신화
+            if (doc.exists && doc.data().images && doc.data().images.length > 0) {
+                heroImages = doc.data().images;
             } else {
-                heroDisplayImg.setAttribute('src', './assets/dodo_hero.png');
-                localStorage.removeItem('dodo-hero-image-cache');
+                heroImages = ["./assets/dodo_hero.png"];
             }
-        }, err => console.error("메인 이미지 설정 로드 에러:", err));
+            // 캐시 최신화
+            localStorage.setItem('dodo-hero-images-cache', JSON.stringify(heroImages));
+            
+            renderHeroSlider();
+            if (heroManagerModal.classList.contains('show')) {
+                renderHeroManagerGrid();
+            }
+        }, err => console.error("메인 슬라이더 로드 에러:", err));
     }
 
-    if (heroEditTrigger && heroImgFile) {
+    // 슬라이더 렌더링
+    function renderHeroSlider() {
+        if (!heroSliderTrack) return;
+        heroSliderTrack.innerHTML = '';
+        heroSliderDots.innerHTML = '';
+
+        heroImages.forEach((imgUrl, idx) => {
+            const slide = document.createElement('div');
+            slide.className = 'hero-slide';
+            slide.innerHTML = `<img src="${imgUrl}" alt="DODO 가족 배경 사진 ${idx+1}">`;
+            heroSliderTrack.appendChild(slide);
+
+            const dot = document.createElement('div');
+            dot.className = `hero-slider-dot ${idx === heroSliderIndex ? 'active' : ''}`;
+            dot.addEventListener('click', () => {
+                goToSlide(idx);
+            });
+            heroSliderDots.appendChild(dot);
+        });
+
+        goToSlide(heroSliderIndex);
+        resetHeroSliderTimer();
+    }
+
+    function goToSlide(index) {
+        if (heroImages.length === 0) return;
+        // 인덱스 범위 순환 처리
+        heroSliderIndex = (index + heroImages.length) % heroImages.length;
+        
+        // 트랙 이동
+        heroSliderTrack.style.transform = `translateX(-${heroSliderIndex * 100}%)`;
+
+        // 닷 갱신
+        const dots = document.querySelectorAll('.hero-slider-dot');
+        dots.forEach((dot, idx) => {
+            if (idx === heroSliderIndex) {
+                dot.classList.add('active');
+            } else {
+                dot.classList.remove('active');
+            }
+        });
+    }
+
+    function nextSlide() {
+        goToSlide(heroSliderIndex + 1);
+    }
+
+    function prevSlide() {
+        goToSlide(heroSliderIndex - 1);
+    }
+
+    function resetHeroSliderTimer() {
+        if (heroSliderInterval) clearInterval(heroSliderInterval);
+        if (heroImages.length > 1) {
+            heroSliderInterval = setInterval(nextSlide, 5000); // 5초 간격 전환
+        }
+    }
+
+    // 슬라이더 수동 제어 버튼
+    if (heroPrevBtn && heroNextBtn) {
+        heroPrevBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            prevSlide();
+            resetHeroSliderTimer();
+        });
+        heroNextBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            nextSlide();
+            resetHeroSliderTimer();
+        });
+    }
+
+    // 배경 사진 관리 모달창 기능
+    if (heroEditTrigger && heroManagerModal && heroManagerClose) {
         heroEditTrigger.addEventListener('click', (e) => {
             e.stopPropagation();
             if (!checkAuth()) return;
-            heroImgFile.click();
+            renderHeroManagerGrid();
+            heroManagerModal.classList.add('show');
         });
 
-        heroImgFile.addEventListener('change', (e) => {
+        heroManagerClose.addEventListener('click', () => {
+            heroManagerModal.classList.remove('show');
+        });
+
+        heroManagerModal.addEventListener('click', (e) => {
+            if (e.target === heroManagerModal) {
+                heroManagerModal.classList.remove('show');
+            }
+        });
+    }
+
+    // 모달창 내 이미지 목록 렌더링
+    function renderHeroManagerGrid() {
+        if (!heroImagesGrid) return;
+        heroImagesGrid.innerHTML = '';
+
+        if (heroImages.length === 0 || (heroImages.length === 1 && heroImages[0] === "./assets/dodo_hero.png")) {
+            heroImagesGrid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding: 1.5rem; color:var(--text-muted); font-size:0.85rem;">등록된 배경 사진이 없습니다.</p>';
+            return;
+        }
+
+        heroImages.forEach((imgUrl, idx) => {
+            // 예비 이미지는 삭제 불가
+            if (imgUrl === "./assets/dodo_hero.png") return;
+
+            const thumb = document.createElement('div');
+            thumb.className = 'hero-thumbnail-item';
+            thumb.innerHTML = `
+                <img src="${imgUrl}" alt="배경사진">
+                <button type="button" class="del-btn" data-index="${idx}">&times;</button>
+            `;
+
+            thumb.querySelector('.del-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteHeroImage(idx);
+            });
+
+            heroImagesGrid.appendChild(thumb);
+        });
+    }
+
+    // 배경 사진 추가 업로드 핸들러
+    if (heroUploadDropzone && heroSliderFileInput) {
+        heroUploadDropzone.addEventListener('click', () => {
+            if (heroImages.length >= 10 && heroImages[0] !== "./assets/dodo_hero.png") {
+                alert("배경 사진은 최대 10장까지만 업로드할 수 있습니다! ⚠️");
+                return;
+            }
+            heroSliderFileInput.click();
+        });
+
+        heroSliderFileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
 
@@ -2073,26 +2261,57 @@ document.addEventListener('DOMContentLoaded', () => {
                     const tempCtx = tempCanvas.getContext('2d');
                     tempCtx.drawImage(img, 0, 0, width, height);
 
-                    const compressedBase64 = tempCanvas.toDataURL('image/jpeg', 0.75);
+                    const compressedBase64 = tempCanvas.toDataURL('image/jpeg', 0.7);
 
-                    // Firestore 업로드 및 로컬 캐싱 즉시 반영
+                    // 기존 예비 이미지만 있을 때는 덮어쓰고, 아니면 배열에 추가
+                    let newImagesList = [];
+                    if (heroImages.length === 1 && heroImages[0] === "./assets/dodo_hero.png") {
+                        newImagesList = [compressedBase64];
+                    } else {
+                        newImagesList = [...heroImages, compressedBase64];
+                    }
+
                     db.collection('settings').doc('main_image').set({
-                        url: compressedBase64,
+                        images: newImagesList,
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                         updatedBy: currentUserInfo ? currentUserInfo.nickname : 'unknown'
                     }).then(() => {
-                        localStorage.setItem('dodo-hero-image-cache', compressedBase64); // 캐시 즉시 업데이트
-                        alert("메인 이미지가 성공적으로 변경되었습니다! 🎉");
+                        alert("새로운 배경 사진이 성공적으로 추가되었습니다! 🎉");
                     }).catch(err => {
-                        console.error("메인 이미지 저장 에러:", err);
-                        alert("이미지 저장 실패! ⚠️");
+                        console.error("배경 사진 업로드 에러:", err);
+                        alert("배경 사진 저장 실패! ⚠️");
                     });
 
-                    heroImgFile.value = '';
+                    heroSliderFileInput.value = '';
                 };
                 img.src = event.target.result;
             };
             reader.readAsDataURL(file);
+        });
+    }
+
+    // 배경 사진 삭제
+    function deleteHeroImage(index) {
+        if (!confirm("이 배경 사진을 슬라이더에서 삭제하시겠습니까?")) return;
+        
+        const updatedImages = [...heroImages];
+        updatedImages.splice(index, 1);
+
+        // 사진이 하나도 남지 않았다면 기본 리스트로 복구
+        const finalImages = updatedImages.length === 0 ? ["./assets/dodo_hero.png"] : updatedImages;
+
+        db.collection('settings').doc('main_image').set({
+            images: finalImages,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedBy: currentUserInfo ? currentUserInfo.nickname : 'unknown'
+        }).then(() => {
+            alert("선택하신 배경 사진이 삭제되었습니다.");
+            if (heroSliderIndex >= finalImages.length) {
+                heroSliderIndex = 0;
+            }
+        }).catch(err => {
+            console.error("배경 사진 삭제 에러:", err);
+            alert("사진 삭제 실패! ⚠️");
         });
     }
 
