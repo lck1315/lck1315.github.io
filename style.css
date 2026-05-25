@@ -118,6 +118,8 @@ main {
     min-height: 100vh;
     display: flex;
     align-items: center;
+    width: 100%;
+    overflow: hidden;
 }
 
 .section-header {
@@ -1762,8 +1764,8 @@ body.light-theme .calendar-day {
     .hero-container {
         grid-template-columns: 1fr;
         text-align: center;
-        gap: 2rem;
-        padding-top: 120px;
+        gap: 1.5rem;
+        padding-top: 75px;
     }
     
     .hero-badge {
@@ -1831,6 +1833,31 @@ body.light-theme .calendar-day {
 }
 
 @media (max-width: 768px) {
+    #hero {
+        min-height: auto !important;
+        padding: 70px 0 20px 0 !important;
+    }
+
+    .hero-container {
+        padding-top: 10px !important;
+        gap: 1rem !important;
+    }
+
+    /* 전역 가로스크롤 방지 장치 */
+    html, body {
+        width: 100%;
+        overflow-x: hidden;
+        margin: 0;
+        padding: 0;
+    }
+
+    .container {
+        padding: 0 1.2rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
     .nav-links {
         display: none;
     }
@@ -1840,7 +1867,7 @@ body.light-theme .calendar-day {
     }
     
     .header-container {
-        padding: 1rem 1.5rem;
+        padding: 1rem 1.2rem;
     }
     
     .section-title {
@@ -1848,12 +1875,110 @@ body.light-theme .calendar-day {
     }
     
     .section {
-        padding: 70px 0;
+        padding: 60px 0;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
+
+    /* 모든 모바일 글래스 박스의 좌우 패딩을 1.2rem으로 정밀 통일 (좌우 폭 일치화) */
+    .gallery-upload-container, 
+    .board-form-container, 
+    .guestbook-form-container,
+    .calendar-wrapper {
+        padding: 1.2rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    .gallery-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .gallery-item {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        word-break: break-all;
+        word-wrap: break-word;
+    }
+
+    .board-posts-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.2rem;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .board-post-card {
+        height: auto;
+        min-height: 380px;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        word-break: break-all;
+        word-wrap: break-word;
+    }
+
+    .gallery-form-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* 다중 이미지 업로드 미리보기 썸네일 그리드 터짐 방지 및 내부 스크롤 제공 */
+    .gallery-img-previews-container {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        gap: 6px;
+        width: 100% !important;
+        padding: 6px !important;
+        box-sizing: border-box !important;
+    }
+
+    .gallery-preview-item {
+        flex: 0 0 60px !important;
+        height: 60px !important;
+    }
+
+    /* 필터 버튼들 가로 폭을 넘지 않도록 flex-wrap 설정 */
+    .gallery-filter-buttons, .board-filter-buttons {
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+
+    .filter-btn, .board-filter-btn {
+        padding: 6px 12px !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* 타임라인 카드 여백 축소 및 긴 한글 삐침 방지 */
+    .timeline-card {
+        padding: 1.2rem !important;
+        width: 85% !important;
+        box-sizing: border-box !important;
+        word-break: break-all;
+        word-wrap: break-word;
     }
     
     .footer-container {
         flex-direction: column;
         gap: 1.5rem;
         text-align: center;
+        padding: 0 1.2rem;
+        width: 100% !important;
+        box-sizing: border-box !important;
     }
 }
+

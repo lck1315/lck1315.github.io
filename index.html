@@ -188,13 +188,17 @@
                 </div>
                 <div class="hero-visual-content">
                     <div class="glass-frame" id="hero-img-frame">
-                        <img src="./assets/dodo_hero.png" alt="DODO 가족 일러스트" class="hero-img" id="hero-display-img">
-                        <!-- 인라인 스크립트: 페이지가 렌더링을 그리기 전 최신 저장 캐시를 최우선 적용해 깜빡임 제로 실현 -->
+                        <!-- src를 1px 투명 이미지로 기본 설정하여 이전 기본 이미지 노출 현상을 사전 차단 -->
+                        <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="DODO 가족 일러스트" class="hero-img" id="hero-display-img">
+                        <!-- 인라인 스크립트: 파싱 시점에 즉시 캐시 판단하여 단 1회 로드 진행 -->
                         <script>
                             (function() {
+                                var imgEl = document.getElementById('hero-display-img');
                                 var cachedHero = localStorage.getItem('dodo-hero-image-cache');
                                 if (cachedHero) {
-                                    document.getElementById('hero-display-img').src = cachedHero;
+                                    imgEl.src = cachedHero;
+                                } else {
+                                    imgEl.src = "./assets/dodo_hero.png";
                                 }
                             })();
                         </script>
