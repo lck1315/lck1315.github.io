@@ -968,29 +968,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 기본 정적 앨범 2개 정의 (가족에게만 공개되도록 isPrivate: true 설정)
-    const defaultGalleryPosts = [
-        {
-            id: "default_1",
-            category: "travel",
-            title: "가을 숲속 오두막 힐링 여행",
-            desc: "바쁜 일상을 잠시 내려두고 맑은 호수와 붉은 단풍이 가득한 오두막에서 보낸 주말.",
-            images: ["./assets/dodo_gallery_1.png"],
-            author: "DODO Family",
-            date: 1761400000000,
-            isPrivate: true
-        },
-        {
-            id: "default_2",
-            category: "daily",
-            title: "주말 저녁의 따뜻한 만찬",
-            desc: "벽난로 온기 속에 모여 앉아 서로의 하루를 나누며 웃음 지었던 주말 식사 시간.",
-            images: ["./assets/dodo_gallery_2.png"],
-            author: "DODO Family",
-            date: 1761300000000,
-            isPrivate: true
-        }
-    ];
+    // 기본 정적 앨범 2개 삭제됨
+    const defaultGalleryPosts = [];
 
     let galleryPosts = [];
     function initGalleryListener() {
@@ -1003,8 +982,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
-            // 기본 로컬 이미지와 병합
-            galleryPosts = [...dbPosts, ...defaultGalleryPosts];
+            // 기본 로컬 이미지 병합 안함
+            galleryPosts = [...dbPosts];
             renderGallery();
         }, err => console.error("갤러리 로드 에러:", err));
     }
