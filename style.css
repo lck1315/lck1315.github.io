@@ -109,7 +109,7 @@ main {
 /* 공통 레이아웃 */
 .container {
     width: 100%;
-    max-width: 1400px;
+    max-width: 1120px;
     margin: 0 auto;
     padding: 0 2rem;
 }
@@ -1229,9 +1229,7 @@ body.light-theme .event-del-btn {
     transition: var(--transition-quick);
 }
 
-.gallery-item:hover .gallery-img-container img {
-    transform: scale(1.1);
-}
+/* 갤러리 이미지 hover 시 확대 비활성화 */
 
 .gallery-item:hover .gallery-overlay {
     opacity: 1;
@@ -1449,9 +1447,7 @@ body.light-theme .board-post-card.no-image-card {
     transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
-.board-post-card:hover .post-img-header img {
-    transform: scale(1.08);
-}
+/* 게시판 이미지 hover 시 확대 비활성화 */
 
 .post-no-img {
     width: 100%;
