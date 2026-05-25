@@ -1414,7 +1414,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-// 이미지 슬라이더 초기화 함수
 function initCardSliders(container) {
     const sliders = container.querySelectorAll('.card-image-slider');
     sliders.forEach(slider => {
@@ -1427,9 +1426,16 @@ function initCardSliders(container) {
         const total = slides.length;
         if (total === 0) return;
 
+        // 트랙 너비를 슬라이드 수 × 100%로 설정하고 각 슬라이드를 1/total로 설정
+        track.style.width = `${total * 100}%`;
+        slides.forEach(sl => { sl.style.width = `${100 / total}%`; sl.style.flexShrink = '0'; });
+
+        // 한 슬라이드당 이동 퍼센트 (트랙 전체 기준)
+        const slidePercent = 100 / total;
+
         const goTo = (idx) => {
             current = idx;
-            track.style.transform = `translateX(-${current * 100}%)`;
+            track.style.transform = `translateX(-${current * slidePercent}%)`;
             dots.forEach((dot, i) => dot.classList.toggle('active', i === current));
         };
 
@@ -1460,7 +1466,9 @@ function initCardSliders(container) {
             // 가로 이동이 세로보다 크면 수평 스크롤로 판단
             if (Math.abs(dx) > Math.abs(dy)) {
                 e.preventDefault();
-                const offset = -current * 100 + (dx / slider.offsetWidth) * 100;
+                // 드래그 거리를 슬라이더 너비 기준 → 트랙 % 변환
+                const dragPercent = (dx / slider.offsetWidth) * slidePercent;
+                const offset = -(current * slidePercent) + dragPercent;
                 track.style.transform = `translateX(${offset}%)`;
             }
         }, { passive: false });
@@ -1479,10 +1487,10 @@ function initCardSliders(container) {
                 } else if (dx < 0 && current < total - 1) {
                     goTo(current + 1);
                 } else {
-                    goTo(current); // 경계에서 되돌리기
+                    goTo(current);
                 }
             } else {
-                goTo(current); // 원래 위치로 되돌리기
+                goTo(current);
             }
         });
 
