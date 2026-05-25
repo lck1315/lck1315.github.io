@@ -1500,10 +1500,10 @@ body.light-theme .board-post-card.no-image-card {
     margin-top: auto;
 }
 
-.post-footer .edit-btn, .post-footer .delete-btn {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--card-border);
-    color: var(--text-muted);
+.post-footer .edit-btn {
+    background: rgba(108, 92, 231, 0.15);
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
     font-size: 0.75rem;
     padding: 6px 12px;
     border-radius: 20px;
@@ -1514,20 +1514,30 @@ body.light-theme .board-post-card.no-image-card {
     transition: var(--transition-quick);
 }
 
-body.light-theme .post-footer .edit-btn, body.light-theme .post-footer .delete-btn {
-    background: rgba(0, 0, 0, 0.02);
+.post-footer .delete-btn {
+    background: rgba(255, 118, 117, 0.15);
+    border: 1px solid #ff7675;
+    color: #ff7675;
+    font-size: 0.75rem;
+    padding: 6px 12px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: var(--transition-quick);
 }
 
 .post-footer .edit-btn:hover {
-    background: rgba(108, 92, 231, 0.15);
-    border-color: var(--primary-color);
-    color: var(--primary-color);
+    background: var(--primary-gradient);
+    color: white;
+    border-color: transparent;
 }
 
 .post-footer .delete-btn:hover {
-    background: rgba(255, 118, 117, 0.15);
-    border-color: #ff7675;
-    color: #ff7675;
+    background: rgba(255, 71, 87, 0.9);
+    color: white;
+    border-color: transparent;
 }
 
 /* 10. 타임라인 */

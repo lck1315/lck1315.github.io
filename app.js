@@ -1163,14 +1163,24 @@ document.addEventListener('DOMContentLoaded', () => {
             : galleryPosts.filter(post => post.isPrivate === false);
 
         if (visibleGalleryPosts.length === 0) {
-            galleryGrid.innerHTML = `
-                <div class="glass-card login-prompt-card" style="grid-column: 1 / -1; width: 100%; text-align: center; padding: 4rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; border: 1px solid var(--card-border); border-radius: 20px;">
-                    <i class="fa-solid fa-lock" style="font-size: 3.5rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
-                    <h3 style="font-size: 1.4rem; font-weight: 800; margin: 0;">추억 갤러리는 로그인 후 이용 가능합니다 🔐</h3>
-                    <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 340px; line-height: 1.6; margin: 0;">DODO 가족의 소중한 여행 사진과 따뜻한 일상 모습은 가족 인증을 마친 멤버들에게만 안전하게 공개됩니다.</p>
-                    <button class="btn btn-primary" onclick="document.getElementById('auth-menu-btn').click();" style="padding: 0.8rem 2rem;"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
-                </div>
-            `;
+            if (!currentUserInfo) {
+                galleryGrid.innerHTML = `
+                    <div class="glass-card login-prompt-card" style="grid-column: 1 / -1; width: 100%; text-align: center; padding: 4rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; border: 1px solid var(--card-border); border-radius: 20px;">
+                        <i class="fa-solid fa-lock" style="font-size: 3.5rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
+                        <h3 style="font-size: 1.4rem; font-weight: 800; margin: 0;">추억 갤러리는 로그인 후 이용 가능합니다 🔐</h3>
+                        <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 340px; line-height: 1.6; margin: 0;">DODO 가족의 소중한 여행 사진과 따뜻한 일상 모습은 가족 인증을 마친 멤버들에게만 안전하게 공개됩니다.</p>
+                        <button class="btn btn-primary" onclick="document.getElementById('auth-menu-btn').click();" style="padding: 0.8rem 2rem;"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
+                    </div>
+                `;
+            } else {
+                galleryGrid.innerHTML = `
+                    <div class="glass-card login-prompt-card" style="grid-column: 1 / -1; width: 100%; text-align: center; padding: 4rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; border: 1px solid var(--card-border); border-radius: 20px;">
+                        <i class="fa-regular fa-images" style="font-size: 3.5rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
+                        <h3 style="font-size: 1.4rem; font-weight: 800; margin: 0;">등록된 사진이 없습니다 📸</h3>
+                        <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 340px; line-height: 1.6; margin: 0;">새로운 추억을 가장 먼저 공유해 보세요!</p>
+                    </div>
+                `;
+            }
             return;
         }
 
@@ -1190,9 +1200,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // 액션 버튼 (수정/삭제 - 본인 글만 노출)
             const isOwner = currentUserInfo && (post.uid === currentUserInfo.uid);
             const actionBtnsHTML = isOwner
-                ? `<div style="position: absolute; bottom: 15px; right: 15px; display: flex; gap: 8px;">
-                       <button class="edit-btn gallery-edit-btn" data-id="${post.id}" style="font-size: 0.8rem; background:rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); cursor: pointer;"><i class="fa-solid fa-pen-to-square"></i> 수정</button>
-                       <button class="delete-btn gallery-del-btn" data-id="${post.id}" style="font-size: 0.8rem; background:rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); cursor: pointer;"><i class="fa-regular fa-trash-can"></i> 삭제</button>
+                ? `<div style="position: absolute; bottom: 15px; right: 15px; display: flex; gap: 8px; z-index: 5;">
+                       <button class="edit-btn gallery-edit-btn" data-id="${post.id}" style="font-size: 0.8rem; background: var(--primary-gradient); padding: 5px 12px; border-radius: 8px; border: none; color: white; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3); font-weight: 600;"><i class="fa-solid fa-pen-to-square"></i> 수정</button>
+                       <button class="delete-btn gallery-del-btn" data-id="${post.id}" style="font-size: 0.8rem; background: rgba(255, 71, 87, 0.9); padding: 5px 12px; border-radius: 8px; border: none; color: white; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.3); font-weight: 600;"><i class="fa-regular fa-trash-can"></i> 삭제</button>
                    </div>`
                 : '';
 
@@ -1497,14 +1507,24 @@ document.addEventListener('DOMContentLoaded', () => {
             : visiblePosts.filter(post => post.role === activeBoardFilter);
 
         if (filteredPosts.length === 0) {
-            boardPostsGrid.innerHTML = `
-                <div class="glass-card login-prompt-card" style="grid-column: 1 / -1; width: 100%; text-align: center; padding: 4rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; border: 1px solid var(--card-border); border-radius: 20px;">
-                    <i class="fa-solid fa-user-lock" style="font-size: 3.5rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
-                    <h3 style="font-size: 1.4rem; font-weight: 800; margin: 0;">가족 소식은 로그인 후 볼 수 있습니다 📝</h3>
-                    <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 340px; line-height: 1.6; margin: 0;">우리들만의 스마트 비밀 아지트 게시판입니다. 로그인하셔서 새로운 이야기와 소중한 안부를 등록해 보세요!</p>
-                    <button class="btn btn-primary" onclick="document.getElementById('auth-menu-btn').click();" style="padding: 0.8rem 2rem;"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
-                </div>
-            `;
+            if (!currentUserInfo) {
+                boardPostsGrid.innerHTML = `
+                    <div class="glass-card login-prompt-card" style="grid-column: 1 / -1; width: 100%; text-align: center; padding: 4rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; border: 1px solid var(--card-border); border-radius: 20px;">
+                        <i class="fa-solid fa-user-lock" style="font-size: 3.5rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
+                        <h3 style="font-size: 1.4rem; font-weight: 800; margin: 0;">가족 소식은 로그인 후 볼 수 있습니다 📝</h3>
+                        <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 340px; line-height: 1.6; margin: 0;">우리들만의 스마트 비밀 아지트 게시판입니다. 로그인하셔서 새로운 이야기와 소중한 안부를 등록해 보세요!</p>
+                        <button class="btn btn-primary" onclick="document.getElementById('auth-menu-btn').click();" style="padding: 0.8rem 2rem;"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
+                    </div>
+                `;
+            } else {
+                boardPostsGrid.innerHTML = `
+                    <div class="glass-card login-prompt-card" style="grid-column: 1 / -1; width: 100%; text-align: center; padding: 4rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; border: 1px solid var(--card-border); border-radius: 20px;">
+                        <i class="fa-solid fa-pen-to-square" style="font-size: 3.5rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
+                        <h3 style="font-size: 1.4rem; font-weight: 800; margin: 0;">아직 등록된 이야기가 없습니다 📝</h3>
+                        <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 340px; line-height: 1.6; margin: 0;">가장 먼저 소중한 가족 이야기를 등록해 보세요!</p>
+                    </div>
+                `;
+            }
             return;
         }
 
