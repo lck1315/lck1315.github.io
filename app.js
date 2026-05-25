@@ -943,29 +943,133 @@ document.addEventListener('DOMContentLoaded', () => {
                 images: compressedGalleryImages, // 압축된 다중 base64 이미지 배열
                 author: currentUserInfo.nickname,
                 uid: currentUserInfo.uid,
-                date: new Date().getTime(),
                 isPrivate: isPrivate
             };
 
-            db.collection('gallery_posts').add(newAlbum).then(() => {
-                galleryForm.reset();
-                galleryImgPreviews.innerHTML = '';
-                compressedGalleryImages = [];
-                alert("소중한 추억 앨범이 등록되었습니다! ✈️");
-            }).catch(err => {
-                console.error("갤러리 저장 에러:", err);
-                if (err.message && err.message.includes('exceeds the maximum')) {
-                    alert("사진 용량이 너무 커서 저장에 실패했습니다. 📦\n사진 수를 줄여주세요!");
-                } else {
-                    alert("갤러리 저장 실패! ⚠️ " + err.message);
-                }
-            }).finally(() => {
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '추억 등록하기 <i class="fa-solid fa-check"></i>';
-                }
-            });
+            const editId = galleryForm.getAttribute('data-edit-id');
+            if (editId) {
+                // 수정
+                db.collection('gallery_posts').doc(editId).update(newAlbum).then(() => {
+                    resetGalleryForm();
+                    alert("소중한 추억 앨범이 수정되었습니다! ✏️");
+                }).catch(err => {
+                    console.error("갤러리 수정 에러:", err);
+                    if (err.message && err.message.includes('exceeds the maximum')) {
+                        alert("사진 용량이 너무 커서 저장에 실패했습니다. 📦\n사진 수를 줄여주세요!");
+                    } else {
+                        alert("갤러리 수정 실패! ⚠️ " + err.message);
+                    }
+                }).finally(() => {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '추억 등록하기 <i class="fa-solid fa-check"></i>';
+                    }
+                });
+            } else {
+                // 신규 등록
+                newAlbum.date = new Date().getTime();
+                db.collection('gallery_posts').add(newAlbum).then(() => {
+                    galleryForm.reset();
+                    galleryImgPreviews.innerHTML = '';
+                    compressedGalleryImages = [];
+                    alert("소중한 추억 앨범이 등록되었습니다! ✈️");
+                }).catch(err => {
+                    console.error("갤러리 저장 에러:", err);
+                    if (err.message && err.message.includes('exceeds the maximum')) {
+                        alert("사진 용량이 너무 커서 저장에 실패했습니다. 📦\n사진 수를 줄여주세요!");
+                    } else {
+                        alert("갤러리 저장 실패! ⚠️ " + err.message);
+                    }
+                }).finally(() => {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '추억 등록하기 <i class="fa-solid fa-check"></i>';
+                    }
+                });
+            }
         });
+    }
+
+    // 갤러리 수정 폼 초기화
+    function resetGalleryForm() {
+        if (!galleryForm) return;
+        galleryForm.removeAttribute('data-edit-id');
+        galleryForm.reset();
+        
+        const formTitle = galleryForm.parentNode.querySelector('h3');
+        if (formTitle) formTitle.innerHTML = '추억 앨범 만들기 📸';
+        
+        const submitBtn = galleryForm.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.innerHTML = '추억 등록하기 <i class="fa-solid fa-check"></i>';
+        
+        const cancelBtn = document.getElementById('gallery-edit-cancel-btn');
+        if (cancelBtn) cancelBtn.remove();
+        
+        galleryImgPreviews.innerHTML = '';
+        compressedGalleryImages = [];
+    }
+
+    // 갤러리 수정 모드 시작
+    function startEditGalleryPost(id) {
+        if (!checkAuth()) return;
+        
+        db.collection('gallery_posts').doc(id).get()
+            .then(doc => {
+                if (doc.exists) {
+                    const post = doc.data();
+                    const isOwner = currentUserInfo && (post.uid === currentUserInfo.uid);
+                    if (!isOwner) {
+                        alert("작성자 본인만 수정할 수 있습니다! 🔐");
+                        return;
+                    }
+                    
+                    galleryForm.setAttribute('data-edit-id', id);
+                    galleryTitle.value = post.title || '';
+                    galleryDesc.value = post.desc || '';
+                    galleryCategory.value = post.category || 'daily';
+                    document.getElementById('gallery-is-private').checked = post.isPrivate !== false;
+                    
+                    galleryImgPreviews.innerHTML = '';
+                    compressedGalleryImages = post.images ? [...post.images] : [];
+                    
+                    compressedGalleryImages.forEach((base64Str, index) => {
+                        const previewItem = document.createElement('div');
+                        previewItem.className = 'gallery-preview-item';
+                        previewItem.innerHTML = `
+                            <img src="${base64Str}" alt="미리보기">
+                            <button type="button" class="del-btn" data-index="${index}">&times;</button>
+                        `;
+
+                        previewItem.querySelector('.del-btn').addEventListener('click', (ev) => {
+                            ev.stopPropagation();
+                            previewItem.remove();
+                            const exactIdx = compressedGalleryImages.indexOf(base64Str);
+                            if (exactIdx > -1) compressedGalleryImages.splice(exactIdx, 1);
+                        });
+                        galleryImgPreviews.appendChild(previewItem);
+                    });
+                    
+                    const formTitle = galleryForm.parentNode.querySelector('h3');
+                    if (formTitle) formTitle.innerHTML = '추억 앨범 수정하기 ✏️';
+                    
+                    const submitBtn = galleryForm.querySelector('button[type="submit"]');
+                    if (submitBtn) submitBtn.innerHTML = '수정 완료 <i class="fa-solid fa-check"></i>';
+                    
+                    if (!document.getElementById('gallery-edit-cancel-btn')) {
+                        const cancelBtn = document.createElement('button');
+                        cancelBtn.type = 'button';
+                        cancelBtn.id = 'gallery-edit-cancel-btn';
+                        cancelBtn.className = 'btn btn-secondary w-100';
+                        cancelBtn.style.marginTop = '10px';
+                        cancelBtn.innerHTML = '수정 취소 <i class="fa-solid fa-xmark"></i>';
+                        cancelBtn.addEventListener('click', resetGalleryForm);
+                        galleryForm.appendChild(cancelBtn);
+                    }
+                    
+                    galleryForm.scrollIntoView({ behavior: 'smooth' });
+                }
+            })
+            .catch(err => console.error("갤러리 수정 로드 에러:", err));
     }
 
     // 기본 정적 앨범 2개 삭제됨
@@ -1023,10 +1127,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // 첫 번째 대표 사진 설정
             const firstImg = post.images && post.images.length > 0 ? post.images[0] : './assets/dodo_hero.png';
 
-            // 삭제 버튼 (본인 글만 노출)
+            // 액션 버튼 (수정/삭제 - 본인 글만 노출)
             const isOwner = currentUserInfo && (post.uid === currentUserInfo.uid);
-            const delBtnHTML = isOwner
-                ? `<button class="delete-btn gallery-del-btn" data-id="${post.id}" style="position: absolute; bottom: 15px; right: 15px; font-size: 0.8rem; background:rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted);"><i class="fa-regular fa-trash-can"></i> 삭제</button>`
+            const actionBtnsHTML = isOwner
+                ? `<div style="position: absolute; bottom: 15px; right: 15px; display: flex; gap: 8px;">
+                       <button class="edit-btn gallery-edit-btn" data-id="${post.id}" style="font-size: 0.8rem; background:rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); cursor: pointer;"><i class="fa-solid fa-pen-to-square"></i> 수정</button>
+                       <button class="delete-btn gallery-del-btn" data-id="${post.id}" style="font-size: 0.8rem; background:rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); color: var(--text-muted); cursor: pointer;"><i class="fa-regular fa-trash-can"></i> 삭제</button>
+                   </div>`
                 : '';
 
             item.innerHTML = `
@@ -1049,22 +1156,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h3 class="gallery-item-title">${escapeHTML(post.title)}</h3>
                     <p class="gallery-item-desc">${escapeHTML(post.desc)}</p>
                     <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; font-weight: 600;"><i class="fa-solid fa-user"></i> ${escapeHTML(post.author)}</p>
-                    ${delBtnHTML}
+                    ${actionBtnsHTML}
                 </div>
             `;
 
             // 라이트박스 사용 안 함 – 슬라이더만 이용
             // (클릭 이벤트 제거)
 
-            // 삭제 이벤트 연결
+            // 액션 이벤트 연결
             if (isOwner) {
-                item.querySelector('.gallery-del-btn').addEventListener('click', (ev) => {
-                    ev.stopPropagation();
-                    if (confirm("이 앨범을 삭제하시겠습니까?")) {
-                        db.collection('gallery_posts').doc(post.id).delete()
-                            .catch(err => console.error("갤러리 삭제 에러:", err));
-                    }
-                });
+                const editBtn = item.querySelector('.gallery-edit-btn');
+                if (editBtn) {
+                    editBtn.addEventListener('click', (ev) => {
+                        ev.stopPropagation();
+                        startEditGalleryPost(post.id);
+                    });
+                }
+                
+                const delBtn = item.querySelector('.gallery-del-btn');
+                if (delBtn) {
+                    delBtn.addEventListener('click', (ev) => {
+                        ev.stopPropagation();
+                        if (confirm("이 앨범을 삭제하시겠습니까?")) {
+                            db.collection('gallery_posts').doc(post.id).delete()
+                                .catch(err => console.error("갤러리 삭제 에러:", err));
+                        }
+                    });
+                }
             }
 
             galleryGrid.appendChild(item);
