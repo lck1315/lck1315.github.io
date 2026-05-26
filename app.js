@@ -273,6 +273,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 인증 상태 감시자
+    let userGoogleCalendarListener = null;
+
     auth.onAuthStateChanged((user) => {
         const headerUserName = document.getElementById('header-user-name');
         const dropdownLoggedOut = document.getElementById('dropdown-logged-out');
@@ -324,6 +326,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // UI 리스트들 즉시 새로고침
                     refreshUIComponents();
+
+                    // 개인 구글 캘린더 연동 설정 수신
+                    if (userGoogleCalendarListener) userGoogleCalendarListener(); // 기존 리스너 해제
+                    userGoogleCalendarListener = db.collection('users').doc(user.uid).onSnapshot((uDoc) => {
+                        if (uDoc.exists && uDoc.data().googleCalendarUrl) {
+                            googleCalendarUrl = uDoc.data().googleCalendarUrl;
+                            const urlInput = document.getElementById('calendar-gas-url');
+                            if (urlInput) urlInput.value = googleCalendarUrl;
+                            fetchGoogleCalendarEvents();
+                        } else {
+                            googleCalendarUrl = '';
+                            googleEvents = {};
+                            const urlInput = document.getElementById('calendar-gas-url');
+                            if (urlInput) urlInput.value = '';
+                            renderCalendar();
+                        }
+                    });
                 })
                 .catch((err) => {
                     console.error("사용자 정보 로드 오류:", err);
@@ -372,7 +391,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderFamilyCards(cachedFamilySnapshot);
             }
 
-            // 메인 이미지 수정 배지 비활성화
+            // 개인 구글 캘린더 데이터 초기화
+            if (userGoogleCalendarListener) {
+                userGoogleCalendarListener();
+                userGoogleCalendarListener = null;
+            }
+            googleCalendarUrl = '';
+            googleEvents = {};
+            const urlInput = document.getElementById('calendar-gas-url');
+            if (urlInput) urlInput.value = '';
+            if (typeof renderCalendar === 'function') renderCalendar();
+
+            // 메인 이미지 수정 배지 숨김
             const heroEditBadge = document.getElementById('hero-img-edit-trigger');
             if (heroEditBadge) heroEditBadge.classList.add('hidden');
 
@@ -2728,20 +2758,6 @@ function initCardSliders(container) {
                 renderHeroManagerGrid();
             }
         }, err => console.error("메인 슬라이더 로드 에러:", err));
-
-        // 구글 캘린더 URL 설정 수신
-        db.collection('settings').doc('google_calendar').onSnapshot((doc) => {
-            if (doc.exists && doc.data().url) {
-                googleCalendarUrl = doc.data().url;
-                const urlInput = document.getElementById('calendar-gas-url');
-                if (urlInput) urlInput.value = googleCalendarUrl;
-                fetchGoogleCalendarEvents();
-            } else {
-                googleCalendarUrl = '';
-                googleEvents = {};
-                renderCalendar();
-            }
-        });
     }
 
     // 구글 캘린더 이벤트 가져오기 함수
@@ -2822,10 +2838,10 @@ function initCardSliders(container) {
                 submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...';
             }
 
-            db.collection('settings').doc('google_calendar').set({
-                url: urlInput
-            }).then(() => {
-                alert("구글 캘린더 연동 URL이 저장되었습니다! 📅");
+            db.collection('users').doc(currentUserInfo.uid).set({
+                googleCalendarUrl: urlInput
+            }, { merge: true }).then(() => {
+                alert("내 구글 캘린더 연동 URL이 저장되었습니다! 📅");
                 calendarSettingsModal.classList.remove('show');
             }).catch(err => {
                 console.error(err);
