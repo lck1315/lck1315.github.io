@@ -285,8 +285,8 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleUIPanelLocks(true);
             
             // 로그인 시 스마트 단어장 관련 요소 노출
-            const wordbookElements = document.querySelectorAll('.auth-only-wordbook');
-            wordbookElements.forEach(el => el.classList.remove('hidden'));
+            const authElements = document.querySelectorAll('.auth-only-wordbook, .auth-only-calendar');
+            authElements.forEach(el => el.style.display = '');
 
             db.collection('users').doc(user.uid).get()
                 .then((doc) => {
@@ -352,8 +352,14 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleUIPanelLocks(false);
             
             // 로그아웃 시 스마트 단어장 관련 요소 숨김
-            const wordbookElements = document.querySelectorAll('.auth-only-wordbook');
-            wordbookElements.forEach(el => el.classList.add('hidden'));
+            const authElements = document.querySelectorAll('.auth-only-wordbook, .auth-only-calendar');
+            authElements.forEach(el => {
+                if (el.classList.contains('auth-only-wordbook')) {
+                    el.classList.add('hidden');
+                } else {
+                    el.style.display = 'none';
+                }
+            });
 
             headerUserName.textContent = "Login";
             dropdownLoggedOut.classList.remove('hidden');
@@ -595,6 +601,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeSelectedDateStr = ''; 
 
     let familyEvents = {};
+    let googleCalendarUrl = '';
+    let googleEvents = {};
+
     function initEventsListener() {
         db.collection('events').onSnapshot((snapshot) => {
             familyEvents = {};
@@ -669,26 +678,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
         dayCell.innerHTML = `<span class="day-number">${dateObj.getDate()}</span>`;
 
-        if (familyEvents[dateStr] && familyEvents[dateStr].length > 0) {
+        let combinedEvents = [];
+        if (familyEvents[dateStr]) combinedEvents = combinedEvents.concat(familyEvents[dateStr]);
+        if (googleEvents[dateStr]) combinedEvents = combinedEvents.concat(googleEvents[dateStr]);
+
+        if (combinedEvents.length > 0) {
             const eventsWrapper = document.createElement('div');
             eventsWrapper.className = 'day-events-list';
             
             const maxVisibleEvents = 2; 
-            const eventsToShow = familyEvents[dateStr].slice(0, maxVisibleEvents);
+            const eventsToShow = combinedEvents.slice(0, maxVisibleEvents);
             
             eventsToShow.forEach(event => {
                 const eventBar = document.createElement('div');
                 eventBar.className = 'calendar-event-bar';
                 eventBar.style.backgroundColor = event.color;
-                eventBar.textContent = event.title;
+                eventBar.innerHTML = (event.isGoogle ? '<i class="fa-brands fa-google"></i> ' : '') + escapeHTML(event.title);
                 eventBar.title = event.title; 
                 eventsWrapper.appendChild(eventBar);
             });
             
-            if (familyEvents[dateStr].length > maxVisibleEvents) {
+            if (combinedEvents.length > maxVisibleEvents) {
                 const moreText = document.createElement('div');
                 moreText.className = 'calendar-event-more';
-                moreText.textContent = `+${familyEvents[dateStr].length - maxVisibleEvents}`;
+                moreText.textContent = `+${combinedEvents.length - maxVisibleEvents}`;
                 eventsWrapper.appendChild(moreText);
             }
             
@@ -736,14 +749,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderModalEventList() {
         modalEventList.innerHTML = '';
-        const dayEvents = familyEvents[activeSelectedDateStr] || [];
+        let combinedEvents = [];
+        if (familyEvents[activeSelectedDateStr]) combinedEvents = combinedEvents.concat(familyEvents[activeSelectedDateStr]);
+        if (googleEvents[activeSelectedDateStr]) combinedEvents = combinedEvents.concat(googleEvents[activeSelectedDateStr]);
 
-        if (dayEvents.length === 0) {
+        if (combinedEvents.length === 0) {
             modalEventList.innerHTML = '<p class="no-messages" style="padding:1rem;">등록된 일정이 없습니다.</p>';
             return;
         }
 
-        dayEvents.forEach((evt, idx) => {
+        combinedEvents.forEach((evt, idx) => {
             const item = document.createElement('div');
             item.className = 'event-item';
             
@@ -752,13 +767,17 @@ document.addEventListener('DOMContentLoaded', () => {
             item.style.backgroundColor = `${baseColor}1a`; 
             item.style.borderLeftColor = baseColor;
 
-            const isOwner = !evt.uid || (currentUserInfo && (evt.uid === currentUserInfo.uid || evt.author === currentUserInfo.nickname));
+            const isOwner = !evt.isGoogle && (!evt.uid || (currentUserInfo && (evt.uid === currentUserInfo.uid || evt.author === currentUserInfo.nickname)));
             const delBtnHTML = isOwner 
                 ? `<button class="event-del-btn" data-index="${idx}"><i class="fa-regular fa-trash-can"></i></button>`
                 : '';
+                
+            const titleHTML = evt.isGoogle 
+                ? `<i class="fa-brands fa-google" style="margin-right: 5px; color: #4285F4;"></i>${escapeHTML(evt.title)}` 
+                : escapeHTML(evt.title);
 
             item.innerHTML = `
-                <span class="event-item-title">${escapeHTML(evt.title)}</span>
+                <span class="event-item-title">${titleHTML}</span>
                 ${delBtnHTML}
             `;
             modalEventList.appendChild(item);
@@ -767,7 +786,15 @@ document.addEventListener('DOMContentLoaded', () => {
         modalEventList.querySelectorAll('.event-del-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const index = parseInt(btn.getAttribute('data-index'));
-                deleteEvent(index);
+                // Google 이벤트는 삭제 불가능하므로, 실제 familyEvents 상의 인덱스를 찾아서 삭제해야 함
+                // 하지만 현재 UI 구조상 인덱스가 어긋날 수 있으므로 타이틀과 컬러로 매칭하여 삭제
+                const targetEvent = combinedEvents[index];
+                if (targetEvent.isGoogle) return;
+                
+                const realIndex = familyEvents[activeSelectedDateStr].findIndex(e => e.title === targetEvent.title && e.color === targetEvent.color);
+                if (realIndex > -1) {
+                    deleteEvent(realIndex);
+                }
             });
         });
     }
@@ -2701,6 +2728,115 @@ function initCardSliders(container) {
                 renderHeroManagerGrid();
             }
         }, err => console.error("메인 슬라이더 로드 에러:", err));
+
+        // 구글 캘린더 URL 설정 수신
+        db.collection('settings').doc('google_calendar').onSnapshot((doc) => {
+            if (doc.exists && doc.data().url) {
+                googleCalendarUrl = doc.data().url;
+                const urlInput = document.getElementById('calendar-gas-url');
+                if (urlInput) urlInput.value = googleCalendarUrl;
+                fetchGoogleCalendarEvents();
+            } else {
+                googleCalendarUrl = '';
+                googleEvents = {};
+                renderCalendar();
+            }
+        });
+    }
+
+    // 구글 캘린더 이벤트 가져오기 함수
+    function fetchGoogleCalendarEvents() {
+        if (!googleCalendarUrl) return;
+        const syncIcon = document.querySelector('#calendar-sync-btn i');
+        if (syncIcon) syncIcon.classList.add('fa-spin');
+
+        fetch(googleCalendarUrl)
+            .then(res => res.json())
+            .then(data => {
+                googleEvents = {};
+                if (Array.isArray(data)) {
+                    data.forEach(ev => {
+                        if (ev.date) {
+                            const d = new Date(ev.date);
+                            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                            if (!googleEvents[dateStr]) googleEvents[dateStr] = [];
+                            googleEvents[dateStr].push({
+                                title: ev.title || '일정',
+                                color: '#4285F4', // 구글 블루
+                                isGoogle: true
+                            });
+                        }
+                    });
+                }
+                renderCalendar();
+                if (calendarModal && calendarModal.classList.contains('show')) {
+                    renderModalEventList();
+                }
+            })
+            .catch(err => {
+                console.error("구글 캘린더 동기화 에러:", err);
+            })
+            .finally(() => {
+                if (syncIcon) syncIcon.classList.remove('fa-spin');
+            });
+    }
+
+    // 구글 캘린더 UI 팝업 및 기능
+    const calendarSettingsBtn = document.getElementById('calendar-settings-btn');
+    const calendarSyncBtn = document.getElementById('calendar-sync-btn');
+    const calendarSettingsModal = document.getElementById('calendar-settings-modal');
+    const calendarSettingsClose = document.getElementById('calendar-settings-close');
+    const calendarSettingsForm = document.getElementById('calendar-settings-form');
+
+    if (calendarSettingsBtn) {
+        calendarSettingsBtn.addEventListener('click', () => {
+            if (calendarSettingsModal) calendarSettingsModal.classList.add('show');
+        });
+    }
+    if (calendarSyncBtn) {
+        calendarSyncBtn.addEventListener('click', () => {
+            fetchGoogleCalendarEvents();
+        });
+    }
+    if (calendarSettingsClose) {
+        calendarSettingsClose.addEventListener('click', () => {
+            if (calendarSettingsModal) calendarSettingsModal.classList.remove('show');
+        });
+    }
+    if (calendarSettingsModal) {
+        calendarSettingsModal.addEventListener('click', (e) => {
+            if (e.target === calendarSettingsModal) {
+                calendarSettingsModal.classList.remove('show');
+            }
+        });
+    }
+    if (calendarSettingsForm) {
+        calendarSettingsForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!checkAuth()) return;
+            const urlInput = document.getElementById('calendar-gas-url').value.trim();
+            const submitBtn = calendarSettingsForm.querySelector('button[type="submit"]');
+            
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...';
+            }
+
+            db.collection('settings').doc('google_calendar').set({
+                url: urlInput
+            }).then(() => {
+                alert("구글 캘린더 연동 URL이 저장되었습니다! 📅");
+                calendarSettingsModal.classList.remove('show');
+            }).catch(err => {
+                console.error(err);
+                alert("URL 저장 중 오류가 발생했습니다.");
+            }).finally(() => {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '저장하기';
+                }
+            });
+        });
     }
 
     // 슬라이더 렌더링
