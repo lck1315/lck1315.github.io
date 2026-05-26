@@ -2823,7 +2823,7 @@ function initCardSliders(container) {
     }
 
     // webcal 및 다중 프록시를 적용해 캘린더 데이터를 가져오는 헬퍼 함수
-    async function fetchWithProxy(url) {
+    async function fetchWithProxy(url, proxyIndexOffset = 0) {
         let targetUrl = url.trim();
         if (targetUrl.startsWith('webcal://')) {
             targetUrl = 'https://' + targetUrl.substring(9);
@@ -2837,7 +2837,9 @@ function initCardSliders(container) {
         ];
 
         let lastError = null;
-        for (const getProxyUrl of proxies) {
+        for (let i = 0; i < proxies.length; i++) {
+            const idx = (i + proxyIndexOffset) % proxies.length;
+            const getProxyUrl = proxies[idx];
             try {
                 const proxyUrl = getProxyUrl(targetUrl);
                 const res = await fetch(proxyUrl);
@@ -2867,22 +2869,30 @@ function initCardSliders(container) {
         const syncIcon = document.querySelector('#calendar-sync-btn i');
         if (syncIcon) syncIcon.classList.add('fa-spin');
 
-        const fetches = googleCalendarUrls.map(async (cal) => {
+        // 여러 캘린더 요청 시 한꺼번에 프록시로 몰리면 차단당하므로 순차 요청
+        const results = [];
+        for (let i = 0; i < googleCalendarUrls.length; i++) {
+            const cal = googleCalendarUrls[i];
+            
+            // 두 번째 요청부터는 150ms 딜레이를 줌
+            if (i > 0) {
+                await new Promise(resolve => setTimeout(resolve, 150));
+            }
+            
             try {
-                const text = await fetchWithProxy(cal.url);
+                // 프록시 시작 인덱스를 다르게 하여 분산 처리 (Round-robin)
+                const text = await fetchWithProxy(cal.url, i);
                 const events = parseICalText(text);
                 console.log(`[${cal.name}] 구글 캘린더 동기화 완료: ${events.length}개 일정`);
-                return { name: cal.name, events: events, success: true };
+                results.push({ name: cal.name, events: events, success: true });
             } catch (err) {
                 console.error(`[${cal.name}] 구글 캘린더 동기화 실패:`, err);
-                return { name: cal.name, events: [], success: false, error: err.message };
+                results.push({ name: cal.name, events: [], success: false, error: err.message });
             }
-        });
+        }
 
         try {
-            const results = await Promise.all(fetches);
             googleEvents = {};
-            
             let failedList = [];
             results.forEach(result => {
                 if (!result.success) {
