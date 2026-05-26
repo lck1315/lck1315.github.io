@@ -619,6 +619,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const calendarGrid = document.getElementById('calendar-grid');
     const prevMonthBtn = document.getElementById('prev-month-btn');
     const nextMonthBtn = document.getElementById('next-month-btn');
+    const prevYearBtn = document.getElementById('prev-year-btn');
+    const nextYearBtn = document.getElementById('next-year-btn');
 
     const calendarModal = document.getElementById('calendar-modal');
     const modalDateTitle = document.getElementById('modal-date-title');
@@ -754,6 +756,20 @@ document.addEventListener('DOMContentLoaded', () => {
         currentCalDate.setMonth(currentCalDate.getMonth() + 1);
         renderCalendar();
     });
+
+    if (prevYearBtn) {
+        prevYearBtn.addEventListener('click', () => {
+            currentCalDate.setFullYear(currentCalDate.getFullYear() - 1);
+            renderCalendar();
+        });
+    }
+
+    if (nextYearBtn) {
+        nextYearBtn.addEventListener('click', () => {
+            currentCalDate.setFullYear(currentCalDate.getFullYear() + 1);
+            renderCalendar();
+        });
+    }
 
     // 페이지 로드 직후 달력 최초 1회 즉시 렌더링 (데이터 오기 전에 틀 노출)
     renderCalendar();

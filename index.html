@@ -260,14 +260,27 @@
                     <!-- 캘린더 원래 콘텐츠 래퍼 -->
                     <div id="calendar-inner">
                         <!-- 캘린더 컨트롤 헤더 -->
-                        <div class="calendar-header">
-                            <button id="prev-month-btn" class="calendar-nav-btn"><i class="fa-solid fa-chevron-left"></i></button>
-                            <h3 id="calendar-month-year">2026년 5월</h3>
-                            <div class="calendar-header-actions" style="display: flex; gap: 10px;">
-                                <button id="calendar-sync-btn" class="calendar-nav-btn" title="구글 캘린더 새로고침"><i class="fa-solid fa-rotate"></i></button>
-                                <button id="calendar-settings-btn" class="calendar-nav-btn auth-only-calendar" title="구글 캘린더 설정" style="display:none;"><i class="fa-solid fa-gear"></i></button>
+                        <div class="calendar-header" style="position: relative; justify-content: center;">
+                            <!-- 왼쪽 네비게이션 (년/월 이전) -->
+                            <div style="position: absolute; left: 0; display: flex; gap: 5px;">
+                                <button id="prev-year-btn" class="calendar-nav-btn" title="이전 년도"><i class="fa-solid fa-angles-left"></i></button>
+                                <button id="prev-month-btn" class="calendar-nav-btn" title="이전 달"><i class="fa-solid fa-angle-left"></i></button>
                             </div>
-                            <button id="next-month-btn" class="calendar-nav-btn"><i class="fa-solid fa-chevron-right"></i></button>
+                            
+                            <!-- 중앙 타이틀 및 액션 버튼 -->
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <h3 id="calendar-month-year" style="margin: 0;">2026년 5월</h3>
+                                <div class="calendar-header-actions" style="display: flex; gap: 5px;">
+                                    <button id="calendar-sync-btn" class="calendar-nav-btn" title="구글 캘린더 새로고침" style="width: 35px; height: 35px; font-size: 0.9rem;"><i class="fa-solid fa-rotate"></i></button>
+                                    <button id="calendar-settings-btn" class="calendar-nav-btn auth-only-calendar" title="내 구글 캘린더 설정" style="display:none; width: 35px; height: 35px; font-size: 0.9rem;"><i class="fa-solid fa-gear"></i></button>
+                                </div>
+                            </div>
+                            
+                            <!-- 오른쪽 네비게이션 (년/월 다음) -->
+                            <div style="position: absolute; right: 0; display: flex; gap: 5px;">
+                                <button id="next-month-btn" class="calendar-nav-btn" title="다음 달"><i class="fa-solid fa-angle-right"></i></button>
+                                <button id="next-year-btn" class="calendar-nav-btn" title="다음 년도"><i class="fa-solid fa-angles-right"></i></button>
+                            </div>
                         </div>
                         
                         <!-- 요일 헤더 -->
