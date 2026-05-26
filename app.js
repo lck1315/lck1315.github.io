@@ -2782,31 +2782,59 @@ function initCardSliders(container) {
         const syncIcon = document.querySelector('#calendar-sync-btn i');
         if (syncIcon) syncIcon.classList.add('fa-spin');
 
-        fetch(googleCalendarUrl)
-            .then(res => res.json())
-            .then(data => {
+        // CORS 우회를 위해 allorigins 프록시 사용 (raw 데이터 반환)
+        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(googleCalendarUrl);
+
+        fetch(proxyUrl)
+            .then(res => res.text())
+            .then(text => {
                 googleEvents = {};
-                if (Array.isArray(data)) {
-                    data.forEach(ev => {
-                        if (ev.date) {
-                            const d = new Date(ev.date);
-                            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                            if (!googleEvents[dateStr]) googleEvents[dateStr] = [];
-                            googleEvents[dateStr].push({
-                                title: ev.title || '일정',
-                                color: '#4285F4', // 구글 블루
+
+                // iCal 줄접기(folding) 해제: 줄바꿈+공백/탭으로 이어지는 줄을 합침
+                const unfoldedText = text.replace(/\r?\n[ \t]/g, '');
+                const lines = unfoldedText.split(/\r?\n/);
+                let currentEvent = null;
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    if (line.startsWith('BEGIN:VEVENT')) {
+                        currentEvent = {};
+                    } else if (line.startsWith('END:VEVENT')) {
+                        if (currentEvent && currentEvent.title && currentEvent.dateStr) {
+                            if (!googleEvents[currentEvent.dateStr]) googleEvents[currentEvent.dateStr] = [];
+                            googleEvents[currentEvent.dateStr].push({
+                                title: currentEvent.title,
+                                color: '#4285F4',
                                 isGoogle: true
                             });
                         }
-                    });
+                        currentEvent = null;
+                    } else if (currentEvent) {
+                        if (line.startsWith('SUMMARY:')) {
+                            currentEvent.title = line.substring(8).trim();
+                        } else if (line.startsWith('DTSTART')) {
+                            // DTSTART;VALUE=DATE:20260526 또는 DTSTART:20260526T090000Z 등
+                            const colonIdx = line.indexOf(':');
+                            if (colonIdx !== -1) {
+                                const dStr = line.substring(colonIdx + 1).trim();
+                                if (dStr.length >= 8) {
+                                    const y = dStr.substring(0, 4);
+                                    const m = dStr.substring(4, 6);
+                                    const d = dStr.substring(6, 8);
+                                    currentEvent.dateStr = `${y}-${m}-${d}`;
+                                }
+                            }
+                        }
+                    }
                 }
+
                 renderCalendar();
                 if (calendarModal && calendarModal.classList.contains('show')) {
                     renderModalEventList();
                 }
             })
             .catch(err => {
-                console.error("구글 캘린더 동기화 에러:", err);
+                console.error("구글 캘린더 iCal 동기화 에러:", err);
             })
             .finally(() => {
                 if (syncIcon) syncIcon.classList.remove('fa-spin');
