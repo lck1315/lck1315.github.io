@@ -2884,26 +2884,40 @@ function initCardSliders(container) {
                 const text = await fetchWithProxy(cal.url, i);
                 const events = parseICalText(text);
                 console.log(`[${cal.name}] 구글 캘린더 동기화 완료: ${events.length}개 일정`);
-                results.push({ name: cal.name, events: events, success: true });
+                results.push({ name: cal.name, events: events, success: true, index: i });
             } catch (err) {
                 console.error(`[${cal.name}] 구글 캘린더 동기화 실패:`, err);
-                results.push({ name: cal.name, events: [], success: false, error: err.message });
+                results.push({ name: cal.name, events: [], success: false, error: err.message, index: i });
             }
         }
 
         try {
             googleEvents = {};
             let failedList = [];
+            
+            // 5가지 구글 캘린더 테마 파스텔톤 색상 지정
+            const googleCalendarColors = [
+                '#4285F4', // 1번: 블루
+                '#34A853', // 2번: 그린
+                '#E67C73', // 3번: 레드/자몽
+                '#F7CB4D', // 4번: 옐로우/바나나
+                '#7986CB'  // 5번: 라벤더/퍼플
+            ];
+
             results.forEach(result => {
                 if (!result.success) {
                     failedList.push(result.name);
                 }
+                
+                // 캘린더 인덱스에 따라 고유한 색상 배정
+                const calColor = googleCalendarColors[result.index % googleCalendarColors.length] || '#4285F4';
+                
                 result.events.forEach(ev => {
                     if (!googleEvents[ev.dateStr]) googleEvents[ev.dateStr] = [];
-                    // 캘린더 구분을 위해 일정 제목에 [캘린더이름] 접두사 추가
+                    // 캘린더 구분을 위해 일정 제목에 [캘린더이름] 접두사 추가 및 고유색 지정
                     googleEvents[ev.dateStr].push({
                         title: `[${result.name}] ${ev.title}`,
-                        color: '#4285F4',
+                        color: calColor,
                         isGoogle: true
                     });
                 });
