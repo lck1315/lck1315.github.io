@@ -288,7 +288,13 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // 로그인 시 스마트 단어장 관련 요소 노출
             const authElements = document.querySelectorAll('.auth-only-wordbook, .auth-only-calendar');
-            authElements.forEach(el => el.style.display = '');
+            authElements.forEach(el => {
+                if (el.classList.contains('auth-only-wordbook')) {
+                    el.classList.remove('hidden');
+                } else {
+                    el.style.display = '';
+                }
+            });
 
             db.collection('users').doc(user.uid).get()
                 .then((doc) => {
@@ -327,19 +333,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     // UI 리스트들 즉시 새로고침
                     refreshUIComponents();
 
-                    // 개인 구글 캘린더 연동 설정 수신
+                    // 개인 구글 캘린더 연동 설정 수신 (다중 캘린더)
                     if (userGoogleCalendarListener) userGoogleCalendarListener(); // 기존 리스너 해제
                     userGoogleCalendarListener = db.collection('users').doc(user.uid).onSnapshot((uDoc) => {
-                        if (uDoc.exists && uDoc.data().googleCalendarUrl) {
-                            googleCalendarUrl = uDoc.data().googleCalendarUrl;
-                            const urlInput = document.getElementById('calendar-gas-url');
-                            if (urlInput) urlInput.value = googleCalendarUrl;
+                        if (uDoc.exists && uDoc.data().googleCalendarUrls && Array.isArray(uDoc.data().googleCalendarUrls)) {
+                            googleCalendarUrls = uDoc.data().googleCalendarUrls;
+                            renderGcalList();
+                            fetchGoogleCalendarEvents();
+                        } else if (uDoc.exists && uDoc.data().googleCalendarUrl) {
+                            // 기존 단일 URL 호환: 배열로 변환
+                            googleCalendarUrls = [{ name: '내 캘린더', url: uDoc.data().googleCalendarUrl }];
+                            renderGcalList();
                             fetchGoogleCalendarEvents();
                         } else {
-                            googleCalendarUrl = '';
+                            googleCalendarUrls = [];
                             googleEvents = {};
-                            const urlInput = document.getElementById('calendar-gas-url');
-                            if (urlInput) urlInput.value = '';
+                            renderGcalList();
                             renderCalendar();
                         }
                     });
@@ -396,10 +405,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 userGoogleCalendarListener();
                 userGoogleCalendarListener = null;
             }
-            googleCalendarUrl = '';
+            googleCalendarUrls = [];
             googleEvents = {};
-            const urlInput = document.getElementById('calendar-gas-url');
-            if (urlInput) urlInput.value = '';
+            renderGcalList();
             if (typeof renderCalendar === 'function') renderCalendar();
 
             // 메인 이미지 수정 배지 숨김
@@ -633,7 +641,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeSelectedDateStr = ''; 
 
     let familyEvents = {};
-    let googleCalendarUrl = '';
+    let googleCalendarUrls = []; // [{name: '멜로', url: 'https://...'}, ...]
     let googleEvents = {};
 
     function initEventsListener() {
@@ -2777,68 +2785,106 @@ function initCardSliders(container) {
     }
 
     // 구글 캘린더 이벤트 가져오기 함수
-    function fetchGoogleCalendarEvents() {
-        if (!googleCalendarUrl) return;
-        const syncIcon = document.querySelector('#calendar-sync-btn i');
-        if (syncIcon) syncIcon.classList.add('fa-spin');
+    // iCal 텍스트를 파싱하여 이벤트 객체 배열 반환
+    function parseICalText(text) {
+        const events = [];
+        const unfoldedText = text.replace(/\r?\n[ \t]/g, '');
+        const lines = unfoldedText.split(/\r?\n/);
+        let currentEvent = null;
 
-        // CORS 우회를 위해 allorigins 프록시 사용 (raw 데이터 반환)
-        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(googleCalendarUrl);
-
-        fetch(proxyUrl)
-            .then(res => res.text())
-            .then(text => {
-                googleEvents = {};
-
-                // iCal 줄접기(folding) 해제: 줄바꿈+공백/탭으로 이어지는 줄을 합침
-                const unfoldedText = text.replace(/\r?\n[ \t]/g, '');
-                const lines = unfoldedText.split(/\r?\n/);
-                let currentEvent = null;
-
-                for (let i = 0; i < lines.length; i++) {
-                    const line = lines[i];
-                    if (line.startsWith('BEGIN:VEVENT')) {
-                        currentEvent = {};
-                    } else if (line.startsWith('END:VEVENT')) {
-                        if (currentEvent && currentEvent.title && currentEvent.dateStr) {
-                            if (!googleEvents[currentEvent.dateStr]) googleEvents[currentEvent.dateStr] = [];
-                            googleEvents[currentEvent.dateStr].push({
-                                title: currentEvent.title,
-                                color: '#4285F4',
-                                isGoogle: true
-                            });
-                        }
-                        currentEvent = null;
-                    } else if (currentEvent) {
-                        if (line.startsWith('SUMMARY:')) {
-                            currentEvent.title = line.substring(8).trim();
-                        } else if (line.startsWith('DTSTART')) {
-                            // DTSTART;VALUE=DATE:20260526 또는 DTSTART:20260526T090000Z 등
-                            const colonIdx = line.indexOf(':');
-                            if (colonIdx !== -1) {
-                                const dStr = line.substring(colonIdx + 1).trim();
-                                if (dStr.length >= 8) {
-                                    const y = dStr.substring(0, 4);
-                                    const m = dStr.substring(4, 6);
-                                    const d = dStr.substring(6, 8);
-                                    currentEvent.dateStr = `${y}-${m}-${d}`;
-                                }
-                            }
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (line.startsWith('BEGIN:VEVENT')) {
+                currentEvent = {};
+            } else if (line.startsWith('END:VEVENT')) {
+                if (currentEvent && currentEvent.title && currentEvent.dateStr) {
+                    events.push(currentEvent);
+                }
+                currentEvent = null;
+            } else if (currentEvent) {
+                if (line.startsWith('SUMMARY:')) {
+                    currentEvent.title = line.substring(8).trim();
+                } else if (line.startsWith('DTSTART')) {
+                    const colonIdx = line.indexOf(':');
+                    if (colonIdx !== -1) {
+                        const dStr = line.substring(colonIdx + 1).trim();
+                        if (dStr.length >= 8) {
+                            currentEvent.dateStr = `${dStr.substring(0,4)}-${dStr.substring(4,6)}-${dStr.substring(6,8)}`;
                         }
                     }
                 }
+            }
+        }
+        return events;
+    }
 
-                renderCalendar();
-                if (calendarModal && calendarModal.classList.contains('show')) {
-                    renderModalEventList();
-                }
-            })
-            .catch(err => {
-                console.error("구글 캘린더 iCal 동기화 에러:", err);
-            })
-            .finally(() => {
-                if (syncIcon) syncIcon.classList.remove('fa-spin');
+    // 등록된 캘린더 목록 UI 렌더링
+    function renderGcalList() {
+        const listEl = document.getElementById('gcal-list');
+        if (!listEl) return;
+        if (!googleCalendarUrls || googleCalendarUrls.length === 0) {
+            listEl.innerHTML = '<p style="text-align:center; color:var(--text-muted); font-size:0.85rem; padding: 8px 0;">등록된 캘린더가 없습니다.</p>';
+            return;
+        }
+        listEl.innerHTML = '';
+        googleCalendarUrls.forEach((cal, idx) => {
+            const item = document.createElement('div');
+            item.style.cssText = 'display:flex; align-items:center; justify-content:space-between; background:var(--input-bg); border:1px solid var(--input-border); border-radius:10px; padding:8px 12px;';
+            item.innerHTML = `
+                <div style="display:flex; align-items:center; gap:8px; overflow:hidden;">
+                    <i class="fa-brands fa-google" style="color:#4285F4; font-size:1rem;"></i>
+                    <span style="font-weight:600; font-size:0.9rem; white-space:nowrap;">${cal.name || '캘린더'}</span>
+                </div>
+                <button class="gcal-del-btn" data-idx="${idx}" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1rem; padding:4px 6px;" title="삭제"><i class="fa-solid fa-trash-can"></i></button>
+            `;
+            item.querySelector('.gcal-del-btn').addEventListener('click', () => {
+                if (!confirm(`'${cal.name}' 캘린더를 삭제할까요?`)) return;
+                googleCalendarUrls.splice(idx, 1);
+                db.collection('users').doc(currentUserInfo.uid).set({ googleCalendarUrls }, { merge: true }).then(() => {
+                    renderGcalList();
+                    fetchGoogleCalendarEvents();
+                });
             });
+            listEl.appendChild(item);
+        });
+    }
+
+    // 다중 캘린더 동시 fetch
+    function fetchGoogleCalendarEvents() {
+        if (!googleCalendarUrls || googleCalendarUrls.length === 0) return;
+        const syncIcon = document.querySelector('#calendar-sync-btn i');
+        if (syncIcon) syncIcon.classList.add('fa-spin');
+
+        const fetches = googleCalendarUrls.map(cal => {
+            const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(cal.url);
+            return fetch(proxyUrl)
+                .then(res => res.text())
+                .then(text => ({ name: cal.name, events: parseICalText(text) }))
+                .catch(err => {
+                    console.error(`[${cal.name}] iCal 동기화 에러:`, err);
+                    return { name: cal.name, events: [] };
+                });
+        });
+
+        Promise.all(fetches).then(results => {
+            googleEvents = {};
+            results.forEach(result => {
+                result.events.forEach(ev => {
+                    if (!googleEvents[ev.dateStr]) googleEvents[ev.dateStr] = [];
+                    googleEvents[ev.dateStr].push({
+                        title: ev.title,
+                        color: '#4285F4',
+                        isGoogle: true
+                    });
+                });
+            });
+            renderCalendar();
+            if (calendarModal && calendarModal.classList.contains('show')) {
+                renderModalEventList();
+            }
+        }).finally(() => {
+            if (syncIcon) syncIcon.classList.remove('fa-spin');
+        });
     }
 
     // 구글 캘린더 UI 팝업 및 기능
@@ -2874,26 +2920,33 @@ function initCardSliders(container) {
         calendarSettingsForm.addEventListener('submit', (e) => {
             e.preventDefault();
             if (!checkAuth()) return;
-            const urlInput = document.getElementById('calendar-gas-url').value.trim();
+            const nameInput = document.getElementById('gcal-name-input');
+            const urlInput = document.getElementById('calendar-gas-url');
+            const name = nameInput.value.trim();
+            const url = urlInput.value.trim();
+            if (!name || !url) return;
+
             const submitBtn = calendarSettingsForm.querySelector('button[type="submit"]');
-            
             if (submitBtn) {
                 submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...';
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 추가 중...';
             }
 
+            // 기존 배열에 추가
+            const newList = [...googleCalendarUrls, { name, url }];
+
             db.collection('users').doc(currentUserInfo.uid).set({
-                googleCalendarUrl: urlInput
+                googleCalendarUrls: newList
             }, { merge: true }).then(() => {
-                alert("내 구글 캘린더 연동 URL이 저장되었습니다! 📅");
-                calendarSettingsModal.classList.remove('show');
+                nameInput.value = '';
+                urlInput.value = '';
             }).catch(err => {
                 console.error(err);
-                alert("URL 저장 중 오류가 발생했습니다.");
+                alert("저장 중 오류가 발생했습니다.");
             }).finally(() => {
                 if (submitBtn) {
                     submitBtn.disabled = false;
-                    submitBtn.innerHTML = '저장하기';
+                    submitBtn.innerHTML = '<i class="fa-solid fa-plus"></i> 캘린더 추가';
                 }
             });
         });
