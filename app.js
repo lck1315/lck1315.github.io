@@ -2822,8 +2822,43 @@ function initCardSliders(container) {
         }
     }
 
+    // webcal 및 다중 프록시를 적용해 캘린더 데이터를 가져오는 헬퍼 함수
+    async function fetchWithProxy(url) {
+        let targetUrl = url.trim();
+        if (targetUrl.startsWith('webcal://')) {
+            targetUrl = 'https://' + targetUrl.substring(9);
+        }
+
+        // 다중 프록시 목록 (CORS 회피용)
+        const proxies = [
+            (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+            (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+            (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
+        ];
+
+        let lastError = null;
+        for (const getProxyUrl of proxies) {
+            try {
+                const proxyUrl = getProxyUrl(targetUrl);
+                const res = await fetch(proxyUrl);
+                if (!res.ok) throw new Error(`HTTP 에러! 상태코드: ${res.status}`);
+                const text = await res.text();
+                // iCal 형식인지 유효성 확인
+                if (text && (text.includes('BEGIN:VCALENDAR') || text.includes('begin:vcalendar'))) {
+                    return text;
+                } else {
+                    throw new Error('올바른 iCal(ICS) 형식이 아닙니다.');
+                }
+            } catch (err) {
+                console.warn(`프록시 실패 (${getProxyUrl(targetUrl)}): ${err.message}`);
+                lastError = err;
+            }
+        }
+        throw lastError || new Error('모든 프록시 서버 연결 실패');
+    }
+
     // 다중 캘린더 동시 fetch
-    function fetchGoogleCalendarEvents() {
+    async function fetchGoogleCalendarEvents() {
         if (!googleCalendarUrls || googleCalendarUrls.length === 0) {
             googleEvents = {};
             renderCalendar();
@@ -2832,36 +2867,51 @@ function initCardSliders(container) {
         const syncIcon = document.querySelector('#calendar-sync-btn i');
         if (syncIcon) syncIcon.classList.add('fa-spin');
 
-        const fetches = googleCalendarUrls.map(cal => {
-            const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(cal.url);
-            return fetch(proxyUrl)
-                .then(res => res.text())
-                .then(text => ({ name: cal.name, events: parseICalText(text) }))
-                .catch(err => {
-                    console.error(`[${cal.name}] iCal 동기화 에러:`, err);
-                    return { name: cal.name, events: [] };
-                });
+        const fetches = googleCalendarUrls.map(async (cal) => {
+            try {
+                const text = await fetchWithProxy(cal.url);
+                const events = parseICalText(text);
+                console.log(`[${cal.name}] 구글 캘린더 동기화 완료: ${events.length}개 일정`);
+                return { name: cal.name, events: events, success: true };
+            } catch (err) {
+                console.error(`[${cal.name}] 구글 캘린더 동기화 실패:`, err);
+                return { name: cal.name, events: [], success: false, error: err.message };
+            }
         });
 
-        Promise.all(fetches).then(results => {
+        try {
+            const results = await Promise.all(fetches);
             googleEvents = {};
+            
+            let failedList = [];
             results.forEach(result => {
+                if (!result.success) {
+                    failedList.push(result.name);
+                }
                 result.events.forEach(ev => {
                     if (!googleEvents[ev.dateStr]) googleEvents[ev.dateStr] = [];
+                    // 캘린더 구분을 위해 일정 제목에 [캘린더이름] 접두사 추가
                     googleEvents[ev.dateStr].push({
-                        title: ev.title,
+                        title: `[${result.name}] ${ev.title}`,
                         color: '#4285F4',
                         isGoogle: true
                     });
                 });
             });
+            
             renderCalendar();
             if (calendarModal && calendarModal.classList.contains('show')) {
                 renderModalEventList();
             }
-        }).finally(() => {
+
+            if (failedList.length > 0) {
+                console.warn(`일부 캘린더 동기화 실패: ${failedList.join(', ')}`);
+            }
+        } catch (e) {
+            console.error("구글 캘린더 통합 렌더링 중 오류:", e);
+        } finally {
             if (syncIcon) syncIcon.classList.remove('fa-spin');
-        });
+        }
     }
 
     // 구글 캘린더 UI 팝업 및 기능
@@ -2898,12 +2948,41 @@ function initCardSliders(container) {
             e.preventDefault();
             if (!checkAuth()) return;
 
-            // 5칸에서 입력된 값 읽기 (비어있지 않은 것만)
+            // 5칸에서 입력된 값 읽기 및 유효성 검사
             const newList = [];
             for (let i = 0; i < 5; i++) {
-                const name = document.getElementById(`gcal-name-${i}`).value.trim();
-                const url = document.getElementById(`gcal-url-${i}`).value.trim();
-                if (name && url) {
+                const nameEl = document.getElementById(`gcal-name-${i}`);
+                const urlEl = document.getElementById(`gcal-url-${i}`);
+                if (!nameEl || !urlEl) continue;
+
+                let name = nameEl.value.trim();
+                let url = urlEl.value.trim();
+
+                if (name || url) {
+                    if (!name || !url) {
+                        alert(`${i + 1}번째 칸의 이름과 iCal 주소를 모두 입력해주세요.`);
+                        return;
+                    }
+
+                    // webcal:// 자동 치환 처리
+                    if (url.startsWith('webcal://')) {
+                        url = 'https://' + url.substring(9);
+                    }
+
+                    const checkUrl = url.toLowerCase();
+                    if (!checkUrl.startsWith('http://') && !checkUrl.startsWith('https://')) {
+                        alert(`${i + 1}번째 칸의 주소 형식이 올바르지 않습니다. http:// 또는 https:// 로 시작하는 주소여야 합니다.`);
+                        return;
+                    }
+
+                    // 구글 캘린더 웹 뷰 주소 감지 및 경고
+                    if (checkUrl.includes('google.com/calendar') && (checkUrl.includes('/render') || checkUrl.includes('/embed') || checkUrl.includes('/r') || checkUrl.includes('/u/'))) {
+                        if (!checkUrl.includes('ical') && !checkUrl.includes('.ics')) {
+                            alert(`${i + 1}번째 칸의 주소는 구글 캘린더 웹페이지 주소(HTML)인 것 같습니다. 구글 캘린더 설정에서 꼭 '비공개 주소(iCal 형식)' 주소를 복사해 넣어주세요.`);
+                            return;
+                        }
+                    }
+
                     newList.push({ name, url });
                 }
             }
