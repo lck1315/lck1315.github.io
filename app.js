@@ -2758,47 +2758,60 @@ function initCardSliders(container) {
         if (!adminApprovalList) return;
         adminApprovalList.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">로딩 중...</p>';
         
-        db.collection('users').where('isApproved', '==', false).get()
+        db.collection('users').get()
             .then(snapshot => {
                 adminApprovalList.innerHTML = '';
                 if (snapshot.empty) {
-                    adminApprovalList.innerHTML = '<div class="no-messages"><p style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">승인 대기 중인 회원이 없습니다.</p></div>';
+                    adminApprovalList.innerHTML = '<div class="no-messages"><p style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">가입된 회원이 없습니다.</p></div>';
                     return;
                 }
                 
                 snapshot.forEach(doc => {
                     const data = doc.data();
+                    if (data.role === '아빠 👨') return; // 아빠는 목록에서 제외
+                    
                     const item = document.createElement('div');
                     item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid var(--card-border);';
+                    
+                    const isApproved = data.isApproved === true;
+                    const statusBadge = isApproved 
+                        ? `<span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: rgba(46, 213, 115, 0.2); color: #2ed573;">승인됨</span>`
+                        : `<span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: rgba(255, 71, 87, 0.2); color: #ff4757;">대기중</span>`;
+
+                    const actionBtn = isApproved
+                        ? `<button class="btn btn-secondary" onclick="toggleApproval('${doc.id}', false)" style="padding: 6px 12px; font-size: 0.8rem; border-color: #ffa502; color: #ffa502;">승인 해제</button>`
+                        : `<button class="btn btn-primary" onclick="toggleApproval('${doc.id}', true)" style="padding: 6px 12px; font-size: 0.8rem;">가입 승인</button>`;
+
                     item.innerHTML = `
                         <div>
-                            <p style="margin: 0; font-weight: 700; font-size: 0.95rem;">${data.nickname} <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(${data.role})</span></p>
+                            <p style="margin: 0; font-weight: 700; font-size: 0.95rem;">${data.nickname} <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(${data.role})</span> ${statusBadge}</p>
                             <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">${data.email}</p>
                         </div>
                         <div style="display: flex; gap: 6px;">
-                            <button class="btn btn-primary" onclick="approveUser('${doc.id}')" style="padding: 6px 12px; font-size: 0.8rem;">승인</button>
-                            <button class="btn btn-secondary" onclick="rejectUser('${doc.id}')" style="padding: 6px 12px; font-size: 0.8rem; border-color: #ff4757; color: #ff4757;">거절</button>
+                            ${actionBtn}
+                            <button class="btn btn-secondary" onclick="rejectUser('${doc.id}')" style="padding: 6px 12px; font-size: 0.8rem; border-color: #ff4757; color: #ff4757;" title="계정 삭제"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     `;
                     adminApprovalList.appendChild(item);
                 });
             })
             .catch(err => {
-                console.error("대기 리스트 로드 실패:", err);
+                console.error("회원 리스트 로드 실패:", err);
                 adminApprovalList.innerHTML = '<p style="text-align: center; color: #ff4757; font-size: 0.9rem;">리스트를 불러오는 중 오류가 발생했습니다.</p>';
             });
     }
 
-    window.approveUser = function(userId) {
-        if (confirm("이 회원의 가입을 승인하시겠습니까?")) {
-            db.collection('users').doc(userId).update({ isApproved: true })
+    window.toggleApproval = function(userId, approve) {
+        const actionStr = approve ? "승인" : "승인 해제";
+        if (confirm(`이 회원을 ${actionStr} 처리하시겠습니까?`)) {
+            db.collection('users').doc(userId).update({ isApproved: approve })
                 .then(() => {
-                    alert("승인되었습니다.");
+                    alert(`${actionStr} 완료되었습니다.`);
                     loadPendingUsers();
                 })
                 .catch(err => {
-                    console.error("승인 실패:", err);
-                    alert("승인 처리 중 오류가 발생했습니다.");
+                    console.error("승인/해제 실패:", err);
+                    alert("처리 중 오류가 발생했습니다.");
                 });
         }
     };
