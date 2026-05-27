@@ -199,6 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     nickname: nickname,
                     role: role,
                     email: email,
+                    isApproved: false,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
             })
@@ -300,17 +301,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 .then((doc) => {
                     if (doc.exists) {
                         const userData = doc.data();
+                        
+                        // 승인 체크 로직
+                        if (userData.role !== '아빠 👨' && userData.isApproved !== true) {
+                            alert("아빠(마스터)의 가입 승인을 기다리고 있습니다. 승인 후 다시 로그인해주세요. 🔐");
+                            auth.signOut();
+                            return;
+                        }
+
+                        // 마스터 메뉴 제어
+                        const adminBtn = document.getElementById('dropdown-admin-approval-btn');
+                        if (adminBtn) {
+                            if (userData.role === '아빠 👨') {
+                                adminBtn.classList.remove('hidden');
+                            } else {
+                                adminBtn.classList.add('hidden');
+                            }
+                        }
+
                         currentUserInfo = {
                             uid: user.uid,
                             nickname: userData.nickname || user.displayName || "가족",
                             role: userData.role || "기타 🤍"
                         };
                     } else {
-                        currentUserInfo = {
-                            uid: user.uid,
-                            nickname: user.displayName || "가족",
-                            role: "기타 🤍"
-                        };
+                        // DB에 유저 문서가 없으면 강제 로그아웃
+                        alert("사용자 정보를 찾을 수 없습니다. 다시 가입해주세요.");
+                        auth.signOut();
+                        return;
                     }
 
                     headerUserName.textContent = currentUserInfo.nickname;
@@ -2707,6 +2725,97 @@ function initCardSliders(container) {
             profileDropdown.classList.add('hidden');
         });
     }
+
+    // 회원 승인 관리 모달 로직
+    const adminApprovalModal = document.getElementById('admin-approval-modal');
+    const adminModalClose = document.getElementById('admin-modal-close');
+    const dropdownAdminApprovalBtn = document.getElementById('dropdown-admin-approval-btn');
+    const adminApprovalList = document.getElementById('admin-approval-list');
+
+    if (adminModalClose) {
+        adminModalClose.addEventListener('click', () => {
+            adminApprovalModal.classList.remove('show');
+        });
+    }
+
+    if (adminApprovalModal) {
+        adminApprovalModal.addEventListener('click', (e) => {
+            if (e.target === adminApprovalModal) {
+                adminApprovalModal.classList.remove('show');
+            }
+        });
+    }
+
+    if (dropdownAdminApprovalBtn) {
+        dropdownAdminApprovalBtn.addEventListener('click', () => {
+            adminApprovalModal.classList.add('show');
+            profileDropdown.classList.add('hidden');
+            loadPendingUsers();
+        });
+    }
+
+    function loadPendingUsers() {
+        if (!adminApprovalList) return;
+        adminApprovalList.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">로딩 중...</p>';
+        
+        db.collection('users').where('isApproved', '==', false).get()
+            .then(snapshot => {
+                adminApprovalList.innerHTML = '';
+                if (snapshot.empty) {
+                    adminApprovalList.innerHTML = '<div class="no-messages"><p style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">승인 대기 중인 회원이 없습니다.</p></div>';
+                    return;
+                }
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const item = document.createElement('div');
+                    item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid var(--card-border);';
+                    item.innerHTML = `
+                        <div>
+                            <p style="margin: 0; font-weight: 700; font-size: 0.95rem;">${data.nickname} <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(${data.role})</span></p>
+                            <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">${data.email}</p>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="btn btn-primary" onclick="approveUser('${doc.id}')" style="padding: 6px 12px; font-size: 0.8rem;">승인</button>
+                            <button class="btn btn-secondary" onclick="rejectUser('${doc.id}')" style="padding: 6px 12px; font-size: 0.8rem; border-color: #ff4757; color: #ff4757;">거절</button>
+                        </div>
+                    `;
+                    adminApprovalList.appendChild(item);
+                });
+            })
+            .catch(err => {
+                console.error("대기 리스트 로드 실패:", err);
+                adminApprovalList.innerHTML = '<p style="text-align: center; color: #ff4757; font-size: 0.9rem;">리스트를 불러오는 중 오류가 발생했습니다.</p>';
+            });
+    }
+
+    window.approveUser = function(userId) {
+        if (confirm("이 회원의 가입을 승인하시겠습니까?")) {
+            db.collection('users').doc(userId).update({ isApproved: true })
+                .then(() => {
+                    alert("승인되었습니다.");
+                    loadPendingUsers();
+                })
+                .catch(err => {
+                    console.error("승인 실패:", err);
+                    alert("승인 처리 중 오류가 발생했습니다.");
+                });
+        }
+    };
+
+    window.rejectUser = function(userId) {
+        if (confirm("이 회원의 가입을 거절하시겠습니까? 데이터가 삭제됩니다.")) {
+            db.collection('users').doc(userId).delete()
+                .then(() => {
+                    alert("거절 및 삭제되었습니다.");
+                    loadPendingUsers();
+                })
+                .catch(err => {
+                    console.error("거절 실패:", err);
+                    alert("거절 처리 중 오류가 발생했습니다.");
+                });
+        }
+    };
 
     if (familyEditForm) {
         familyEditForm.addEventListener('submit', (e) => {

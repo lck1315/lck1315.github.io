@@ -1,9 +1,24 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
+    
+    function isMaster() {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == '아빠 👨';
+    }
+
+    match /users/{userId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && (
+        isMaster() || 
+        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isApproved']))
+      );
+      allow delete: if isMaster();
+    }
+
+    match /{collection}/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null && collection != 'users';
     }
   }
 }

@@ -65,6 +65,7 @@
                             <span id="dropdown-user-role" class="hero-badge" style="font-size: 0.75rem; padding: 2px 8px; margin-bottom: 12px; display: inline-block;">멤버</span>
                             <hr style="border: 0; border-top: 1px solid var(--card-border); margin-bottom: 8px;">
                             <button id="dropdown-manage-family-btn" class="btn btn-secondary w-100" style="padding: 0.5rem; font-size: 0.85rem; margin-bottom: 6px;"><i class="fa-solid fa-users-gear"></i> 가족 정보 관리</button>
+                            <button id="dropdown-admin-approval-btn" class="btn btn-secondary w-100 hidden" style="padding: 0.5rem; font-size: 0.85rem; margin-bottom: 6px;"><i class="fa-solid fa-user-check"></i> 회원 승인 관리</button>
                             <button id="dropdown-logout-btn" class="btn btn-primary w-100" style="padding: 0.5rem; font-size: 0.85rem; background: var(--accent-gradient); box-shadow: none;"><i class="fa-solid fa-right-from-bracket"></i> 로그아웃</button>
                         </div>
                         <div id="dropdown-logged-out">
@@ -154,7 +155,6 @@
                     <div class="form-group">
                         <label for="signup-role"><i class="fa-solid fa-user-tag"></i> 역할 스티커 선택</label>
                         <select id="signup-role" style="width: 100%; padding: 0.8rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; color: var(--text-color);">
-                            <option value="아빠 👨">아빠 👨</option>
                             <option value="엄마 👩">엄마 👩</option>
                             <option value="첫째 👦">첫째 👦</option>
                             <option value="둘째 👧">둘째 👧</option>
@@ -771,6 +771,18 @@
 
                 <button type="submit" class="btn btn-primary" style="width:100%; padding:0.8rem; margin-top:4px; font-weight:700;"><i class="fa-solid fa-save"></i> 저장하기</button>
             </form>
+        </div>
+    </div>
+
+    <!-- 회원 가입 승인 관리 모달 (마스터 전용) -->
+    <div id="admin-approval-modal" class="calendar-modal-overlay">
+        <div class="calendar-modal-content glass-card" style="max-width: 500px; padding: 2rem;">
+            <span class="admin-modal-close" id="admin-modal-close" style="position: absolute; right: 20px; top: 15px; font-size: 1.8rem; cursor: pointer; color: var(--text-muted); transition: var(--transition-quick);">&times;</span>
+            <h3 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 1.5rem; background: linear-gradient(135deg, var(--text-color), var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"><i class="fa-solid fa-user-check"></i> 회원 가입 승인 대기 목록</h3>
+            
+            <div id="admin-approval-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto;">
+                <!-- JS를 통해 리스트 아이템 렌더링 -->
+            </div>
         </div>
     </div>
 
