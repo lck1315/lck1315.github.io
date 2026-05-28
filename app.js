@@ -10,7 +10,8 @@ const firebaseConfig = {
   apiKey: "AIzaSyCT6eXu_rJqsKdxa8jr7OGKOWk6GH_fxkk",
   authDomain: "dodo-family-space-lck.firebaseapp.com",
   messagingSenderId: "540819252997",
-  projectNumber: "540819252997"
+  projectNumber: "540819252997",
+  databaseURL: "https://dodo-family-space-lck-default-rtdb.firebaseio.com"
 };
 
 // Initialize Firebase

@@ -885,6 +885,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     
     <script src="app.js?v=1.0.45"></script>
 
@@ -977,12 +978,13 @@
             if (currentConnectionMode === 'cloud') {
                 container.innerHTML = '<p style="text-align:center; padding:1rem;"><i class="fa-solid fa-spinner fa-spin"></i> 클라우드에서 데이터를 불러오는 중...</p>';
                 
-                // Firestore 구독: 기기 상태 모니터링 (30초 이내 lastSeen 업데이트면 온라인)
-                cloudStatusListener = db.collection('device_status').doc('m5stick').onSnapshot((doc) => {
-                    if (doc.exists) {
-                        const data = doc.data();
+                // RTDB 구독: 기기 상태 모니터링 (30초 이내 lastSeen 업데이트면 온라인)
+                const statusRef = firebase.database().ref('device_status/m5stick');
+                const statusCallback = statusRef.on('value', (snapshot) => {
+                    if (snapshot.exists()) {
+                        const data = snapshot.val();
                         const now = Date.now();
-                        const lastSeen = data.lastSeen ? data.lastSeen.toMillis() : 0;
+                        const lastSeen = data.lastSeen || 0; // 서버 타임스탬프 (ms)
                         const isOnline = (now - lastSeen) < 30000; // 30초 내 업데이트
                         
                         updateConnectionBadge(isOnline, isOnline ? '클라우드 온라인' : '기기 오프라인 (30초 초과)');
@@ -993,38 +995,46 @@
                         document.getElementById('detail-status').innerText = '오프라인 (등록안됨)';
                     }
                 });
+                cloudStatusListener = () => statusRef.off('value', statusCallback);
 
-                // Firestore 구독: 단어장 데이터
-                cloudWordbookListener = db.collection('device_wordbook').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
+                // RTDB 구독: 단어장 데이터
+                const wordbookRef = firebase.database().ref('device_wordbook');
+                const wordbookCallback = wordbookRef.on('value', (snapshot) => {
+                    let childCount = snapshot.numChildren();
                     document.getElementById('device-settings-panel').style.display = 'block';
                     document.getElementById('detail-ip').innerText = '클라우드 연동';
-                    document.getElementById('detail-ssid').innerText = 'Firebase';
-                    document.getElementById('detail-word-count').innerText = snapshot.docs.length + '개';
+                    document.getElementById('detail-ssid').innerText = 'Firebase RTDB';
+                    document.getElementById('detail-word-count').innerText = childCount + '개';
                     
                     cloudWordsList = [];
                     container.innerHTML = '';
                     
-                    if (snapshot.empty) {
+                    if (!snapshot.exists() || childCount === 0) {
                         container.innerHTML = '<div class="no-posts" style="text-align: center; padding: 2rem; background: var(--card-bg); border-radius: 15px; border: 1px solid var(--card-border);"><p>단어장이 비어있습니다.</p></div>';
                         return;
                     }
                     
-                    snapshot.forEach((doc) => {
-                        const data = doc.data();
-                        const id = doc.id;
-                        cloudWordsList.push({ id, ...data });
-                        
+                    // RTDB 객체를 배열로 변환 후 정렬 (최신순 등 필요 시)
+                    const wordsMap = snapshot.val();
+                    for (let key in wordsMap) {
+                        cloudWordsList.push({ id: key, ...wordsMap[key] });
+                    }
+                    // timestamp 기준 내림차순 정렬
+                    cloudWordsList.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                    
+                    cloudWordsList.forEach((data) => {
                         const div = document.createElement('div');
                         div.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px;";
                         div.innerHTML = `
                             <span style="font-size: 1.1rem; font-weight: 600;">${data.word}</span>
-                            <button onclick="deleteWord('${id}')" class="btn" style="background: rgba(232, 67, 147, 0.2); color: #e84393; border: 1px solid rgba(232, 67, 147, 0.3); padding: 0.4rem 0.8rem; border-radius: 8px;">
+                            <button onclick="deleteWord('${data.id}')" class="btn" style="background: rgba(232, 67, 147, 0.2); color: #e84393; border: 1px solid rgba(232, 67, 147, 0.3); padding: 0.4rem 0.8rem; border-radius: 8px;">
                                 <i class="fa-solid fa-trash"></i> 삭제
                             </button>
                         `;
                         container.appendChild(div);
                     });
                 });
+                cloudWordbookListener = () => wordbookRef.off('value', wordbookCallback);
                 return;
             }
 
@@ -1109,9 +1119,9 @@
 
             if (currentConnectionMode === 'cloud') {
                 try {
-                    await db.collection('device_wordbook').add({
+                    await firebase.database().ref('device_wordbook').push({
                         word: word,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        createdAt: firebase.database.ServerValue.TIMESTAMP
                     });
                     wordInput.value = '';
                 } catch (error) {
@@ -1140,7 +1150,7 @@
 
             if (currentConnectionMode === 'cloud') {
                 try {
-                    await db.collection('device_wordbook').doc(String(idOrIndex)).delete();
+                    await firebase.database().ref('device_wordbook/' + String(idOrIndex)).remove();
                 } catch (error) {
                     alert("클라우드 단어 삭제에 실패했습니다.");
                 }
