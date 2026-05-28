@@ -567,11 +567,24 @@
                     <div class="board-form-container glass-card">
                         <h3>새 단어 등록하기</h3>
                         <div id="wordbook-form">
-                            <div class="form-group">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                    <label for="device-ip" style="margin: 0;"><i class="fa-solid fa-link"></i> 기기 IP 주소 (기존 연결 시)</label>
-                                    <span id="connection-status-badge" style="font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 12px; background: rgba(128, 128, 128, 0.2); color: var(--text-muted);"><i class="fa-solid fa-circle-question"></i> 대기중</span>
+                            <div class="form-group" style="margin-bottom: 1.5rem; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 12px; border: 1px solid var(--card-border);">
+                                <label style="display: block; font-weight: 700; margin-bottom: 10px; color: var(--primary-color);"><i class="fa-solid fa-satellite-dish"></i> 기기 연결 방식 선택</label>
+                                <div style="display: flex; gap: 15px;">
+                                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.9rem;">
+                                        <input type="radio" name="connection-mode" value="local" checked onchange="toggleConnectionMode()" style="accent-color: var(--primary-color);"> 📡 로컬 핫스팟 (직접)
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.9rem;">
+                                        <input type="radio" name="connection-mode" value="cloud" onchange="toggleConnectionMode()" style="accent-color: var(--primary-color);"> ☁️ 클라우드 (어디서나)
+                                    </label>
                                 </div>
+                            </div>
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <label style="margin: 0; font-size: 0.85rem;"><i class="fa-solid fa-signal"></i> 기기 연결 상태</label>
+                                <span id="connection-status-badge" style="font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 12px; background: rgba(128, 128, 128, 0.2); color: var(--text-muted);"><i class="fa-solid fa-circle-question"></i> 대기중</span>
+                            </div>
+
+                            <div id="local-mode-container" class="form-group">
                                 <div style="display: flex; gap: 8px; margin-bottom: 1.5rem;">
                                     <input type="text" id="device-ip" placeholder="예: 192.168.0.100 (또는 비워두세요)" style="flex: 1; padding: 0.8rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; color: var(--text-color);">
                                     <button onclick="connectDevice()" class="btn btn-primary" style="white-space: nowrap; padding: 0 1.2rem;"><i class="fa-solid fa-link"></i> 연결</button>
@@ -877,6 +890,43 @@
 
     <!-- 단어장 연동 스크립트 -->
     <script>
+        let currentConnectionMode = 'local';
+        let cloudWordbookListener = null;
+        let cloudStatusListener = null;
+        let cloudWordsList = [];
+
+        function toggleConnectionMode() {
+            const mode = document.querySelector('input[name="connection-mode"]:checked').value;
+            currentConnectionMode = mode;
+            const localContainer = document.getElementById('local-mode-container');
+            const badge = document.getElementById('connection-status-badge');
+            const container = document.getElementById('word-list-container');
+            const settingsPanel = document.getElementById('device-settings-panel');
+            
+            // 공통 초기화
+            settingsPanel.style.display = 'none';
+            container.innerHTML = '';
+            
+            if (cloudWordbookListener) { cloudWordbookListener(); cloudWordbookListener = null; }
+            if (cloudStatusListener) { cloudStatusListener(); cloudStatusListener = null; }
+
+            if (mode === 'local') {
+                localContainer.style.display = 'block';
+                badge.innerHTML = '<i class="fa-solid fa-circle-question"></i> 대기중';
+                badge.style.background = 'rgba(128, 128, 128, 0.2)';
+                badge.style.color = 'var(--text-muted)';
+                container.innerHTML = '<div class="no-posts" style="text-align: center; padding: 2rem; background: var(--card-bg); border-radius: 15px; border: 1px solid var(--card-border);"><p><i class="fa-solid fa-plug"></i> 기기 IP를 입력하고 연결 버튼을 눌러주세요.</p></div>';
+            } else {
+                localContainer.style.display = 'none';
+                badge.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 클라우드 연결중...';
+                badge.style.background = 'rgba(56, 189, 248, 0.2)';
+                badge.style.color = '#38bdf8';
+                
+                // 클라우드 모드 실행
+                fetchWords();
+            }
+        }
+
         function getDeviceUrl(defaultToAP = false) {
             let ip = document.getElementById('device-ip').value.trim();
             if(!ip) {
@@ -891,20 +941,21 @@
             if(!ip.startsWith("http://")) ip = "http://" + ip;
             return ip;
         }
-        function updateConnectionBadge(isConnected) {
+        function updateConnectionBadge(isConnected, customText = null) {
             const badge = document.getElementById('connection-status-badge');
             if(isConnected) {
-                badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> 🟢 연결됨';
+                badge.innerHTML = `<i class="fa-solid fa-circle-check"></i> 🟢 ${customText || '연결됨'}`;
                 badge.style.background = 'rgba(0, 206, 201, 0.2)';
                 badge.style.color = '#00cec9';
             } else {
-                badge.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> 🔴 끊김';
+                badge.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> 🔴 ${customText || '끊김'}`;
                 badge.style.background = 'rgba(232, 67, 147, 0.2)';
                 badge.style.color = '#e84393';
             }
         }
 
         function connectDevice() {
+            if (currentConnectionMode !== 'local') return;
             const url = getDeviceUrl();
             if(!url) return;
             
@@ -921,10 +972,66 @@
         }
 
         async function fetchWords(isConnecting = false) {
+            const container = document.getElementById('word-list-container');
+            
+            if (currentConnectionMode === 'cloud') {
+                container.innerHTML = '<p style="text-align:center; padding:1rem;"><i class="fa-solid fa-spinner fa-spin"></i> 클라우드에서 데이터를 불러오는 중...</p>';
+                
+                // Firestore 구독: 기기 상태 모니터링 (30초 이내 lastSeen 업데이트면 온라인)
+                cloudStatusListener = db.collection('device_status').doc('m5stick').onSnapshot((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        const now = Date.now();
+                        const lastSeen = data.lastSeen ? data.lastSeen.toMillis() : 0;
+                        const isOnline = (now - lastSeen) < 30000; // 30초 내 업데이트
+                        
+                        updateConnectionBadge(isOnline, isOnline ? '클라우드 온라인' : '기기 오프라인 (30초 초과)');
+                        document.getElementById('detail-status').innerText = isOnline ? '온라인 (클라우드)' : '오프라인';
+                        document.getElementById('detail-status').style.color = isOnline ? '#00cec9' : '#e84393';
+                    } else {
+                        updateConnectionBadge(false, '기기 오프라인 (상태 없음)');
+                        document.getElementById('detail-status').innerText = '오프라인 (등록안됨)';
+                    }
+                });
+
+                // Firestore 구독: 단어장 데이터
+                cloudWordbookListener = db.collection('device_wordbook').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
+                    document.getElementById('device-settings-panel').style.display = 'block';
+                    document.getElementById('detail-ip').innerText = '클라우드 연동';
+                    document.getElementById('detail-ssid').innerText = 'Firebase';
+                    document.getElementById('detail-word-count').innerText = snapshot.docs.length + '개';
+                    
+                    cloudWordsList = [];
+                    container.innerHTML = '';
+                    
+                    if (snapshot.empty) {
+                        container.innerHTML = '<div class="no-posts" style="text-align: center; padding: 2rem; background: var(--card-bg); border-radius: 15px; border: 1px solid var(--card-border);"><p>단어장이 비어있습니다.</p></div>';
+                        return;
+                    }
+                    
+                    snapshot.forEach((doc) => {
+                        const data = doc.data();
+                        const id = doc.id;
+                        cloudWordsList.push({ id, ...data });
+                        
+                        const div = document.createElement('div');
+                        div.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px;";
+                        div.innerHTML = `
+                            <span style="font-size: 1.1rem; font-weight: 600;">${data.word}</span>
+                            <button onclick="deleteWord('${id}')" class="btn" style="background: rgba(232, 67, 147, 0.2); color: #e84393; border: 1px solid rgba(232, 67, 147, 0.3); padding: 0.4rem 0.8rem; border-radius: 8px;">
+                                <i class="fa-solid fa-trash"></i> 삭제
+                            </button>
+                        `;
+                        container.appendChild(div);
+                    });
+                });
+                return;
+            }
+
+            // 로컬 핫스팟 모드 로직 (기존)
             const url = getDeviceUrl();
             if(!url) return;
             
-            const container = document.getElementById('word-list-container');
             if(isConnecting) {
                 container.innerHTML = '<p style="text-align:center; padding:1rem;"><i class="fa-solid fa-spinner fa-spin"></i> 기기와 연결 중...</p>';
             } else {
@@ -993,15 +1100,29 @@
             }
         }
         async function addWord() {
-            const url = getDeviceUrl();
-            if(!url) return;
-            
             const wordInput = document.getElementById('new-word-input');
             const word = wordInput.value.trim();
             if(!word) {
                 alert("추가할 단어를 입력해주세요!");
                 return;
             }
+
+            if (currentConnectionMode === 'cloud') {
+                try {
+                    await db.collection('device_wordbook').add({
+                        word: word,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    wordInput.value = '';
+                } catch (error) {
+                    alert("클라우드 단어 추가에 실패했습니다. 권한이 있는지 확인하세요.");
+                }
+                return;
+            }
+
+            const url = getDeviceUrl();
+            if(!url) return;
+            
             try {
                 await fetch(`${url}/api/words`, {
                     method: 'POST',
@@ -1014,13 +1135,23 @@
                 alert("단어 추가에 실패했습니다. 연결을 확인해주세요.");
             }
         }
-        async function deleteWord(index) {
+        async function deleteWord(idOrIndex) {
+            if(!confirm("정말 이 단어를 삭제할까요?")) return;
+
+            if (currentConnectionMode === 'cloud') {
+                try {
+                    await db.collection('device_wordbook').doc(String(idOrIndex)).delete();
+                } catch (error) {
+                    alert("클라우드 단어 삭제에 실패했습니다.");
+                }
+                return;
+            }
+
             const url = getDeviceUrl();
             if(!url) return;
             
-            if(!confirm("정말 이 단어를 삭제할까요?")) return;
             try {
-                await fetch(`${url}/api/words?id=${index}`, { method: 'DELETE' });
+                await fetch(`${url}/api/words?id=${idOrIndex}`, { method: 'DELETE' });
                 fetchWords(); // 목록 새로고침
             } catch (error) {
                 alert("단어 삭제에 실패했습니다.");
