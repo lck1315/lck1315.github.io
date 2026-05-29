@@ -668,6 +668,13 @@
                                     <button onclick="fetchWords()" class="btn btn-secondary w-100"><i class="fa-solid fa-rotate"></i> 단어 새로고침</button>
                                     <button onclick="addWord()" class="btn btn-primary w-100"><i class="fa-solid fa-plus"></i> 추가하기</button>
                                 </div>
+                                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed rgba(255,255,255,0.1); text-align: center;">
+                                    <input type="file" id="bulk-upload-input" accept=".txt,.csv" style="display: none;" onchange="handleBulkUpload(event)">
+                                    <button onclick="document.getElementById('bulk-upload-input').click()" class="btn btn-secondary w-100" style="background: rgba(255,255,255,0.05); border: 1px dashed var(--input-border); color: var(--text-color);">
+                                        <i class="fa-solid fa-file-lines"></i> 텍스트 파일로 여러 단어 한 번에 추가
+                                    </button>
+                                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; margin-bottom: 0;">* 메모장에서 한 줄에 한 단어씩 작성 후 업로드하세요.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1119,6 +1126,76 @@
                 alert("설정 저장에 실패했습니다. 연결을 확인해주세요.");
             }
         }
+        async function handleBulkUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const text = e.target.result;
+                const lines = text.split(/\r?\n/);
+                const wordsToAdd = lines.map(line => line.trim()).filter(line => line.length > 0);
+                
+                if (wordsToAdd.length === 0) {
+                    alert("추가할 단어를 찾지 못했습니다. 파일 내용을 확인해주세요.");
+                    event.target.value = ''; // input 초기화
+                    return;
+                }
+
+                if (!confirm(`총 ${wordsToAdd.length}개의 단어를 한 번에 추가하시겠습니까?`)) {
+                    event.target.value = ''; // input 초기화
+                    return;
+                }
+
+                const badge = document.getElementById('connection-status-badge');
+                const originalBadgeHtml = badge.innerHTML;
+                badge.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${wordsToAdd.length}개 추가 중...`;
+
+                if (currentConnectionMode === 'cloud') {
+                    let successCount = 0;
+                    try {
+                        const ref = firebase.database().ref('device_wordbook');
+                        const promises = wordsToAdd.map(word => 
+                            ref.push({
+                                word: word,
+                                createdAt: firebase.database.ServerValue.TIMESTAMP
+                            }).then(() => { successCount++; })
+                        );
+                        await Promise.all(promises);
+                        alert(`총 ${successCount}개의 단어가 성공적으로 클라우드에 추가되었습니다.`);
+                    } catch (error) {
+                        alert("클라우드 단어 일괄 추가 중 오류가 발생했습니다.");
+                    }
+                } else {
+                    const url = getDeviceUrl();
+                    if(!url) {
+                        event.target.value = '';
+                        return;
+                    }
+                    
+                    let successCount = 0;
+                    for (const word of wordsToAdd) {
+                        try {
+                            const res = await fetch(`${url}/api/words`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: `word=${encodeURIComponent(word)}`
+                            });
+                            if (res.ok) successCount++;
+                        } catch (error) {
+                            console.error("단어 추가 실패:", word);
+                        }
+                    }
+                    fetchWords(); // 로컬 모드에서는 완료 후 전체 새로고침
+                    alert(`총 ${wordsToAdd.length}개 중 ${successCount}개의 단어가 기기에 추가되었습니다.`);
+                }
+
+                badge.innerHTML = originalBadgeHtml;
+                event.target.value = ''; // input 초기화
+            };
+            reader.readAsText(file);
+        }
+
         async function addWord() {
             const wordInput = document.getElementById('new-word-input');
             const word = wordInput.value.trim();
