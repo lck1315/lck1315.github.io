@@ -677,7 +677,7 @@
                             <h3>현재 단어 목록 📚</h3>
                         </div>
                         <!-- 단어 목록이 표시될 공간 -->
-                        <div id="word-list-container" style="display: flex; flex-direction: column; gap: 10px; margin-top: 1rem; max-height: 400px; overflow-y: auto; padding-right: 10px;">
+                        <div id="word-list-container" style="display: flex; flex-direction: column; gap: 8px; margin-top: 1rem; max-height: 600px; overflow-y: auto; padding-right: 10px;">
                             <div class="no-posts" style="text-align: center; padding: 2rem; background: var(--card-bg); border-radius: 15px; border: 1px solid var(--card-border);">
                                 <p><i class="fa-solid fa-plug"></i> 기기 IP를 입력하고 불러오기 버튼을 눌러주세요.</p>
                             </div>
@@ -1024,9 +1024,9 @@
                     
                     cloudWordsList.forEach((data) => {
                         const div = document.createElement('div');
-                        div.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px;";
+                        div.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px;";
                         div.innerHTML = `
-                            <span style="font-size: 1.1rem; font-weight: 600;">${data.word}</span>
+                            <span style="font-size: 1rem; font-weight: 600;">${data.word}</span>
                             <button onclick="deleteWord('${data.id}')" class="btn" style="background: rgba(232, 67, 147, 0.2); color: #e84393; border: 1px solid rgba(232, 67, 147, 0.3); padding: 0.4rem 0.8rem; border-radius: 8px;">
                                 <i class="fa-solid fa-trash"></i> 삭제
                             </button>
@@ -1071,9 +1071,9 @@
                 container.innerHTML = '';
                 data.words.forEach(item => {
                     const div = document.createElement('div');
-                    div.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px;";
+                    div.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 1rem; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 10px;";
                     div.innerHTML = `
-                        <span style="font-size: 1.1rem; font-weight: 600;">${item.word}</span>
+                        <span style="font-size: 1rem; font-weight: 600;">${item.word}</span>
                         <button onclick="deleteWord(${item.index})" class="btn" style="background: rgba(232, 67, 147, 0.2); color: #e84393; border: 1px solid rgba(232, 67, 147, 0.3); padding: 0.4rem 0.8rem; border-radius: 8px;">
                             <i class="fa-solid fa-trash"></i> 삭제
                         </button>
