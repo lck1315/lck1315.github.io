@@ -445,27 +445,38 @@ document.addEventListener('DOMContentLoaded', () => {
     // ----------------------------------------------------
     // M5StickS3 실시간 버튼 알림 리스너
     // ----------------------------------------------------
-    let m5ToastTimeout = null;
-    function showM5ButtonToast(message) {
-        const toast = document.getElementById('m5-button-toast');
-        const toastText = document.getElementById('m5-button-toast-text');
-        if (!toast || !toastText) return;
+    function addM5Notification(buttonName) {
+        const list = document.getElementById('m5-notification-list');
+        if (!list) return;
         
-        toastText.textContent = message;
-        toast.classList.remove('hidden');
+        const li = document.createElement('li');
+        li.style.cssText = `
+            padding: 10px 12px; 
+            background: rgba(0, 0, 0, 0.2); 
+            border-radius: 8px; 
+            border-left: 4px solid var(--primary-color); 
+            color: var(--text-color); 
+            font-size: 0.9rem; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            animation: fadeIn 0.3s ease;
+        `;
         
-        requestAnimationFrame(() => {
-            toast.style.transform = 'translateY(0)';
-        });
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         
-        if (m5ToastTimeout) clearTimeout(m5ToastTimeout);
+        let btnColor = buttonName === 'A' ? '#ff4757' : '#38bdf8';
         
-        m5ToastTimeout = setTimeout(() => {
-            toast.style.transform = 'translateY(150px)';
-            setTimeout(() => {
-                toast.classList.add('hidden');
-            }, 500); 
-        }, 3000);
+        li.innerHTML = `
+            <div><strong style="color: ${btnColor}; font-size: 1.1rem;">[${buttonName}]</strong> 버튼이 눌렸습니다!</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;"><i class="fa-regular fa-clock"></i> ${timeStr}</div>
+        `;
+        
+        list.insertBefore(li, list.firstChild);
+        
+        // 최대 10개까지만 유지
+        if (list.children.length > 10) {
+            list.removeChild(list.lastChild);
+        }
     }
 
     function initM5ButtonListener() {
@@ -480,7 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const data = snapshot.val();
             if (data && data.lastButton) {
-                showM5ButtonToast(`M5Stick 버튼 [${data.lastButton}] 클릭됨! 🚀`);
+                addM5Notification(data.lastButton);
             }
         });
     }
