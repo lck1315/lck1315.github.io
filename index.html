@@ -1027,9 +1027,14 @@
                         div.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0.8rem; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px;";
                         div.innerHTML = `
                             <span style="font-size: 0.9rem; font-weight: 600;">${data.word}</span>
-                            <button onclick="deleteWord('${data.id}')" class="btn" style="background: rgba(232, 67, 147, 0.2); color: #e84393; border: 1px solid rgba(232, 67, 147, 0.3); padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.8rem;">
-                                <i class="fa-solid fa-trash"></i> 삭제
-                            </button>
+                            <div style="display: flex; gap: 4px;">
+                                <button onclick="editWord('${data.id}', true, decodeURIComponent('${encodeURIComponent(data.word)}'))" class="btn" style="background: rgba(0, 206, 201, 0.2); color: #00cec9; border: 1px solid rgba(0, 206, 201, 0.3); padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.8rem;">
+                                    <i class="fa-solid fa-pen"></i> 수정
+                                </button>
+                                <button onclick="deleteWord('${data.id}')" class="btn" style="background: rgba(232, 67, 147, 0.2); color: #e84393; border: 1px solid rgba(232, 67, 147, 0.3); padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.8rem;">
+                                    <i class="fa-solid fa-trash"></i> 삭제
+                                </button>
+                            </div>
                         `;
                         container.appendChild(div);
                     });
@@ -1074,9 +1079,14 @@
                     div.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0.8rem; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px;";
                     div.innerHTML = `
                         <span style="font-size: 0.9rem; font-weight: 600;">${item.word}</span>
-                        <button onclick="deleteWord(${item.index})" class="btn" style="background: rgba(232, 67, 147, 0.2); color: #e84393; border: 1px solid rgba(232, 67, 147, 0.3); padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.8rem;">
-                            <i class="fa-solid fa-trash"></i> 삭제
-                        </button>
+                        <div style="display: flex; gap: 4px;">
+                            <button onclick="editWord(${item.index}, false, decodeURIComponent('${encodeURIComponent(item.word)}'))" class="btn" style="background: rgba(0, 206, 201, 0.2); color: #00cec9; border: 1px solid rgba(0, 206, 201, 0.3); padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.8rem;">
+                                <i class="fa-solid fa-pen"></i> 수정
+                            </button>
+                            <button onclick="deleteWord(${item.index})" class="btn" style="background: rgba(232, 67, 147, 0.2); color: #e84393; border: 1px solid rgba(232, 67, 147, 0.3); padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.8rem;">
+                                <i class="fa-solid fa-trash"></i> 삭제
+                            </button>
+                        </div>
                     `;
                     container.appendChild(div);
                 });
@@ -1145,6 +1155,41 @@
                 alert("단어 추가에 실패했습니다. 연결을 확인해주세요.");
             }
         }
+        async function editWord(idOrIndex, isCloud, currentWord) {
+            const newWord = prompt("단어를 수정하세요:", currentWord);
+            if (newWord === null) return; // 취소
+            const trimmedWord = newWord.trim();
+            if (trimmedWord === "" || trimmedWord === currentWord) return;
+
+            if (isCloud) {
+                try {
+                    await firebase.database().ref('device_wordbook/' + idOrIndex).update({
+                        word: trimmedWord
+                    });
+                } catch (error) {
+                    alert("클라우드 단어 수정에 실패했습니다.");
+                }
+                return;
+            }
+
+            // 로컬 핫스팟 모드
+            const url = getDeviceUrl();
+            if(!url) return;
+            
+            try {
+                // 임시로 삭제 후 추가 방식을 사용합니다 (펌웨어가 업데이트되면 PUT 사용 가능)
+                await fetch(`${url}/api/words?id=${idOrIndex}`, { method: 'DELETE' });
+                await fetch(`${url}/api/words`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `word=${encodeURIComponent(trimmedWord)}`
+                });
+                fetchWords(); // 목록 새로고침
+            } catch (error) {
+                alert("단어 수정에 실패했습니다. 연결을 확인해주세요.");
+            }
+        }
+
         async function deleteWord(idOrIndex) {
             if(!confirm("정말 이 단어를 삭제할까요?")) return;
 
