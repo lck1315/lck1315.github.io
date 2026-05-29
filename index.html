@@ -47,6 +47,7 @@
                 <a href="#board" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Board</a>
                 <a href="#timeline" class="nav-item"><i class="fa-solid fa-timeline"></i> Timeline</a>
                 <a href="#guestbook" class="nav-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
+                <a href="work.html" target="_blank" class="nav-item"><i class="fa-solid fa-briefcase"></i> Work</a>
                 <a href="#wordbook" class="nav-item auth-only-wordbook hidden"><i class="fa-solid fa-spell-check"></i> Wordbook</a>
             </nav>
             
@@ -99,6 +100,7 @@
         <a href="#board" class="mobile-dropdown-item"><i class="fa-solid fa-clipboard-list"></i> Board</a>
         <a href="#timeline" class="mobile-dropdown-item"><i class="fa-solid fa-timeline"></i> Timeline</a>
         <a href="#guestbook" class="mobile-dropdown-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
+        <a href="work.html" target="_blank" class="mobile-dropdown-item"><i class="fa-solid fa-briefcase"></i> Work</a>
         <a href="#wordbook" class="mobile-dropdown-item auth-only-wordbook hidden"><i class="fa-solid fa-spell-check"></i> Wordbook</a>
     </div>
 
@@ -661,7 +663,7 @@
 
                                 <h4 style="font-size: 1.1rem; margin-bottom: 1rem; padding-top: 1.5rem; border-top: 1px dashed var(--card-border);"><i class="fa-solid fa-pen"></i> 단어 추가</h4>
                                 <div class="form-group">
-                                    <input type="text" id="new-word-input" placeholder="새로운 단어를 입력하세요" style="width: 100%; padding: 0.8rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; color: var(--text-color);">
+                                    <textarea id="new-word-input" placeholder="사과/apple 처럼 입력하세요&#10;(엔터를 쳐서 여러 줄을 한 번에 추가할 수 있습니다)" rows="4" style="width: 100%; padding: 0.8rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; color: var(--text-color); resize: vertical;"></textarea>
                                 </div>
                                 
                                 <div style="display: flex; gap: 10px; margin-top: 1rem;">
@@ -1198,38 +1200,61 @@
 
         async function addWord() {
             const wordInput = document.getElementById('new-word-input');
-            const word = wordInput.value.trim();
-            if(!word) {
+            const text = wordInput.value.trim();
+            if(!text) {
                 alert("추가할 단어를 입력해주세요!");
                 return;
             }
 
+            const wordsToAdd = text.split(/\r?\n/).map(w => w.trim()).filter(w => w.length > 0);
+            if (wordsToAdd.length === 0) return;
+
+            const badge = document.getElementById('connection-status-badge');
+            const originalBadgeHtml = badge.innerHTML;
+            if (wordsToAdd.length > 1) {
+                badge.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${wordsToAdd.length}개 추가 중...`;
+            }
+
             if (currentConnectionMode === 'cloud') {
                 try {
-                    await firebase.database().ref('device_wordbook').push({
-                        word: word,
-                        createdAt: firebase.database.ServerValue.TIMESTAMP
-                    });
+                    const ref = firebase.database().ref('device_wordbook');
+                    const promises = wordsToAdd.map(word => 
+                        ref.push({
+                            word: word,
+                            createdAt: firebase.database.ServerValue.TIMESTAMP
+                        })
+                    );
+                    await Promise.all(promises);
                     wordInput.value = '';
                 } catch (error) {
                     alert("클라우드 단어 추가에 실패했습니다. 권한이 있는지 확인하세요.");
                 }
-                return;
+            } else {
+                const url = getDeviceUrl();
+                if(!url) return;
+                
+                let successCount = 0;
+                try {
+                    for (const word of wordsToAdd) {
+                        const res = await fetch(`${url}/api/words`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: `word=${encodeURIComponent(word)}`
+                        });
+                        if (res.ok) successCount++;
+                    }
+                    wordInput.value = ''; // 입력창 비우기
+                    fetchWords(); // 목록 새로고침
+                    if (wordsToAdd.length > 1) {
+                        alert(`총 ${wordsToAdd.length}개 중 ${successCount}개의 단어가 기기에 추가되었습니다.`);
+                    }
+                } catch (error) {
+                    alert("단어 추가에 실패했습니다. 연결을 확인해주세요.");
+                }
             }
-
-            const url = getDeviceUrl();
-            if(!url) return;
             
-            try {
-                await fetch(`${url}/api/words`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `word=${encodeURIComponent(word)}`
-                });
-                wordInput.value = ''; // 입력창 비우기
-                fetchWords(); // 목록 새로고침
-            } catch (error) {
-                alert("단어 추가에 실패했습니다. 연결을 확인해주세요.");
+            if (wordsToAdd.length > 1) {
+                badge.innerHTML = originalBadgeHtml;
             }
         }
         async function editWord(idOrIndex, isCloud, currentWord) {
@@ -1363,5 +1388,14 @@
             }
         }
     </script>
+    
+    <!-- M5Stick 버튼 알림 토스트 UI -->
+    <div id="m5-button-toast" class="glass-card hidden" style="position: fixed; bottom: 30px; left: 30px; z-index: 9999; padding: 15px 25px; border-radius: 50px; display: flex; align-items: center; gap: 12px; background: rgba(var(--primary-color-rgb), 0.85); color: white; transform: translateY(150px); transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+        <i class="fa-solid fa-gamepad" style="font-size: 1.5rem;"></i>
+        <div style="display: flex; flex-direction: column;">
+            <span style="font-size: 0.75rem; opacity: 0.9;">M5StickS3 알림</span>
+            <strong id="m5-button-toast-text" style="font-size: 1rem; font-weight: 700;">버튼이 눌렸습니다!</strong>
+        </div>
+    </div>
 </body>
 </html>

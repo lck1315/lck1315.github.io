@@ -439,6 +439,50 @@ document.addEventListener('DOMContentLoaded', () => {
         initFamilyMembers();
         initSettingsListener();
         initGalleryListener(); // 갤러리 실시간 리스너 추가
+        initM5ButtonListener();
+    }
+
+    // ----------------------------------------------------
+    // M5StickS3 실시간 버튼 알림 리스너
+    // ----------------------------------------------------
+    let m5ToastTimeout = null;
+    function showM5ButtonToast(message) {
+        const toast = document.getElementById('m5-button-toast');
+        const toastText = document.getElementById('m5-button-toast-text');
+        if (!toast || !toastText) return;
+        
+        toastText.textContent = message;
+        toast.classList.remove('hidden');
+        
+        requestAnimationFrame(() => {
+            toast.style.transform = 'translateY(0)';
+        });
+        
+        if (m5ToastTimeout) clearTimeout(m5ToastTimeout);
+        
+        m5ToastTimeout = setTimeout(() => {
+            toast.style.transform = 'translateY(150px)';
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 500); 
+        }, 3000);
+    }
+
+    function initM5ButtonListener() {
+        const btnRef = firebase.database().ref('device_status/button_events');
+        
+        let initialLoad = true;
+        btnRef.on('value', (snapshot) => {
+            if (initialLoad) {
+                initialLoad = false;
+                return;
+            }
+            
+            const data = snapshot.val();
+            if (data && data.lastButton) {
+                showM5ButtonToast(`M5Stick 버튼 [${data.lastButton}] 클릭됨! 🚀`);
+            }
+        });
     }
 
 
