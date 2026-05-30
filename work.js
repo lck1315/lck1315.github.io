@@ -157,7 +157,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (userProfileIcon) {
                         userProfileIcon.style.display = 'block';
                         let pUrl = currentUserDoc.photoURL;
-                        userProfileImg.src = (pUrl && pUrl !== 'null' && pUrl.trim() !== '') ? pUrl : 'https://via.placeholder.com/40';
+                        const DEFAULT_AVATAR = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23b0bec5"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
+                        userProfileImg.src = (pUrl && pUrl !== 'null' && pUrl.trim() !== '') ? pUrl : DEFAULT_AVATAR;
                     }
                     if (btnWorkLogout) btnWorkLogout.style.display = 'inline-block';
                     
@@ -179,7 +180,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     btnWorkLogin.style.display = 'none';
                     if (userProfileIcon) {
                         userProfileIcon.style.display = 'block';
-                        userProfileImg.src = (currentUserDoc.photoURL && currentUserDoc.photoURL !== 'null') ? currentUserDoc.photoURL : 'https://via.placeholder.com/40';
+                        let pUrl = currentUserDoc.photoURL;
+                        const DEFAULT_AVATAR = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23b0bec5"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
+                        userProfileImg.src = (pUrl && pUrl !== 'null' && pUrl.trim() !== '') ? pUrl : DEFAULT_AVATAR;
                     }
                     if (btnWorkLogout) btnWorkLogout.style.display = 'inline-block';
                     if (btnMasterAdmin) btnMasterAdmin.style.display = 'none';
@@ -347,11 +350,27 @@ document.addEventListener('DOMContentLoaded', () => {
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             tabs.forEach(t => t.classList.remove('active'));
-            tabContents.forEach(c => c.classList.remove('active'));
+            tabContents.forEach(c => {
+                c.classList.remove('active');
+                c.style.display = 'none';
+            });
             
             tab.classList.add('active');
             currentTab = tab.getAttribute('data-tab');
-            document.getElementById(`tab-${currentTab}`).classList.add('active');
+            const targetContent = document.getElementById(`tab-${currentTab}`);
+            if (targetContent) {
+                targetContent.classList.add('active');
+                targetContent.style.display = 'block';
+            }
+            
+            const workHero = document.getElementById('work-hero');
+            if (workHero) {
+                if (currentTab === 'schedule') {
+                    workHero.style.display = 'block';
+                } else {
+                    workHero.style.display = 'none';
+                }
+            }
         });
     });
 
