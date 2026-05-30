@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ----------------------------------------------------
     // 탭 네비게이션
     // ----------------------------------------------------
-    let currentTab = 'bookmarks';
+    let currentTab = 'schedule';
     const tabs = document.querySelectorAll('.work-tab');
     const tabContents = document.querySelectorAll('.tab-content');
 
@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ====================================================
     // 일정관리 (Schedule)
     // ====================================================
-    const scheduleList = document.getElementById('schedule-list');
+    const scheduleContainer = document.getElementById('schedule-content-container');
     let schedulesData = [];
 
     db.collection('workSchedules').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
@@ -202,29 +202,41 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function renderSchedules() {
-        scheduleList.innerHTML = '';
+        scheduleContainer.innerHTML = '';
         if (schedulesData.length === 0) {
-            scheduleList.innerHTML = '<li style="text-align:center; padding: 20px; color: var(--text-muted);">등록된 일정이 없습니다.</li>';
+            scheduleContainer.innerHTML = '<div style="text-align:center; padding: 50px; color: var(--text-muted);"><i class="fa-regular fa-calendar-check"></i> 등록된 일정이 없습니다.</div>';
             return;
         }
         
+        const grid = document.createElement('div');
+        grid.className = 'work-grid';
+        
         schedulesData.forEach(item => {
             const isCompleted = item.completed;
-            const dateStr = item.date ? `<div class="schedule-date"><i class="fa-regular fa-calendar"></i> ${item.date}</div>` : '';
-            const deleteBtn = currentUser ? `<button class="item-delete-btn" onclick="window.deleteItem('workSchedules', '${item.id}')"><i class="fa-solid fa-trash"></i></button>` : '';
+            const iconClass = isCompleted ? 'fa-solid fa-check-double' : 'fa-regular fa-calendar-check';
+            const iconColor = isCompleted ? 'style="background: #2ed573;"' : '';
+            const deleteBtn = currentUser ? `<button class="work-card-delete item-delete-btn" onclick="event.preventDefault(); window.deleteItem('workSchedules', '${item.id}')"><i class="fa-solid fa-trash"></i></button>` : '';
             
-            const li = document.createElement('li');
-            li.className = `schedule-item ${isCompleted ? 'completed' : ''}`;
-            li.innerHTML = `
-                <input type="checkbox" class="schedule-checkbox" ${isCompleted ? 'checked' : ''} onchange="window.toggleSchedule('${item.id}', ${isCompleted})">
-                <div class="schedule-info">
-                    <div class="schedule-title">${item.title}</div>
-                    ${dateStr}
+            const card = document.createElement('a');
+            card.href = "#";
+            card.className = `work-card glass-card ${isCompleted ? 'completed' : ''}`;
+            if(isCompleted) card.style.opacity = '0.6';
+            card.onclick = (e) => {
+                e.preventDefault();
+                window.toggleSchedule(item.id, isCompleted);
+            };
+
+            card.innerHTML = `
+                <div class="work-icon-wrap" ${iconColor}><i class="${iconClass}"></i></div>
+                <div class="work-info">
+                    <h4 style="${isCompleted ? 'text-decoration: line-through;' : ''}">${item.title}</h4>
+                    <p>${item.date ? item.date : '기한 없음'}</p>
                 </div>
                 ${deleteBtn}
             `;
-            scheduleList.appendChild(li);
+            grid.appendChild(card);
         });
+        scheduleContainer.appendChild(grid);
     }
 
     document.getElementById('form-schedule').addEventListener('submit', (e) => {
@@ -244,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ====================================================
     // 개인성과 (Performance)
     // ====================================================
-    const performanceTimeline = document.getElementById('performance-timeline');
+    const performanceContainer = document.getElementById('performance-content-container');
     let performancesData = [];
 
     db.collection('workPerformances').orderBy('date', 'desc').onSnapshot((snapshot) => {
@@ -254,29 +266,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function renderPerformances() {
-        performanceTimeline.innerHTML = '';
+        performanceContainer.innerHTML = '';
         if (performancesData.length === 0) {
-            performanceTimeline.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-muted);">등록된 성과 기록이 없습니다.</div>';
+            performanceContainer.innerHTML = '<div style="text-align:center; padding: 50px; color: var(--text-muted);"><i class="fa-solid fa-trophy"></i> 등록된 성과 기록이 없습니다.</div>';
             return;
         }
 
+        const grid = document.createElement('div');
+        grid.className = 'work-grid';
+
         performancesData.forEach(item => {
-            const deleteBtn = currentUser ? `<button class="item-delete-btn" onclick="window.deleteItem('workPerformances', '${item.id}')"><i class="fa-solid fa-trash"></i></button>` : '';
-            const descHtml = item.description.replace(/\n/g, '<br>');
+            const deleteBtn = currentUser ? `<button class="work-card-delete item-delete-btn" onclick="event.preventDefault(); window.deleteItem('workPerformances', '${item.id}')"><i class="fa-solid fa-trash"></i></button>` : '';
             
-            const div = document.createElement('div');
-            div.className = 'timeline-item';
-            div.innerHTML = `
-                <div class="timeline-dot"></div>
-                <div class="timeline-content">
-                    <div class="timeline-date">${item.date}</div>
-                    <h4 class="timeline-title">${item.title}</h4>
-                    <p class="timeline-desc">${descHtml}</p>
-                    ${deleteBtn}
+            const card = document.createElement('div');
+            card.className = 'work-card glass-card';
+            card.style.alignItems = 'flex-start'; // 텍스트가 많을 수 있으니 위로 정렬
+
+            card.innerHTML = `
+                <div class="work-icon-wrap" style="background: linear-gradient(135deg, #ffa502, #ff7f50);"><i class="fa-solid fa-medal"></i></div>
+                <div class="work-info">
+                    <h4>${item.title}</h4>
+                    <p style="color: var(--primary-color); font-weight: 600; margin-bottom: 5px;">${item.date}</p>
+                    <p style="white-space: normal; overflow: visible;">${item.description}</p>
                 </div>
+                ${deleteBtn}
             `;
-            performanceTimeline.appendChild(div);
+            grid.appendChild(card);
         });
+        performanceContainer.appendChild(grid);
     }
 
     document.getElementById('form-performance').addEventListener('submit', (e) => {
@@ -296,6 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ====================================================
     // 프로젝트 (Projects)
     // ====================================================
+    const projectsContainer = document.getElementById('projects-content-container');
     let projectsData = [];
 
     db.collection('workProjects').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
@@ -305,44 +323,56 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function renderProjects() {
-        const todoContainer = document.getElementById('kanban-todo');
-        const progressContainer = document.getElementById('kanban-progress');
-        const doneContainer = document.getElementById('kanban-done');
-        
-        todoContainer.innerHTML = '';
-        progressContainer.innerHTML = '';
-        doneContainer.innerHTML = '';
+        projectsContainer.innerHTML = '';
+        if (projectsData.length === 0) {
+            projectsContainer.innerHTML = '<div style="text-align:center; padding: 50px; color: var(--text-muted);"><i class="fa-solid fa-bars-progress"></i> 등록된 프로젝트가 없습니다.</div>';
+            return;
+        }
+
+        const grid = document.createElement('div');
+        grid.className = 'work-grid';
 
         projectsData.forEach(item => {
-            const deleteBtn = currentUser ? `<button class="item-delete-btn" onclick="window.deleteItem('workProjects', '${item.id}')"><i class="fa-solid fa-xmark"></i></button>` : '';
-            const dateStr = item.dueDate ? `<i class="fa-regular fa-calendar"></i> ${item.dueDate}` : '';
+            const deleteBtn = currentUser ? `<button class="work-card-delete item-delete-btn" onclick="event.preventDefault(); window.deleteItem('workProjects', '${item.id}')"><i class="fa-solid fa-xmark"></i></button>` : '';
             
-            // 상태 변경 select
+            let statusIcon = 'fa-solid fa-spinner fa-spin';
+            let statusColor = 'linear-gradient(135deg, #ffa502, #ff7f50)'; // 진행중
+            let statusText = '진행 중';
+            
+            if (item.status === 'todo') {
+                statusIcon = 'fa-solid fa-list-ul';
+                statusColor = 'linear-gradient(135deg, #ff4757, #ff6b81)';
+                statusText = '시작 전';
+            } else if (item.status === 'done') {
+                statusIcon = 'fa-regular fa-circle-check';
+                statusColor = 'linear-gradient(135deg, #2ed573, #7bed9f)';
+                statusText = '완료됨';
+            }
+
             const statusSelect = currentUser ? `
-                <select class="kanban-status-select" onchange="window.updateProjectStatus('${item.id}', this.value)">
-                    <option value="todo" ${item.status === 'todo' ? 'selected' : ''}>To Do</option>
-                    <option value="progress" ${item.status === 'progress' ? 'selected' : ''}>In Progress</option>
-                    <option value="done" ${item.status === 'done' ? 'selected' : ''}>Done</option>
+                <select style="background: rgba(0,0,0,0.3); color: var(--text-color); border: 1px solid var(--input-border); border-radius: 4px; padding: 2px 5px; font-size: 0.8rem; margin-top: 10px;" onchange="window.updateProjectStatus('${item.id}', this.value)">
+                    <option value="todo" ${item.status === 'todo' ? 'selected' : ''}>To Do (시작 전)</option>
+                    <option value="progress" ${item.status === 'progress' ? 'selected' : ''}>In Progress (진행 중)</option>
+                    <option value="done" ${item.status === 'done' ? 'selected' : ''}>Done (완료)</option>
                 </select>
-            ` : '';
+            ` : `<p style="margin-top:5px; font-weight:600;">상태: ${statusText}</p>`;
 
             const card = document.createElement('div');
-            card.className = 'kanban-card';
-            if (item.status === 'done') card.style.opacity = '0.6';
+            card.className = 'work-card glass-card';
+            if (item.status === 'done') card.style.opacity = '0.7';
+
             card.innerHTML = `
-                <h4 class="kanban-title">${item.title}</h4>
-                <div class="kanban-meta">
-                    <span>${dateStr}</span>
+                <div class="work-icon-wrap" style="background: ${statusColor};"><i class="${statusIcon}"></i></div>
+                <div class="work-info">
+                    <h4>${item.title}</h4>
+                    <p>마감일: ${item.dueDate ? item.dueDate : '미정'}</p>
+                    ${statusSelect}
                 </div>
-                ${statusSelect}
                 ${deleteBtn}
             `;
-            
-            if (item.status === 'todo') todoContainer.appendChild(card);
-            else if (item.status === 'progress') progressContainer.appendChild(card);
-            else if (item.status === 'done') doneContainer.appendChild(card);
-            else todoContainer.appendChild(card);
+            grid.appendChild(card);
         });
+        projectsContainer.appendChild(grid);
     }
 
     document.getElementById('form-projects').addEventListener('submit', (e) => {

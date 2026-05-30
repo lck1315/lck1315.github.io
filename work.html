@@ -34,6 +34,7 @@
         .work-tab:hover { color: var(--text-color); }
         .work-tab.active { color: var(--primary-color); }
         .work-tab.active::after { content: ''; position: absolute; bottom: -7px; left: 0; width: 100%; height: 3px; background: var(--primary-color); border-radius: 3px; }
+        .work-tabs::-webkit-scrollbar { display: none; }
         .tab-content { display: none; animation: fadeIn 0.3s ease; }
         .tab-content.active { display: block; }
 
@@ -88,11 +89,11 @@
     <header id="main-header">
         <div class="header-container">
             <a href="index.html" class="logo">DODO<span>.work</span></a>
-            <nav class="work-tabs" id="work-tabs" style="border: none; margin-bottom: 0; padding-bottom: 0; flex: 1; justify-content: center;">
-                <button class="work-tab active" data-tab="bookmarks"><i class="fa-solid fa-bookmark"></i> 북마크</button>
-                <button class="work-tab" data-tab="schedule"><i class="fa-regular fa-calendar-check"></i> 일정관리</button>
+            <nav class="work-tabs" id="work-tabs" style="border: none; margin-bottom: 0; padding-bottom: 0; flex: 1; justify-content: center; overflow: visible;">
+                <button class="work-tab active" data-tab="schedule"><i class="fa-regular fa-calendar-check"></i> 일정관리</button>
                 <button class="work-tab" data-tab="performance"><i class="fa-solid fa-trophy"></i> 개인성과</button>
                 <button class="work-tab" data-tab="projects"><i class="fa-solid fa-bars-progress"></i> 프로젝트</button>
+                <button class="work-tab" data-tab="bookmarks"><i class="fa-solid fa-bookmark"></i> 북마크</button>
             </nav>
             <div class="header-actions">
                 <button id="theme-toggle" aria-label="테마 전환" class="theme-btn">
@@ -114,43 +115,30 @@
 
 
                 <!-- 탭 내용: 북마크 (기존) -->
-                <div id="tab-bookmarks" class="tab-content active">
+                <div id="tab-bookmarks" class="tab-content">
                     <div id="work-content-container">
                         <div style="text-align:center; padding: 50px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> 데이터를 불러오는 중...</div>
                     </div>
                 </div>
 
                 <!-- 탭 내용: 일정관리 -->
-                <div id="tab-schedule" class="tab-content">
-                    <div class="glass-card" style="padding: 25px;">
-                        <ul id="schedule-list" class="schedule-list">
-                            <li style="text-align:center; padding: 20px; color: var(--text-muted);">데이터를 불러오는 중...</li>
-                        </ul>
+                <div id="tab-schedule" class="tab-content active">
+                    <div id="schedule-content-container">
+                        <div style="text-align:center; padding: 50px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> 데이터를 불러오는 중...</div>
                     </div>
                 </div>
 
                 <!-- 탭 내용: 개인성과 -->
                 <div id="tab-performance" class="tab-content">
-                    <div id="performance-timeline" class="timeline">
-                        <div style="text-align:center; padding: 20px; color: var(--text-muted);">데이터를 불러오는 중...</div>
+                    <div id="performance-content-container">
+                        <div style="text-align:center; padding: 50px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> 데이터를 불러오는 중...</div>
                     </div>
                 </div>
 
                 <!-- 탭 내용: 프로젝트 -->
                 <div id="tab-projects" class="tab-content">
-                    <div class="kanban-board">
-                        <div class="kanban-column">
-                            <h3 style="color: #ff4757;"><i class="fa-solid fa-list-ul"></i> 시작 전 (To Do)</h3>
-                            <div class="kanban-items" id="kanban-todo"></div>
-                        </div>
-                        <div class="kanban-column">
-                            <h3 style="color: #ffa502;"><i class="fa-solid fa-spinner fa-spin"></i> 진행 중 (In Progress)</h3>
-                            <div class="kanban-items" id="kanban-progress"></div>
-                        </div>
-                        <div class="kanban-column">
-                            <h3 style="color: #2ed573;"><i class="fa-regular fa-circle-check"></i> 완료 (Done)</h3>
-                            <div class="kanban-items" id="kanban-done"></div>
-                        </div>
+                    <div id="projects-content-container">
+                        <div style="text-align:center; padding: 50px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> 데이터를 불러오는 중...</div>
                     </div>
                 </div>
 
