@@ -274,25 +274,38 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (data.isMaster) return; // 마스터 본인은 리스트에서 제외
                     
                     const item = document.createElement('div');
-                    item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid var(--card-border); margin-bottom: 10px;';
+                    item.style.cssText = 'display: flex; flex-direction: column; gap: 10px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid var(--card-border); margin-bottom: 10px;';
                     
                     const isApproved = data.isApproved === true;
+                    const isUserMaster = data.isMaster === true;
+                    
                     const statusBadge = isApproved 
                         ? `<span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: rgba(46, 213, 115, 0.2); color: #2ed573;">승인됨</span>`
                         : `<span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: rgba(255, 71, 87, 0.2); color: #ff4757;">대기중</span>`;
 
+                    const roleBadge = isUserMaster
+                        ? `<span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: rgba(255, 165, 2, 0.2); color: #ffa502; margin-left: 5px;">마스터</span>`
+                        : `<span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: rgba(148, 163, 184, 0.2); color: #94a3b8; margin-left: 5px;">일반</span>`;
+
                     const actionBtn = isApproved
-                        ? `<button class="btn btn-secondary" onclick="window.workToggleApproval('${doc.id}', false)" style="padding: 6px 12px; font-size: 0.8rem; border-color: #ffa502; color: #ffa502;">승인 해제</button>`
-                        : `<button class="btn btn-primary" onclick="window.workToggleApproval('${doc.id}', true)" style="padding: 6px 12px; font-size: 0.8rem;">가입 승인</button>`;
+                        ? `<button class="btn btn-secondary" onclick="window.workToggleApproval('${doc.id}', false)" style="padding: 6px 10px; font-size: 0.8rem; border-color: #ff4757; color: #ff4757; flex: 1;">승인 취소</button>`
+                        : `<button class="btn btn-primary" onclick="window.workToggleApproval('${doc.id}', true)" style="padding: 6px 10px; font-size: 0.8rem; flex: 1;">가입 승인</button>`;
+
+                    const roleBtn = isUserMaster
+                        ? `<button class="btn btn-secondary" onclick="window.workToggleMaster('${doc.id}', false)" style="padding: 6px 10px; font-size: 0.8rem; border-color: #ffa502; color: #ffa502; flex: 1;">일반으로 강등</button>`
+                        : `<button class="btn btn-secondary" onclick="window.workToggleMaster('${doc.id}', true)" style="padding: 6px 10px; font-size: 0.8rem; border-color: #2ed573; color: #2ed573; flex: 1;">마스터 임명</button>`;
 
                     item.innerHTML = `
-                        <div>
-                            <p style="margin: 0; font-weight: 700; font-size: 0.95rem;">${data.nickname} ${statusBadge}</p>
-                            <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">${data.email}</p>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <p style="margin: 0; font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 5px;">${data.nickname} ${statusBadge} ${roleBadge}</p>
+                                <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;">${data.email}</p>
+                            </div>
+                            <button class="btn btn-secondary" onclick="window.workRejectUser('${doc.id}')" style="padding: 6px 12px; font-size: 0.8rem; border-color: #ff4757; color: #ff4757;" title="계정 완전 삭제"><i class="fa-solid fa-user-xmark"></i> 강제 탈퇴</button>
                         </div>
-                        <div style="display: flex; gap: 6px;">
+                        <div style="display: flex; gap: 8px; margin-top: 5px;">
                             ${actionBtn}
-                            <button class="btn btn-secondary" onclick="window.workRejectUser('${doc.id}')" style="padding: 6px 12px; font-size: 0.8rem; border-color: #ff4757; color: #ff4757;" title="계정 삭제"><i class="fa-solid fa-trash"></i></button>
+                            ${roleBtn}
                         </div>
                     `;
                     masterApprovalList.appendChild(item);
@@ -314,6 +327,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
                 .catch(err => {
                     console.error("승인/해제 실패:", err);
+                    alert("처리 중 오류가 발생했습니다.");
+                });
+        }
+    };
+
+    window.workToggleMaster = function(userId, makeMaster) {
+        const actionStr = makeMaster ? "마스터로 임명" : "일반 계정으로 강등";
+        if (confirm(`이 회원을 ${actionStr}하시겠습니까?`)) {
+            db.collection('workUsers').doc(userId).update({ isMaster: makeMaster })
+                .then(() => {
+                    alert(`${actionStr} 처리되었습니다.`);
+                    loadMasterApprovalList();
+                })
+                .catch(err => {
+                    console.error("권한 설정 실패:", err);
                     alert("처리 중 오류가 발생했습니다.");
                 });
         }
