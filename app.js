@@ -311,12 +311,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         // 마스터 메뉴 제어
                         const adminBtn = document.getElementById('dropdown-admin-approval-btn');
-                        if (adminBtn) {
-                            if (userData.role === '아빠 👨') {
-                                adminBtn.classList.remove('hidden');
-                            } else {
-                                adminBtn.classList.add('hidden');
-                            }
+                        const btnWriteNotice = document.getElementById('btn-write-notice');
+                        if (userData.role === '아빠 👨') {
+                            if (adminBtn) adminBtn.classList.remove('hidden');
+                            if (btnWriteNotice) btnWriteNotice.classList.remove('hidden');
+                        } else {
+                            if (adminBtn) adminBtn.classList.add('hidden');
+                            if (btnWriteNotice) btnWriteNotice.classList.add('hidden');
                         }
 
                         currentUserInfo = {
@@ -3476,6 +3477,48 @@ function initCardSliders(container) {
                     <div style="font-size:0.75rem; color:var(--text-muted);">작성자: ${notice.authorName} | ${dateStr}</div>
                 `;
                 indexNoticeContainer.appendChild(div);
+            });
+        });
+    }
+
+    // 공지 작성 모달 (마스터)
+    const btnWriteNotice = document.getElementById('btn-write-notice');
+    const noticeWriteModal = document.getElementById('notice-write-modal');
+    const noticeWriteClose = document.getElementById('notice-write-close');
+    const btnSubmitNotice = document.getElementById('btn-submit-notice');
+
+    if (btnWriteNotice) {
+        btnWriteNotice.addEventListener('click', () => {
+            document.getElementById('notice-write-title').value = '';
+            document.getElementById('notice-write-content').value = '';
+            noticeWriteModal.classList.remove('hidden');
+        });
+    }
+
+    if (noticeWriteClose) {
+        noticeWriteClose.addEventListener('click', () => noticeWriteModal.classList.add('hidden'));
+    }
+
+    if (btnSubmitNotice) {
+        btnSubmitNotice.addEventListener('click', () => {
+            const title = document.getElementById('notice-write-title').value.trim();
+            const content = document.getElementById('notice-write-content').value.trim();
+            
+            if (!title || !content) {
+                alert("제목과 내용을 모두 입력해주세요.");
+                return;
+            }
+
+            db.collection('workNotices').add({
+                title: title,
+                content: content,
+                authorUid: currentUser.uid,
+                authorName: currentUserDoc ? currentUserDoc.displayName : currentUser.displayName || '이름 없음',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                noticeWriteModal.classList.add('hidden');
+            }).catch(e => {
+                alert("공지 등록 실패: " + e.message);
             });
         });
     }
