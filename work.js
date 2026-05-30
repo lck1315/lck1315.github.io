@@ -294,18 +294,6 @@ document.addEventListener('DOMContentLoaded', () => {
             tab.classList.add('active');
             currentTab = tab.getAttribute('data-tab');
             document.getElementById(`tab-${currentTab}`).classList.add('active');
-            
-            // 프로젝트 탭일 경우 화면 너비 100% 확장
-            const container = document.querySelector('main .container');
-            if (container) {
-                if (currentTab === 'projects') {
-                    container.style.maxWidth = '100%';
-                    container.style.padding = '0 1rem';
-                } else {
-                    container.style.maxWidth = '900px';
-                    container.style.padding = '0 2rem';
-                }
-            }
         });
     });
 
