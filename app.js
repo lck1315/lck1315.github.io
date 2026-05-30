@@ -283,7 +283,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const dropdownLoggedIn = document.getElementById('dropdown-logged-in');
         const dropdownUserNickname = document.getElementById('dropdown-user-nickname');
         const dropdownUserRole = document.getElementById('dropdown-user-role');
-        const galleryUploadContainer = document.getElementById('gallery-upload-container');
 
         if (user) {
             toggleUIPanelLocks(true);
@@ -405,9 +404,6 @@ document.addEventListener('DOMContentLoaded', () => {
             headerUserName.textContent = "Login";
             dropdownLoggedOut.classList.remove('hidden');
             dropdownLoggedIn.classList.add('hidden');
-
-            // 로그아웃 시 여행 갤러리 등록 폼 감춤
-            if (galleryUploadContainer) galleryUploadContainer.classList.add('hidden');
 
             if (cachedFamilySnapshot) {
                 renderFamilyCards(cachedFamilySnapshot);

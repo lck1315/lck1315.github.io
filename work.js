@@ -47,8 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentUserDoc = null;
     let workUserListener = null;
 
-    const authWallOverlay = document.getElementById('auth-wall-overlay');
-    const authStatusMessage = document.getElementById('auth-status-message');
+    const authStatusHeader = document.getElementById('auth-status-header');
     const btnClaimMaster = document.getElementById('btn-claim-master');
     const btnWorkLogin = document.getElementById('btn-work-login');
     const btnWorkLogout = document.getElementById('btn-work-logout');
@@ -63,8 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const provider = new firebase.auth.GoogleAuthProvider();
         auth.signInWithPopup(provider).catch(err => {
             console.error("Login Error:", err);
-            authStatusMessage.innerText = "로그인 중 오류가 발생했습니다.";
-            authStatusMessage.style.display = 'block';
+            alert("로그인 중 오류가 발생했습니다.");
         });
     });
 
@@ -72,6 +70,55 @@ document.addEventListener('DOMContentLoaded', () => {
         btnWorkLogout.addEventListener('click', () => {
             auth.signOut();
         });
+    }
+
+    // 보안 영역 처리 함수
+    function showAuthRequiredMessage(containerId) {
+        const container = document.getElementById(containerId);
+        if (container) {
+            container.innerHTML = `<div style="text-align:center; padding: 100px 50px; color: var(--text-muted);">
+                <i class="fa-solid fa-lock" style="font-size: 3rem; margin-bottom: 20px; color: #ff4757;"></i>
+                <h3 style="font-size: 1.5rem; margin-bottom: 10px;">접근 권한이 없습니다</h3>
+                <p>내용을 보려면 로그인 및 마스터의 승인이 필요합니다.</p>
+            </div>`;
+        }
+    }
+
+    function renderRestrictedContent() {
+        if (!currentUser || !currentUserDoc || !currentUserDoc.isApproved) {
+            showAuthRequiredMessage('work-content-container');
+            showAuthRequiredMessage('schedule-content-container');
+            showAuthRequiredMessage('performance-content-container');
+            showAuthRequiredMessage('members-content-container');
+            
+            // 프로젝트 탭은 .ps-desktop-app 내부를 가림
+            const psApp = document.querySelector('.ps-desktop-app');
+            if (psApp) {
+                psApp.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; color: #333;">
+                    <i class="fa-solid fa-lock" style="font-size: 3rem; margin-bottom: 20px; color: #ff4757;"></i>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 10px;">접근 권한이 없습니다</h3>
+                    <p>내용을 보려면 로그인 및 마스터의 승인이 필요합니다.</p>
+                </div>`;
+            }
+            return;
+        }
+
+        // 로그인 및 승인됨 -> 정상 렌더링
+        const workHeroEditTrigger = document.getElementById('work-hero-img-edit-trigger');
+        if (workHeroEditTrigger) {
+            if (currentUserDoc && currentUserDoc.isMaster) {
+                workHeroEditTrigger.classList.remove('hidden');
+            } else {
+                workHeroEditTrigger.classList.add('hidden');
+            }
+        }
+
+        // 프로젝트 탭 복구는 페이지 새로고침 필요하므로 일단 UI 초기화 (간단히 하기 위해 페이지 강제 리로드하거나 기존 렌더 함수 호출)
+        renderWorkLinks();
+        renderSchedules();
+        renderPerformances();
+        if (window.renderWorkMembers) window.renderWorkMembers();
+        renderProjects();
     }
 
     auth.onAuthStateChanged((user) => {
@@ -105,7 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (currentUserDoc.isApproved) {
                     // 승인됨 -> 화면 표시
-                    authWallOverlay.style.display = 'none';
+                    authStatusHeader.style.display = 'none';
+                    btnWorkLogin.style.display = 'none';
                     if (userProfileIcon) {
                         userProfileIcon.style.display = 'block';
                         userProfileImg.src = currentUserDoc.photoURL || 'https://via.placeholder.com/40';
@@ -118,30 +166,39 @@ document.addEventListener('DOMContentLoaded', () => {
                         btnMasterAdmin.style.display = 'none';
                     }
 
-                    // 콘텐츠 렌더링
-                    renderWorkLinks();
-                    renderSchedules();
-                    renderPerformances();
-                    renderProjects();
+                    // 리로드하여 HTML 복구 (만약 보안 메시지로 덮어씌워졌었다면)
+                    if (document.querySelector('.ps-desktop-app').innerHTML.includes('fa-lock')) {
+                        location.reload();
+                    } else {
+                        renderRestrictedContent();
+                    }
                 } else {
                     // 승인 대기중 -> 화면 가림
-                    authWallOverlay.style.display = 'flex';
-                    authStatusMessage.innerText = "승인 대기 중입니다. 마스터의 승인을 기다려주세요.";
-                    authStatusMessage.style.display = 'block';
+                    authStatusHeader.style.display = 'inline-block';
                     btnWorkLogin.style.display = 'none';
+                    if (userProfileIcon) {
+                        userProfileIcon.style.display = 'block';
+                        userProfileImg.src = currentUserDoc.photoURL || 'https://via.placeholder.com/40';
+                    }
+                    if (btnWorkLogout) btnWorkLogout.style.display = 'inline-block';
+                    if (btnMasterAdmin) btnMasterAdmin.style.display = 'none';
+                    
+                    renderRestrictedContent();
                 }
             });
         } else {
             // 로그아웃 됨
             currentUserDoc = null;
-            authWallOverlay.style.display = 'flex';
-            authStatusMessage.style.display = 'none';
+            authStatusHeader.style.display = 'none';
             btnWorkLogin.style.display = 'inline-block';
             btnClaimMaster.style.display = 'none';
             
             if (userProfileIcon) userProfileIcon.style.display = 'none';
             if (btnMasterAdmin) btnMasterAdmin.style.display = 'none';
             if (btnWorkLogout) btnWorkLogout.style.display = 'none';
+
+            // 로그아웃 상태일 때도 restricted message 렌더링
+            renderRestrictedContent();
         }
     });
 
@@ -533,6 +590,139 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.reset();
             document.getElementById('modal-performance').classList.add('hidden');
         });
+    });
+
+    // ====================================================
+    // 구성원 소개 (Members)
+    // ====================================================
+    const membersContainer = document.getElementById('members-content-container');
+    let membersData = [];
+
+    db.collection('workMembers').orderBy('createdAt', 'asc').onSnapshot((snapshot) => {
+        membersData = [];
+        snapshot.forEach(doc => membersData.push({ id: doc.id, ...doc.data() }));
+        if (currentUser && currentUserDoc && currentUserDoc.isApproved) {
+            if (window.renderWorkMembers) window.renderWorkMembers();
+        }
+    });
+
+    window.renderWorkMembers = function() {
+        if (!membersContainer) return;
+        membersContainer.innerHTML = '';
+        if (membersData.length === 0) {
+            membersContainer.innerHTML = '<div style="text-align:center; padding: 50px; color: var(--text-muted); grid-column: 1 / -1;"><i class="fa-solid fa-users"></i> 등록된 구성원이 없습니다.</div>';
+            return;
+        }
+
+        membersData.forEach(item => {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'member-card-wrapper';
+            
+            const deleteBtnHtml = (currentUser && currentUserDoc && currentUserDoc.isMaster) 
+                ? `<div class="member-edit-btn" onclick="event.stopPropagation(); window.deleteItem('workMembers', '${item.id}')" style="background:#ff4757;" title="구성원 삭제"><i class="fa-solid fa-trash"></i></div>` 
+                : '';
+
+            const iconHtml = item.photoBase64 
+                ? `<img src="${item.photoBase64}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`
+                : `<i class="fa-solid fa-user-tie"></i>`;
+
+            wrapper.innerHTML = `
+                <div class="member-card">
+                    <div class="card-front glass-card">
+                        ${deleteBtnHtml}
+                        <div class="member-icon bg-blue" style="overflow:hidden; padding:0;">
+                            ${iconHtml}
+                        </div>
+                        <h3 class="member-name">${item.name}</h3>
+                        <p class="member-role">${item.role}</p>
+                        <span class="card-flip-hint">클릭해서 더 알아보기 <i class="fa-solid fa-rotate"></i></span>
+                    </div>
+                    <div class="card-back glass-card">
+                        <h3>${item.name.split(' ')[0]}의 프로필</h3>
+                        <ul class="member-details">
+                            <li><i class="fa-solid fa-heart text-pink"></i> 취미: ${item.hobby || '-'}</li>
+                            <li><i class="fa-solid fa-comment-dots text-blue"></i> 한마디: "${item.comment || '-'}"</li>
+                            <li><i class="fa-solid fa-gift text-purple"></i> 좋아하는 것: ${item.like || '-'}</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+
+            wrapper.addEventListener('click', () => {
+                wrapper.classList.toggle('flipped');
+            });
+
+            membersContainer.appendChild(wrapper);
+        });
+    };
+
+    document.getElementById('form-members')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const fileInput = document.getElementById('mem-photo');
+        const name = document.getElementById('mem-name').value.trim();
+        const role = document.getElementById('mem-role').value.trim();
+        const hobby = document.getElementById('mem-hobby').value.trim();
+        const comment = document.getElementById('mem-comment').value.trim();
+        const like = document.getElementById('mem-like').value.trim();
+
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...';
+        submitBtn.disabled = true;
+
+        const saveToDb = (base64Str) => {
+            db.collection('workMembers').add({
+                name, role, hobby, comment, like,
+                photoBase64: base64Str,
+                createdBy: currentUser.uid,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                e.target.reset();
+                document.getElementById('modal-members').classList.add('hidden');
+            }).catch(err => {
+                console.error(err);
+                alert("저장 중 오류가 발생했습니다.");
+            }).finally(() => {
+                submitBtn.innerHTML = originalBtnText;
+                submitBtn.disabled = false;
+            });
+        };
+
+        if (fileInput.files && fileInput.files[0]) {
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const max_size = 400;
+
+                    if (width > height) {
+                        if (width > max_size) {
+                            height *= max_size / width;
+                            width = max_size;
+                        }
+                    } else {
+                        if (height > max_size) {
+                            width *= max_size / height;
+                            height = max_size;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const base64Str = canvas.toDataURL('image/jpeg', 0.8);
+                    saveToDb(base64Str);
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            saveToDb(null);
+        }
     });
 
     // ====================================================
@@ -1015,6 +1205,229 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
+    }
+
+    // ====================================================
+    // Work Hero 배경 사진 (Slider & Manager)
+    // ====================================================
+    const workHeroSliderTrack = document.getElementById('work-hero-slider-track');
+    const workHeroSliderDots = document.getElementById('work-hero-slider-dots');
+    const workHeroPrevBtn = document.getElementById('work-hero-prev-btn');
+    const workHeroNextBtn = document.getElementById('work-hero-next-btn');
+    const workHeroEditTrigger = document.getElementById('work-hero-img-edit-trigger');
+
+    const workHeroManagerModal = document.getElementById('work-hero-manager-modal');
+    const workHeroManagerClose = document.getElementById('work-hero-manager-close');
+    const workHeroImagesGrid = document.getElementById('work-hero-images-grid');
+    const workHeroUploadDropzone = document.getElementById('work-hero-upload-dropzone');
+    const workHeroSliderFileInput = document.getElementById('work-hero-slider-file-input');
+
+    let workHeroImages = [];
+    let workHeroSliderIndex = 0;
+    let workHeroSliderInterval = null;
+
+    db.collection('workSiteSettings').doc('heroImages').onSnapshot(doc => {
+        if (doc.exists) {
+            workHeroImages = doc.data().images || [];
+        }
+        if (!workHeroImages || workHeroImages.length === 0) {
+            workHeroImages = ['./assets/dodo_hero.png'];
+        }
+        localStorage.setItem('dodo-work-hero-images-cache', JSON.stringify(workHeroImages));
+        renderWorkHeroSlider();
+        if (workHeroManagerModal && !workHeroManagerModal.classList.contains('hidden')) {
+            renderWorkHeroManager();
+        }
+    });
+
+    function renderWorkHeroSlider() {
+        if (!workHeroSliderTrack) return;
+        workHeroSliderTrack.innerHTML = '';
+        if (workHeroSliderDots) workHeroSliderDots.innerHTML = '';
+
+        workHeroImages.forEach((imgUrl, idx) => {
+            const slide = document.createElement('div');
+            slide.className = 'hero-slide';
+            slide.style.width = '100%';
+            slide.style.height = '100%';
+            slide.style.flexShrink = '0';
+            slide.innerHTML = `<img src="${imgUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:16px; display:block;">`;
+            workHeroSliderTrack.appendChild(slide);
+
+            if (workHeroSliderDots) {
+                const dot = document.createElement('div');
+                dot.className = `hero-slider-dot ${idx === workHeroSliderIndex ? 'active' : ''}`;
+                dot.addEventListener('click', () => goWorkHeroSlide(idx));
+                workHeroSliderDots.appendChild(dot);
+            }
+        });
+        
+        if (workHeroSliderIndex >= workHeroImages.length) {
+            workHeroSliderIndex = 0;
+        }
+        updateWorkHeroSliderPosition();
+        startWorkHeroAutoSlide();
+    }
+
+    function updateWorkHeroSliderPosition() {
+        if (!workHeroSliderTrack) return;
+        workHeroSliderTrack.style.transform = `translateX(-${workHeroSliderIndex * 100}%)`;
+        
+        if (workHeroSliderDots) {
+            const dots = workHeroSliderDots.querySelectorAll('.hero-slider-dot');
+            dots.forEach((dot, idx) => {
+                if (idx === workHeroSliderIndex) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+        }
+    }
+
+    function goWorkHeroSlide(index) {
+        workHeroSliderIndex = index;
+        if (workHeroSliderIndex >= workHeroImages.length) workHeroSliderIndex = 0;
+        if (workHeroSliderIndex < 0) workHeroSliderIndex = workHeroImages.length - 1;
+        updateWorkHeroSliderPosition();
+        startWorkHeroAutoSlide();
+    }
+
+    if (workHeroPrevBtn) workHeroPrevBtn.addEventListener('click', () => goWorkHeroSlide(workHeroSliderIndex - 1));
+    if (workHeroNextBtn) workHeroNextBtn.addEventListener('click', () => goWorkHeroSlide(workHeroSliderIndex + 1));
+
+    function startWorkHeroAutoSlide() {
+        if (workHeroSliderInterval) clearInterval(workHeroSliderInterval);
+        workHeroSliderInterval = setInterval(() => {
+            goWorkHeroSlide(workHeroSliderIndex + 1);
+        }, 5000);
+    }
+
+    if (workHeroEditTrigger) {
+        workHeroEditTrigger.addEventListener('click', () => {
+            renderWorkHeroManager();
+            if (workHeroManagerModal) workHeroManagerModal.classList.remove('hidden');
+        });
+    }
+
+    if (workHeroManagerClose) {
+        workHeroManagerClose.addEventListener('click', () => {
+            if (workHeroManagerModal) workHeroManagerModal.classList.add('hidden');
+        });
+    }
+
+    function renderWorkHeroManager() {
+        if (!workHeroImagesGrid) return;
+        workHeroImagesGrid.innerHTML = '';
+        
+        workHeroImages.forEach((imgUrl, idx) => {
+            const wrapper = document.createElement('div');
+            wrapper.style.position = 'relative';
+            wrapper.style.aspectRatio = '16/9';
+            wrapper.style.borderRadius = '8px';
+            wrapper.style.overflow = 'hidden';
+            wrapper.style.border = '1px solid var(--input-border)';
+            
+            const img = document.createElement('img');
+            img.src = imgUrl;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            
+            const delBtn = document.createElement('button');
+            delBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+            delBtn.style.position = 'absolute';
+            delBtn.style.top = '5px';
+            delBtn.style.right = '5px';
+            delBtn.style.background = 'rgba(255, 71, 87, 0.9)';
+            delBtn.style.color = 'white';
+            delBtn.style.border = 'none';
+            delBtn.style.borderRadius = '50%';
+            delBtn.style.width = '24px';
+            delBtn.style.height = '24px';
+            delBtn.style.cursor = 'pointer';
+            delBtn.style.display = 'flex';
+            delBtn.style.alignItems = 'center';
+            delBtn.style.justifyContent = 'center';
+            delBtn.style.fontSize = '0.7rem';
+            
+            delBtn.addEventListener('click', () => {
+                if(confirm("이 배경 사진을 삭제하시겠습니까?")) {
+                    const newImages = [...workHeroImages];
+                    newImages.splice(idx, 1);
+                    db.collection('workSiteSettings').doc('heroImages').set({
+                        images: newImages,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+            });
+            
+            wrapper.appendChild(img);
+            if (workHeroImages.length > 1) {
+                wrapper.appendChild(delBtn);
+            }
+            workHeroImagesGrid.appendChild(wrapper);
+        });
+    }
+
+    if (workHeroUploadDropzone) {
+        workHeroUploadDropzone.addEventListener('click', () => {
+            if (workHeroSliderFileInput) workHeroSliderFileInput.click();
+        });
+    }
+
+    if (workHeroSliderFileInput) {
+        workHeroSliderFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const originalHtml = workHeroUploadDropzone.innerHTML;
+            workHeroUploadDropzone.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary-color);"></i><p style="margin-top:10px; font-weight:bold;">업로드 중...</p>';
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const max_size = 1200;
+                    
+                    if (width > height) {
+                        if (width > max_size) {
+                            height *= max_size / width;
+                            width = max_size;
+                        }
+                    } else {
+                        if (height > max_size) {
+                            width *= max_size / height;
+                            height = max_size;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    const newImages = [...workHeroImages, compressedBase64];
+                    db.collection('workSiteSettings').doc('heroImages').set({
+                        images: newImages,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }).then(() => {
+                        workHeroUploadDropzone.innerHTML = originalHtml;
+                        e.target.value = '';
+                    }).catch(err => {
+                        console.error(err);
+                        alert("업로드 실패");
+                        workHeroUploadDropzone.innerHTML = originalHtml;
+                    });
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
     }
 
     initParticles();
