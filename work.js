@@ -156,7 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     btnWorkLogin.style.display = 'none';
                     if (userProfileIcon) {
                         userProfileIcon.style.display = 'block';
-                        userProfileImg.src = (currentUserDoc.photoURL && currentUserDoc.photoURL !== 'null') ? currentUserDoc.photoURL : 'https://via.placeholder.com/40';
+                        let pUrl = currentUserDoc.photoURL;
+                        userProfileImg.src = (pUrl && pUrl !== 'null' && pUrl.trim() !== '') ? pUrl : 'https://via.placeholder.com/40';
                     }
                     if (btnWorkLogout) btnWorkLogout.style.display = 'inline-block';
                     
