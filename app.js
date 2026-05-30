@@ -3450,4 +3450,33 @@ function initCardSliders(container) {
     if (document.getElementById('board-date')) document.getElementById('board-date').value = todayStr;
 
     initRealtimeDbListeners();
+
+    // ====================================================
+    // 공지사항 (Notices) - index.html
+    // ====================================================
+    const indexNoticeContainer = document.getElementById('index-notice-list-container');
+    if (indexNoticeContainer) {
+        db.collection('workNotices').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
+            indexNoticeContainer.innerHTML = '';
+            if (snapshot.empty) {
+                indexNoticeContainer.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-muted);"><i class="fa-solid fa-bullhorn"></i> 등록된 공지사항이 없습니다.</div>';
+                return;
+            }
+            
+            snapshot.forEach(doc => {
+                const notice = doc.data();
+                const div = document.createElement('div');
+                div.style.cssText = "padding: 1rem; border-bottom: 1px solid var(--card-border);";
+                const dateStr = notice.createdAt ? new Date(notice.createdAt.toDate()).toLocaleDateString() : '';
+                div.innerHTML = `
+                    <div style="font-weight:700; color:var(--primary-color); margin-bottom:0.5rem; display:flex; align-items:center; gap:0.5rem;">
+                        <i class="fa-solid fa-thumbtack"></i> ${notice.title}
+                    </div>
+                    <div style="font-size:0.9rem; color:var(--text-color); margin-bottom:0.5rem; white-space:pre-wrap;">${notice.content}</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">작성자: ${notice.authorName} | ${dateStr}</div>
+                `;
+                indexNoticeContainer.appendChild(div);
+            });
+        });
+    }
 });
