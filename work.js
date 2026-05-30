@@ -59,11 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginRequiredModal = document.getElementById('login-required-modal');
 
     btnWorkLogin.addEventListener('click', () => {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).catch(err => {
-            console.error("Login Error:", err);
-            alert("로그인 중 오류가 발생했습니다.");
-        });
+        window.location.href = 'index.html?login=true';
     });
 
     if (btnWorkLogout) {

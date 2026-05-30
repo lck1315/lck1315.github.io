@@ -3522,4 +3522,14 @@ function initCardSliders(container) {
             });
         });
     }
+
+    // URL 파라미터로 로그인 화면 자동 띄우기
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('login') === 'true') {
+        const authContainer = document.getElementById('auth-container');
+        if (authContainer) {
+            if (typeof showLoginScreen === 'function') showLoginScreen();
+            authContainer.classList.remove('hidden');
+        }
+    }
 });
