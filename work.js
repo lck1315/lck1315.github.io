@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSchedules();
         renderPerformances();
         if (window.renderWorkMembers) window.renderWorkMembers();
-        renderProjects();
+        if (typeof renderPsScheduler === 'function') renderPsScheduler();
     }
 
     auth.onAuthStateChanged((user) => {
