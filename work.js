@@ -353,7 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ----------------------------------------------------
     // 탭 네비게이션
     // ----------------------------------------------------
-    let currentTab = 'schedule';
+    let currentTab = 'main';
     const tabs = document.querySelectorAll('.work-tab');
     const tabContents = document.querySelectorAll('.tab-content');
 
@@ -373,12 +373,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 targetContent.style.display = 'block';
             }
             
-            const workHero = document.getElementById('work-hero');
-            if (workHero) {
-                if (currentTab === 'schedule') {
-                    workHero.style.display = 'block';
+            const btnOpenModal = document.getElementById('btn-open-modal');
+            if (btnOpenModal) {
+                if (currentTab === 'main' || currentTab === 'members') {
+                    btnOpenModal.style.display = 'none';
                 } else {
-                    workHero.style.display = 'none';
+                    btnOpenModal.style.display = 'flex';
                 }
             }
         });
