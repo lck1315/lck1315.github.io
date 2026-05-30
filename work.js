@@ -69,6 +69,18 @@ document.addEventListener('DOMContentLoaded', () => {
             tab.classList.add('active');
             currentTab = tab.getAttribute('data-tab');
             document.getElementById(`tab-${currentTab}`).classList.add('active');
+            
+            // 프로젝트 탭일 경우 화면 너비 100% 확장
+            const container = document.querySelector('main .container');
+            if (container) {
+                if (currentTab === 'projects') {
+                    container.style.maxWidth = '100%';
+                    container.style.padding = '0 1rem';
+                } else {
+                    container.style.maxWidth = '900px';
+                    container.style.padding = '0 2rem';
+                }
+            }
         });
     });
 
@@ -317,6 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let psYear = new Date().getFullYear();
     let psDayWidth = 30; // DAY_WIDTH from python
     let psSelectedId = null;
+    let psRowIndexMap = []; // Maps Y-index to Task ID
 
     db.collection('workProjects').orderBy('order', 'asc').onSnapshot((snapshot) => {
         psData = [];
@@ -496,10 +509,13 @@ document.addEventListener('DOMContentLoaded', () => {
         bgHlines.innerHTML = '';
         ganttBlocks.innerHTML = '';
 
+        psRowIndexMap = []; // Reset map
+
         const rootTasks = psData.filter(p => !p.parentId).sort((a,b) => a.order - b.order);
         let globalIndex = 0;
 
         function renderRow(task, level, prefix) {
+            psRowIndexMap.push(task.id);
             globalIndex++;
             const children = psData.filter(p => p.parentId === task.id).sort((a,b) => a.order - b.order);
             const isExpanded = task.expanded !== false;
@@ -616,6 +632,99 @@ document.addEventListener('DOMContentLoaded', () => {
             isSyncingRight = false;
         };
     }
+
+    // --- 4. Drag to Draw Block ---
+    let isDrawing = false;
+    let drawStartDayIndex = 0;
+    let drawingTaskId = null;
+    let drawingBlock = null;
+
+    document.addEventListener('mousedown', (e) => {
+        const ganttBody = document.getElementById('ps-gantt-body');
+        if (ganttBody && ganttBody.contains(e.target)) {
+            if(!currentUser) {
+                alert('로그인이 필요합니다.');
+                return;
+            }
+            const container = document.getElementById('ps-gantt-container');
+            const rect = ganttBody.getBoundingClientRect();
+            const x = e.clientX - rect.left + container.scrollLeft;
+            const y = e.clientY - rect.top;
+            
+            const rowIndex = Math.floor(y / 30);
+            const dayIndex = Math.floor(x / psDayWidth);
+            
+            if(rowIndex >= 0 && rowIndex < psRowIndexMap.length) {
+                isDrawing = true;
+                drawStartDayIndex = dayIndex;
+                drawingTaskId = psRowIndexMap[rowIndex];
+                psSelectedId = drawingTaskId; // Update selection
+                renderPsScheduler(); // To highlight selected row
+                
+                // Create temporary block
+                drawingBlock = document.createElement('div');
+                drawingBlock.className = 'ps-block selected';
+                drawingBlock.style.left = `${dayIndex * psDayWidth}px`;
+                drawingBlock.style.width = `${psDayWidth}px`;
+                drawingBlock.style.top = `${rowIndex * 30 + 5}px`;
+                drawingBlock.style.background = 'rgba(255, 107, 129, 0.7)'; // Red-ish preview
+                drawingBlock.innerText = '설정 중...';
+                document.getElementById('ps-gantt-blocks').appendChild(drawingBlock);
+                e.preventDefault(); // Prevent text selection
+            }
+        }
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if(isDrawing && drawingBlock) {
+            const ganttBody = document.getElementById('ps-gantt-body');
+            const container = document.getElementById('ps-gantt-container');
+            const rect = ganttBody.getBoundingClientRect();
+            let x = e.clientX - rect.left + container.scrollLeft;
+            if(x < 0) x = 0;
+            const dayIndex = Math.floor(x / psDayWidth);
+            
+            const minDay = Math.min(drawStartDayIndex, dayIndex);
+            const maxDay = Math.max(drawStartDayIndex, dayIndex);
+            
+            drawingBlock.style.left = `${minDay * psDayWidth}px`;
+            drawingBlock.style.width = `${(maxDay - minDay + 1) * psDayWidth}px`;
+        }
+    });
+    
+    document.addEventListener('mouseup', (e) => {
+        if(isDrawing) {
+            isDrawing = false;
+            if(drawingBlock && drawingTaskId) {
+                const ganttBody = document.getElementById('ps-gantt-body');
+                const container = document.getElementById('ps-gantt-container');
+                const rect = ganttBody.getBoundingClientRect();
+                let x = e.clientX - rect.left + container.scrollLeft;
+                if (x < 0) x = 0;
+                const dayIndex = Math.floor(x / psDayWidth);
+                
+                const minDay = Math.min(drawStartDayIndex, dayIndex);
+                const maxDay = Math.max(drawStartDayIndex, dayIndex);
+                
+                // Convert minDay and maxDay to Date
+                const yearStart = new Date(psYear, 0, 1);
+                
+                // Add minDay days to yearStart
+                const sDate = new Date(psYear, 0, 1 + minDay);
+                const eDate = new Date(psYear, 0, 1 + maxDay);
+                
+                const sDateStr = sDate.getFullYear() + '-' + String(sDate.getMonth() + 1).padStart(2, '0') + '-' + String(sDate.getDate()).padStart(2, '0');
+                const eDateStr = eDate.getFullYear() + '-' + String(eDate.getMonth() + 1).padStart(2, '0') + '-' + String(eDate.getDate()).padStart(2, '0');
+                
+                // Update Firebase
+                window.psUpdateField(drawingTaskId, 'startDate', sDateStr);
+                window.psUpdateField(drawingTaskId, 'endDate', eDateStr);
+                
+                drawingBlock.remove();
+                drawingBlock = null;
+            }
+        }
+    });
 
     // ====================================================
     // 파티클 배경 로직 (기존 유지)
