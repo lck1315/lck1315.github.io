@@ -2522,3 +2522,311 @@ body.light-theme .mobile-dropdown-item:hover {
 }
 
 /* 슬라이더 내부 이미지도 동일하게 hover 확대 적용 */
+
+/* ==========================================================================
+   Desktop Replica Project Scheduler Layout
+   ========================================================================== */
+#tab-projects {
+    padding: 0 !important;
+}
+
+.ps-desktop-app {
+    background-color: #ffffff;
+    color: #333333;
+    font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 150px);
+    min-height: 600px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+    /* Reset dark mode inheritance */
+    --text-color: #333333;
+}
+
+.ps-desktop-app * {
+    box-sizing: border-box;
+}
+
+/* 1. Top Toolbar */
+.ps-top-toolbar {
+    height: 45px;
+    background: linear-gradient(to bottom, #ffffff, #f7f7f7);
+    border-bottom: 2px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    gap: 12px;
+}
+
+.ps-tool-btn {
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 13px;
+    padding: 6px 12px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #333;
+    font-weight: 500;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.ps-tool-btn:hover {
+    background-color: #e3f2fd;
+    border: 1px solid #bbdefb;
+    color: #0d47a1;
+}
+.ps-tool-btn:active {
+    background-color: #bbdefb;
+    border: 1px solid #1976d2;
+}
+
+.ps-spinbox {
+    font-size: 13pt;
+    font-weight: bold;
+    width: 80px;
+    padding: 2px;
+    border: 1px solid #ced4da;
+    border-radius: 3px;
+}
+
+.ps-combo {
+    padding: 3px 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background: white;
+    font-size: 13pt;
+    width: 200px;
+}
+.ps-combo:hover { border-color: #adb5bd; }
+
+/* 2. Splitter Area */
+.ps-splitter {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    background: #e0e0e0;
+    gap: 1px; /* The splitter handle itself */
+}
+
+/* 3. Left Panel */
+.ps-left-panel {
+    width: 650px;
+    min-width: 300px;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+}
+
+.ps-left-toolbar {
+    height: 45px;
+    background-color: #fcfcfc;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    gap: 8px;
+}
+
+.ps-left-tool-btn {
+    background-color: #ffffff;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-weight: 500;
+    color: #495057;
+    font-size: 13px;
+    cursor: pointer;
+}
+.ps-left-tool-btn:hover { background-color: #f1f3f5; border-color: #adb5bd; }
+
+.ps-tree-header {
+    height: 160px;
+    background-color: #f0f0f0;
+    border-bottom: 1px solid #d0d0d0;
+    display: flex;
+    align-items: flex-end;
+}
+
+.ps-tree-header > div {
+    border-right: 1px solid #e0e0e0;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 15px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Column widths mimicking PyQt defaults */
+.ps-col-0 { width: 50px; }
+.ps-col-1 { width: 220px; flex: 1; justify-content: flex-start !important; padding-left: 10px; }
+.ps-col-2 { width: 100px; }
+.ps-col-3 { width: 100px; }
+.ps-col-4 { width: 90px; }
+.ps-col-5 { width: 90px; }
+
+.ps-tree-body {
+    flex: 1;
+    overflow-y: hidden; /* Scroll controlled by JS */
+    overflow-x: hidden;
+}
+
+.ps-tree-row {
+    display: flex;
+    height: 30px;
+    border-bottom: 1px solid #d0d0d0;
+    align-items: center;
+    font-size: 13px;
+    cursor: pointer;
+}
+.ps-tree-row.selected {
+    background-color: #a0a0a0;
+    color: black;
+}
+
+.ps-tree-row > div {
+    border-right: 1px solid transparent;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    padding: 0 5px;
+}
+
+.ps-tree-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-size: 13px;
+    font-family: inherit;
+}
+.ps-tree-input:focus { outline: 1px solid #1976d2; background: white; color: black; }
+
+.ps-tree-combo {
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-size: 13px;
+}
+.ps-tree-combo:focus { background: white; color: black; }
+
+/* 4. Right Panel */
+.ps-right-panel {
+    flex: 1;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.ps-right-toolbar {
+    height: 45px;
+    background-color: #fcfcfc;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    gap: 8px;
+}
+
+.ps-gantt-container {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: scroll;
+    position: relative;
+    background: #ffffff;
+}
+
+.ps-gantt-header {
+    height: 160px;
+    background-color: #f8f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+/* 4 tiers of header: Week(40px), Month(40px), Day(40px), Weekday(40px) */
+.ps-gantt-header-row {
+    display: flex;
+    height: 40px;
+    border-bottom: 1px solid #d0d0d0;
+}
+
+.ps-gh-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    border-right: 1px solid #d0d0d0;
+    color: #333;
+}
+.ps-gh-cell.weekend-sun { color: red; }
+.ps-gh-cell.weekend-sat { color: blue; }
+
+.ps-gantt-body {
+    position: relative;
+    min-height: calc(100% - 160px);
+}
+
+.ps-gantt-bg-grid {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 1;
+    display: flex;
+    pointer-events: none;
+}
+
+.ps-gantt-bg-day {
+    height: 100%;
+    border-right: 1px solid #d0d0d0;
+    background: #ffffff;
+}
+.ps-gantt-bg-day.weekend-sat { background: #f0f5ff; }
+.ps-gantt-bg-day.weekend-sun { background: #fff0f0; }
+.ps-gantt-bg-day.today { background: #ffffcc; }
+
+.ps-gantt-horizontal-lines {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 2;
+    pointer-events: none;
+}
+.ps-gantt-hline {
+    height: 30px;
+    border-bottom: 1px solid #d0d0d0;
+}
+
+.ps-gantt-blocks {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 5;
+}
+
+.ps-block {
+    position: absolute;
+    height: 20px;
+    top: 5px; /* (30 - 20) / 2 */
+    border: 1px solid black;
+    background: #fffacd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: black;
+    border-radius: 2px;
+    cursor: pointer;
+    user-select: none;
+}
+.ps-block.selected {
+    border: 2px dashed red;
+}

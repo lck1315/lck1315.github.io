@@ -137,8 +137,71 @@
 
                 <!-- 탭 내용: 프로젝트 -->
                 <div id="tab-projects" class="tab-content">
-                    <div id="projects-content-container">
-                        <div style="text-align:center; padding: 50px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> 데이터를 불러오는 중...</div>
+                    <div class="ps-desktop-app">
+                        <!-- 1. Top Toolbar -->
+                        <div class="ps-top-toolbar">
+                            <select class="ps-combo" id="ps-search" style="width: 150px;">
+                                <option>검색 (준비중)</option>
+                            </select>
+                            <input type="number" class="ps-spinbox" id="ps-year" value="2026">
+                            <button class="ps-tool-btn"><i class="fa-solid fa-file-excel"></i> 전체 엑셀 출력</button>
+                            <button class="ps-tool-btn"><i class="fa-solid fa-file-export"></i> 선택 엑셀 출력</button>
+                            <div style="flex:1;"></div>
+                            <button class="ps-tool-btn" id="ps-btn-today"><i class="fa-solid fa-calendar-day"></i> 오늘로 이동</button>
+                        </div>
+
+                        <!-- 2. Splitter Area -->
+                        <div class="ps-splitter">
+                            
+                            <!-- 3. Left Panel -->
+                            <div class="ps-left-panel">
+                                <div class="ps-left-toolbar">
+                                    <button class="ps-left-tool-btn" id="ps-btn-add-project"><i class="fa-solid fa-plus"></i> 추가</button>
+                                    <button class="ps-left-tool-btn" id="ps-btn-add-task"><i class="fa-solid fa-sitemap"></i> 태스크</button>
+                                    <button class="ps-left-tool-btn" id="ps-btn-delete"><i class="fa-solid fa-minus"></i> 삭제</button>
+                                    <div style="width: 10px;"></div>
+                                    <button class="ps-left-tool-btn"><i class="fa-solid fa-copy"></i> 복사</button>
+                                    <button class="ps-left-tool-btn"><i class="fa-solid fa-paste"></i> 붙여넣기</button>
+                                </div>
+                                
+                                <div class="ps-tree-header">
+                                    <div class="ps-col-0">No.</div>
+                                    <div class="ps-col-1">Project / Task</div>
+                                    <div class="ps-col-2">Assignee</div>
+                                    <div class="ps-col-3">Status</div>
+                                    <div class="ps-col-4">Start</div>
+                                    <div class="ps-col-5" style="border-right: none;">End</div>
+                                </div>
+                                
+                                <div class="ps-tree-body" id="ps-tree-body">
+                                    <div style="text-align:center; padding: 20px; color: #888;">데이터를 불러오는 중...</div>
+                                </div>
+                            </div>
+                            
+                            <!-- 4. Right Panel -->
+                            <div class="ps-right-panel">
+                                <div class="ps-right-toolbar">
+                                    <button class="ps-left-tool-btn" id="ps-btn-zoom-in"><i class="fa-solid fa-magnifying-glass-plus"></i> 줌 인</button>
+                                    <button class="ps-left-tool-btn" id="ps-btn-zoom-out"><i class="fa-solid fa-magnifying-glass-minus"></i> 줌 아웃</button>
+                                    <button class="ps-left-tool-btn" id="ps-btn-zoom-reset">리셋</button>
+                                    <button class="ps-left-tool-btn">화면 맞춤</button>
+                                    <div style="width: 10px;"></div>
+                                    <button class="ps-left-tool-btn" id="ps-btn-color"><i class="fa-solid fa-palette"></i> 색상 변경</button>
+                                </div>
+                                
+                                <div class="ps-gantt-container" id="ps-gantt-container">
+                                    <div class="ps-gantt-header" id="ps-gantt-header">
+                                        <!-- Weeks, Months, Days, Weekdays injected here -->
+                                    </div>
+                                    <div class="ps-gantt-body" id="ps-gantt-body">
+                                        <div class="ps-gantt-bg-grid" id="ps-gantt-bg-grid"></div>
+                                        <div class="ps-gantt-horizontal-lines" id="ps-gantt-horizontal-lines"></div>
+                                        <div class="ps-gantt-blocks" id="ps-gantt-blocks"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
 

@@ -311,83 +311,311 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ====================================================
-    // 프로젝트 (Projects)
+    // 프로젝트 스케줄러 (Projects Scheduler - Desktop Replica)
     // ====================================================
-    const projectsContainer = document.getElementById('projects-content-container');
-    let projectsData = [];
+    let psData = [];
+    let psYear = new Date().getFullYear();
+    let psDayWidth = 30; // DAY_WIDTH from python
+    let psSelectedId = null;
 
-    db.collection('workProjects').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
-        projectsData = [];
-        snapshot.forEach(doc => projectsData.push({ id: doc.id, ...doc.data() }));
-        renderProjects();
+    db.collection('workProjects').orderBy('order', 'asc').onSnapshot((snapshot) => {
+        psData = [];
+        snapshot.forEach(doc => psData.push({ id: doc.id, ...doc.data() }));
+        renderPsScheduler();
     });
 
-    function renderProjects() {
-        projectsContainer.innerHTML = '';
-        if (projectsData.length === 0) {
-            projectsContainer.innerHTML = '<div style="text-align:center; padding: 50px; color: var(--text-muted);"><i class="fa-solid fa-bars-progress"></i> 등록된 프로젝트가 없습니다.</div>';
-            return;
+    document.getElementById('ps-year')?.addEventListener('change', (e) => { psYear = parseInt(e.target.value); renderPsScheduler(); });
+    document.getElementById('ps-btn-today')?.addEventListener('click', () => { 
+        psYear = new Date().getFullYear(); 
+        document.getElementById('ps-year').value = psYear; 
+        renderPsScheduler(); 
+    });
+
+    document.getElementById('ps-btn-zoom-in')?.addEventListener('click', () => { psDayWidth = Math.min(psDayWidth + 5, 100); renderPsScheduler(); });
+    document.getElementById('ps-btn-zoom-out')?.addEventListener('click', () => { psDayWidth = Math.max(psDayWidth - 5, 10); renderPsScheduler(); });
+    document.getElementById('ps-btn-zoom-reset')?.addEventListener('click', () => { psDayWidth = 30; renderPsScheduler(); });
+
+    document.getElementById('ps-btn-add-project')?.addEventListener('click', () => {
+        if(!currentUser) return alert('로그인이 필요합니다.');
+        db.collection('workProjects').add({
+            parentId: null,
+            name: '새 프로젝트',
+            assignee: '',
+            status: '대기중',
+            startDate: '',
+            endDate: '',
+            color: '#fffacd',
+            order: Date.now(),
+            expanded: true,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    });
+
+    document.getElementById('ps-btn-add-task')?.addEventListener('click', () => {
+        if(!currentUser) return alert('로그인이 필요합니다.');
+        if(!psSelectedId) return alert('추가할 프로젝트/태스크를 먼저 선택하세요.');
+        const parentTask = psData.find(p => p.id === psSelectedId);
+        if(!parentTask) return;
+        const parentId = parentTask.parentId ? parentTask.parentId : parentTask.id;
+        
+        db.collection('workProjects').add({
+            parentId: parentId,
+            name: '새 태스크',
+            assignee: '',
+            status: '대기중',
+            startDate: '',
+            endDate: '',
+            color: '#e0f7fa',
+            order: Date.now(),
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    });
+    
+    document.getElementById('ps-btn-delete')?.addEventListener('click', () => {
+        if(!currentUser) return alert('로그인이 필요합니다.');
+        if(!psSelectedId) return alert('삭제할 항목을 선택하세요.');
+        if(confirm('선택한 항목을 삭제하시겠습니까? (하위 태스크가 있다면 함께 삭제되지 않을 수 있습니다)')) {
+            db.collection('workProjects').doc(psSelectedId).delete();
+            psSelectedId = null;
+        }
+    });
+
+    document.getElementById('ps-btn-color')?.addEventListener('click', () => {
+        if(!currentUser) return alert('로그인이 필요합니다.');
+        if(!psSelectedId) return alert('항목을 선택하세요.');
+        const task = psData.find(p => p.id === psSelectedId);
+        if(!task) return;
+        const colors = ['#fffacd', '#e0f7fa', '#f8bbd0', '#dcedc8', '#ffcc80', '#e1bee7', '#b3e5fc', '#ffecb3'];
+        let idx = colors.indexOf(task.color);
+        const nextColor = colors[(idx + 1) % colors.length];
+        window.psUpdateField(psSelectedId, 'color', nextColor);
+    });
+
+    window.psUpdateField = (id, field, value) => {
+        if(!currentUser) return alert('로그인이 필요합니다.');
+        db.collection('workProjects').doc(id).update({ [field]: value }).catch(e => console.error(e));
+    };
+
+    function renderPsScheduler() {
+        const treeBody = document.getElementById('ps-tree-body');
+        const ganttHeader = document.getElementById('ps-gantt-header');
+        const bgGrid = document.getElementById('ps-gantt-bg-grid');
+        const bgHlines = document.getElementById('ps-gantt-horizontal-lines');
+        const ganttBlocks = document.getElementById('ps-gantt-blocks');
+
+        if(!treeBody || !ganttHeader) return;
+
+        // --- 1. Gantt Header & Grid ---
+        const isLeapYear = (psYear % 4 === 0 && psYear % 100 !== 0) || (psYear % 400 === 0);
+        const daysInMonth = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        
+        let headerHtml = `
+            <div class="ps-gantt-header-row" id="gh-weeks"></div>
+            <div class="ps-gantt-header-row" id="gh-months"></div>
+            <div class="ps-gantt-header-row" id="gh-days"></div>
+            <div class="ps-gantt-header-row" id="gh-weekdays"></div>
+        `;
+        ganttHeader.innerHTML = headerHtml;
+        
+        const ghWeeks = document.getElementById('gh-weeks');
+        const ghMonths = document.getElementById('gh-months');
+        const ghDays = document.getElementById('gh-days');
+        const ghWeekdays = document.getElementById('gh-weekdays');
+        
+        bgGrid.innerHTML = '';
+        
+        const today = new Date();
+        const weekdaysStr = ['일', '월', '화', '수', '목', '금', '토'];
+        
+        let totalDays = 0;
+        let currentWeekCount = 0;
+        let daysInCurrentWeek = 0;
+        
+        for (let m = 0; m < 12; m++) {
+            const mDays = daysInMonth[m];
+            
+            // Month
+            const mDiv = document.createElement('div');
+            mDiv.className = 'ps-gh-cell';
+            mDiv.style.width = `${mDays * psDayWidth}px`;
+            mDiv.style.minWidth = `${mDays * psDayWidth}px`;
+            mDiv.innerText = `${m + 1}월`;
+            ghMonths.appendChild(mDiv);
+            
+            for (let d = 1; d <= mDays; d++) {
+                const dayDate = new Date(psYear, m, d);
+                const dayOfWeek = dayDate.getDay();
+                const isToday = (dayDate.getFullYear() === today.getFullYear() && dayDate.getMonth() === today.getMonth() && dayDate.getDate() === today.getDate());
+                
+                // Day number
+                const dDiv = document.createElement('div');
+                dDiv.className = 'ps-gh-cell';
+                dDiv.style.width = `${psDayWidth}px`;
+                dDiv.style.minWidth = `${psDayWidth}px`;
+                dDiv.innerText = d;
+                ghDays.appendChild(dDiv);
+                
+                // Weekday
+                const wdDiv = document.createElement('div');
+                wdDiv.className = 'ps-gh-cell';
+                wdDiv.style.width = `${psDayWidth}px`;
+                wdDiv.style.minWidth = `${psDayWidth}px`;
+                wdDiv.innerText = weekdaysStr[dayOfWeek];
+                if(dayOfWeek === 0) wdDiv.classList.add('weekend-sun');
+                if(dayOfWeek === 6) wdDiv.classList.add('weekend-sat');
+                ghWeekdays.appendChild(wdDiv);
+                
+                // Background Grid Line
+                const gridLine = document.createElement('div');
+                gridLine.className = 'ps-gantt-bg-day';
+                gridLine.style.width = `${psDayWidth}px`;
+                gridLine.style.minWidth = `${psDayWidth}px`;
+                if(dayOfWeek === 0) gridLine.classList.add('weekend-sun');
+                if(dayOfWeek === 6) gridLine.classList.add('weekend-sat');
+                if(isToday) gridLine.classList.add('today');
+                bgGrid.appendChild(gridLine);
+                
+                // Weeks calculation (roughly matching PyQt ISO week, simplified)
+                daysInCurrentWeek++;
+                if (dayOfWeek === 0 || (m === 11 && d === 31)) {
+                    currentWeekCount++;
+                    const wDiv = document.createElement('div');
+                    wDiv.className = 'ps-gh-cell';
+                    wDiv.style.width = `${daysInCurrentWeek * psDayWidth}px`;
+                    wDiv.style.minWidth = `${daysInCurrentWeek * psDayWidth}px`;
+                    wDiv.innerText = `${currentWeekCount}주차`;
+                    ghWeeks.appendChild(wDiv);
+                    daysInCurrentWeek = 0;
+                }
+            }
+            totalDays += mDays;
         }
 
-        const grid = document.createElement('div');
-        grid.className = 'work-grid';
+        // --- 2. Tree Body & Gantt Blocks ---
+        treeBody.innerHTML = '';
+        bgHlines.innerHTML = '';
+        ganttBlocks.innerHTML = '';
 
-        projectsData.forEach(item => {
-            const deleteBtn = currentUser ? `<button class="work-card-delete item-delete-btn" onclick="event.preventDefault(); window.deleteItem('workProjects', '${item.id}')"><i class="fa-solid fa-xmark"></i></button>` : '';
+        const rootTasks = psData.filter(p => !p.parentId).sort((a,b) => a.order - b.order);
+        let globalIndex = 0;
+
+        function renderRow(task, level, prefix) {
+            globalIndex++;
+            const children = psData.filter(p => p.parentId === task.id).sort((a,b) => a.order - b.order);
+            const isExpanded = task.expanded !== false;
+            const hasChildren = children.length > 0;
             
-            let statusIcon = 'fa-solid fa-spinner fa-spin';
-            let statusColor = 'linear-gradient(135deg, #ffa502, #ff7f50)'; // 진행중
-            let statusText = '진행 중';
+            const isSelected = psSelectedId === task.id;
             
-            if (item.status === 'todo') {
-                statusIcon = 'fa-solid fa-list-ul';
-                statusColor = 'linear-gradient(135deg, #ff4757, #ff6b81)';
-                statusText = '시작 전';
-            } else if (item.status === 'done') {
-                statusIcon = 'fa-regular fa-circle-check';
-                statusColor = 'linear-gradient(135deg, #2ed573, #7bed9f)';
-                statusText = '완료됨';
+            // Tree Row
+            const tr = document.createElement('div');
+            tr.className = `ps-tree-row ${isSelected ? 'selected' : ''}`;
+            tr.onclick = () => { psSelectedId = task.id; renderPsScheduler(); };
+            
+            const disabledAttr = !currentUser ? 'disabled' : '';
+
+            tr.innerHTML = `
+                <div class="ps-col-0">${globalIndex}</div>
+                <div class="ps-col-1" style="padding-left: ${10 + level * 20}px;">
+                    ${hasChildren ? `<span style="cursor:pointer; width:15px; display:inline-block; font-weight:bold; color:#555;" onclick="event.stopPropagation(); window.psUpdateField('${task.id}', 'expanded', ${!isExpanded})">${isExpanded ? '▼' : '▶'}</span>` : '<span style="width:15px; display:inline-block;"></span>'}
+                    <span style="margin-right:5px; color:#666; font-size:11px; min-width:20px;">${prefix}</span>
+                    <input class="ps-tree-input" value="${task.name || ''}" onchange="window.psUpdateField('${task.id}', 'name', this.value)" ${disabledAttr}>
+                </div>
+                <div class="ps-col-2">
+                    <input class="ps-tree-input" value="${task.assignee || ''}" onchange="window.psUpdateField('${task.id}', 'assignee', this.value)" ${disabledAttr}>
+                </div>
+                <div class="ps-col-3">
+                    <select class="ps-tree-combo" onchange="window.psUpdateField('${task.id}', 'status', this.value)" ${disabledAttr}>
+                        <option value="대기중" ${task.status === '대기중' ? 'selected' : ''}>대기중</option>
+                        <option value="진행중" ${task.status === '진행중' ? 'selected' : ''}>진행중</option>
+                        <option value="완료" ${task.status === '완료' ? 'selected' : ''}>완료</option>
+                    </select>
+                </div>
+                <div class="ps-col-4">
+                    <input type="date" class="ps-tree-input" value="${task.startDate || ''}" onchange="window.psUpdateField('${task.id}', 'startDate', this.value)" ${disabledAttr} style="font-size:11px; letter-spacing:-1px;">
+                </div>
+                <div class="ps-col-5" style="border-right: none;">
+                    <input type="date" class="ps-tree-input" value="${task.endDate || ''}" onchange="window.psUpdateField('${task.id}', 'endDate', this.value)" ${disabledAttr} style="font-size:11px; letter-spacing:-1px;">
+                </div>
+            `;
+            treeBody.appendChild(tr);
+            
+            // Background Horizontal Line
+            const hline = document.createElement('div');
+            hline.className = 'ps-gantt-hline';
+            hline.style.width = `${totalDays * psDayWidth}px`;
+            bgHlines.appendChild(hline);
+            
+            // Gantt Block
+            if (task.startDate && task.endDate) {
+                const sDate = new Date(task.startDate);
+                const eDate = new Date(task.endDate);
+                
+                if (sDate.getFullYear() <= psYear && eDate.getFullYear() >= psYear) {
+                    const yearStart = new Date(psYear, 0, 1);
+                    const yearEnd = new Date(psYear, 11, 31);
+                    
+                    let drawStart = sDate < yearStart ? yearStart : sDate;
+                    let drawEnd = eDate > yearEnd ? yearEnd : eDate;
+                    
+                    const daysFromStart = Math.floor((drawStart - yearStart) / (1000 * 60 * 60 * 24));
+                    const durationDays = Math.floor((drawEnd - drawStart) / (1000 * 60 * 60 * 24)) + 1;
+                    
+                    if (daysFromStart >= 0 && durationDays > 0) {
+                        const block = document.createElement('div');
+                        block.className = `ps-block ${isSelected ? 'selected' : ''}`;
+                        block.style.left = `${daysFromStart * psDayWidth}px`;
+                        block.style.width = `${durationDays * psDayWidth}px`;
+                        block.style.top = `${(globalIndex - 1) * 30 + 5}px`;
+                        block.style.background = task.color || '#fffacd';
+                        block.innerText = task.name;
+                        
+                        block.onclick = (e) => {
+                            e.stopPropagation();
+                            psSelectedId = task.id;
+                            renderPsScheduler();
+                        };
+                        ganttBlocks.appendChild(block);
+                    }
+                }
             }
 
-            const statusSelect = currentUser ? `
-                <select style="background: rgba(0,0,0,0.3); color: var(--text-color); border: 1px solid var(--input-border); border-radius: 4px; padding: 2px 5px; font-size: 0.8rem; margin-top: 10px;" onchange="window.updateProjectStatus('${item.id}', this.value)">
-                    <option value="todo" ${item.status === 'todo' ? 'selected' : ''}>To Do (시작 전)</option>
-                    <option value="progress" ${item.status === 'progress' ? 'selected' : ''}>In Progress (진행 중)</option>
-                    <option value="done" ${item.status === 'done' ? 'selected' : ''}>Done (완료)</option>
-                </select>
-            ` : `<p style="margin-top:5px; font-weight:600;">상태: ${statusText}</p>`;
+            if (isExpanded) {
+                children.forEach((child, idx) => {
+                    renderRow(child, level + 1, `${prefix}-${idx + 1}`);
+                });
+            }
+        }
 
-            const card = document.createElement('div');
-            card.className = 'work-card glass-card';
-            if (item.status === 'done') card.style.opacity = '0.7';
-
-            card.innerHTML = `
-                <div class="work-icon-wrap" style="background: ${statusColor};"><i class="${statusIcon}"></i></div>
-                <div class="work-info">
-                    <h4>${item.title}</h4>
-                    <p>마감일: ${item.dueDate ? item.dueDate : '미정'}</p>
-                    ${statusSelect}
-                </div>
-                ${deleteBtn}
-            `;
-            grid.appendChild(card);
+        rootTasks.forEach((root, idx) => {
+            renderRow(root, 0, `${idx + 1}`);
         });
-        projectsContainer.appendChild(grid);
+
+        if(psData.length === 0) {
+            treeBody.innerHTML = '<div style="text-align:center; padding: 20px; color: #888;">등록된 일정이 없습니다.</div>';
+        }
+
+        // --- 3. Synchronize Scrolling ---
+        const ganttContainer = document.getElementById('ps-gantt-container');
+        let isSyncingLeft = false;
+        let isSyncingRight = false;
+        
+        treeBody.onscroll = () => {
+            if(!isSyncingLeft) {
+                isSyncingRight = true;
+                ganttContainer.scrollTop = treeBody.scrollTop;
+            }
+            isSyncingLeft = false;
+        };
+        
+        ganttContainer.onscroll = () => {
+            if(!isSyncingRight) {
+                isSyncingLeft = true;
+                treeBody.scrollTop = ganttContainer.scrollTop;
+            }
+            isSyncingRight = false;
+        };
     }
-
-    document.getElementById('form-projects').addEventListener('submit', (e) => {
-        e.preventDefault();
-        db.collection('workProjects').add({
-            title: document.getElementById('proj-title').value.trim(),
-            status: document.getElementById('proj-status').value,
-            dueDate: document.getElementById('proj-date').value,
-            createdBy: currentUser.uid,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(() => {
-            e.target.reset();
-            document.getElementById('modal-projects').classList.add('hidden');
-        });
-    });
 
     // ====================================================
     // 파티클 배경 로직 (기존 유지)
