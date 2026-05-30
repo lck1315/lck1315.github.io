@@ -110,15 +110,15 @@
                 <button class="work-tab" data-tab="bookmarks"><i class="fa-solid fa-bookmark"></i> 북마크</button>
                 <button class="work-tab" data-tab="members"><i class="fa-solid fa-users"></i> 구성원</button>
             </nav>
-            <div class="header-actions">
-                <span id="auth-status-header" style="color: #ff4757; font-size: 0.85rem; margin-right: 10px; font-weight: bold; display: none;">승인 대기중</span>
-                <button id="btn-claim-master" class="btn btn-secondary" style="display: none; padding: 6px 10px; font-size: 0.85rem; border-color: #ffa502; color: #ffa502; margin-right: 10px;">👑 마스터 획득</button>
-                <button id="btn-work-login" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.85rem; margin-right: 10px;">로그인</button>
+            <div class="header-actions" style="display: flex; gap: 10px; align-items: center;">
+                <span id="auth-status-header" style="color: #ff4757; font-size: 0.85rem; font-weight: bold; display: none;">승인 대기중</span>
+                <button id="btn-claim-master" class="btn btn-secondary" style="display: none; padding: 6px 10px; font-size: 0.85rem; border-color: #ffa502; color: #ffa502;">👑 마스터 획득</button>
+                <button id="btn-work-login" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.85rem;">로그인</button>
                 <button id="btn-master-admin" class="theme-btn" style="display: none; color: #ffa502;" title="마스터 관리">
                     <i class="fa-solid fa-crown"></i>
                 </button>
                 <div class="profile-icon" id="user-profile-icon" style="display: none;">
-                    <img src="https://via.placeholder.com/40" alt="Profile" id="user-profile-img">
+                    <img src="https://via.placeholder.com/40" alt="Profile" id="user-profile-img" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);">
                 </div>
                 <button id="theme-toggle" aria-label="테마 전환" class="theme-btn">
                     <i class="fa-solid fa-sun"></i>

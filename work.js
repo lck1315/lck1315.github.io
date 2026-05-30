@@ -156,7 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     btnWorkLogin.style.display = 'none';
                     if (userProfileIcon) {
                         userProfileIcon.style.display = 'block';
-                        userProfileImg.src = currentUserDoc.photoURL || 'https://via.placeholder.com/40';
+                        userProfileImg.src = (currentUserDoc.photoURL && currentUserDoc.photoURL !== 'null') ? currentUserDoc.photoURL : 'https://via.placeholder.com/40';
                     }
                     if (btnWorkLogout) btnWorkLogout.style.display = 'inline-block';
                     
@@ -178,7 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     btnWorkLogin.style.display = 'none';
                     if (userProfileIcon) {
                         userProfileIcon.style.display = 'block';
-                        userProfileImg.src = currentUserDoc.photoURL || 'https://via.placeholder.com/40';
+                        userProfileImg.src = (currentUserDoc.photoURL && currentUserDoc.photoURL !== 'null') ? currentUserDoc.photoURL : 'https://via.placeholder.com/40';
                     }
                     if (btnWorkLogout) btnWorkLogout.style.display = 'inline-block';
                     if (btnMasterAdmin) btnMasterAdmin.style.display = 'none';
