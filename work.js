@@ -41,18 +41,243 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ----------------------------------------------------
-    // 인증 관리
+    // 인증 및 승인 관리 (workUsers)
     // ----------------------------------------------------
     let currentUser = null;
-    auth.onAuthStateChanged((user) => {
-        currentUser = user;
-        renderWorkLinks();
-        renderSchedules();
-        renderPerformances();
-        renderProjects();
+    let currentUserDoc = null;
+    let workUserListener = null;
+
+    const authWallOverlay = document.getElementById('auth-wall-overlay');
+    const authStatusMessage = document.getElementById('auth-status-message');
+    const btnClaimMaster = document.getElementById('btn-claim-master');
+    const btnWorkLogin = document.getElementById('btn-work-login');
+    const btnWorkLogout = document.getElementById('btn-work-logout');
+    const userProfileIcon = document.getElementById('user-profile-icon');
+    const userProfileImg = document.getElementById('user-profile-img');
+    const btnMasterAdmin = document.getElementById('btn-master-admin');
+    
+    // 모달들 (로그인 안 된 경우 보여주던 기존 모달들)
+    const loginRequiredModal = document.getElementById('login-required-modal');
+
+    btnWorkLogin.addEventListener('click', () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).catch(err => {
+            console.error("Login Error:", err);
+            authStatusMessage.innerText = "로그인 중 오류가 발생했습니다.";
+            authStatusMessage.style.display = 'block';
+        });
     });
 
-    const loginRequiredModal = document.getElementById('login-required-modal');
+    if (btnWorkLogout) {
+        btnWorkLogout.addEventListener('click', () => {
+            auth.signOut();
+        });
+    }
+
+    auth.onAuthStateChanged((user) => {
+        currentUser = user;
+        if (workUserListener) {
+            workUserListener(); // Unsubscribe previous listener
+            workUserListener = null;
+        }
+
+        if (user) {
+            // Check workUsers collection
+            const userRef = db.collection('workUsers').doc(user.uid);
+            
+            workUserListener = userRef.onSnapshot(doc => {
+                if (!doc.exists) {
+                    // 신규 유저 등록 (기본 승인 안 됨)
+                    userRef.set({
+                        uid: user.uid,
+                        email: user.email,
+                        nickname: user.displayName || user.email.split('@')[0],
+                        photoURL: user.photoURL,
+                        isApproved: false,
+                        isMaster: false,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    return;
+                }
+                
+                currentUserDoc = doc.data();
+                checkMasterAvailability();
+                
+                if (currentUserDoc.isApproved) {
+                    // 승인됨 -> 화면 표시
+                    authWallOverlay.style.display = 'none';
+                    if (userProfileIcon) {
+                        userProfileIcon.style.display = 'block';
+                        userProfileImg.src = currentUserDoc.photoURL || 'https://via.placeholder.com/40';
+                    }
+                    if (btnWorkLogout) btnWorkLogout.style.display = 'inline-block';
+                    
+                    if (currentUserDoc.isMaster) {
+                        btnMasterAdmin.style.display = 'inline-block';
+                    } else {
+                        btnMasterAdmin.style.display = 'none';
+                    }
+
+                    // 콘텐츠 렌더링
+                    renderWorkLinks();
+                    renderSchedules();
+                    renderPerformances();
+                    renderProjects();
+                } else {
+                    // 승인 대기중 -> 화면 가림
+                    authWallOverlay.style.display = 'flex';
+                    authStatusMessage.innerText = "승인 대기 중입니다. 마스터의 승인을 기다려주세요.";
+                    authStatusMessage.style.display = 'block';
+                    btnWorkLogin.style.display = 'none';
+                }
+            });
+        } else {
+            // 로그아웃 됨
+            currentUserDoc = null;
+            authWallOverlay.style.display = 'flex';
+            authStatusMessage.style.display = 'none';
+            btnWorkLogin.style.display = 'inline-block';
+            btnClaimMaster.style.display = 'none';
+            
+            if (userProfileIcon) userProfileIcon.style.display = 'none';
+            if (btnMasterAdmin) btnMasterAdmin.style.display = 'none';
+            if (btnWorkLogout) btnWorkLogout.style.display = 'none';
+        }
+    });
+
+    // 마스터 권한 획득 가능 여부 확인
+    function checkMasterAvailability() {
+        if (!currentUser || !currentUserDoc) return;
+        
+        db.collection('workUsers').where('isMaster', '==', true).get().then(snapshot => {
+            if (snapshot.empty && !currentUserDoc.isMaster) {
+                // 마스터가 아무도 없으면 획득 버튼 표시
+                btnClaimMaster.style.display = 'inline-block';
+            } else {
+                btnClaimMaster.style.display = 'none';
+            }
+        });
+    }
+
+    // 마스터 권한 획득 버튼
+    btnClaimMaster.addEventListener('click', () => {
+        if (!currentUser) return;
+        db.collection('workUsers').where('isMaster', '==', true).get().then(snapshot => {
+            if (snapshot.empty) {
+                db.collection('workUsers').doc(currentUser.uid).update({
+                    isMaster: true,
+                    isApproved: true
+                }).then(() => {
+                    alert("최초 마스터 권한을 획득하셨습니다!");
+                });
+            } else {
+                alert("이미 다른 마스터가 존재합니다.");
+                btnClaimMaster.style.display = 'none';
+            }
+        });
+    });
+
+    // ----------------------------------------------------
+    // 마스터 회원 관리 로직
+    // ----------------------------------------------------
+    const masterAdminModal = document.getElementById('master-admin-modal');
+    const masterApprovalList = document.getElementById('master-approval-list');
+    
+    if (btnMasterAdmin) {
+        btnMasterAdmin.addEventListener('click', () => {
+            masterAdminModal.classList.remove('hidden');
+            loadMasterApprovalList();
+        });
+    }
+
+    function loadMasterApprovalList() {
+        if (!masterApprovalList) return;
+        masterApprovalList.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">로딩 중...</p>';
+        
+        db.collection('workUsers').get()
+            .then(snapshot => {
+                masterApprovalList.innerHTML = '';
+                if (snapshot.empty) {
+                    masterApprovalList.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">가입된 회원이 없습니다.</p>';
+                    return;
+                }
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.isMaster) return; // 마스터 본인은 리스트에서 제외
+                    
+                    const item = document.createElement('div');
+                    item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid var(--card-border); margin-bottom: 10px;';
+                    
+                    const isApproved = data.isApproved === true;
+                    const statusBadge = isApproved 
+                        ? `<span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: rgba(46, 213, 115, 0.2); color: #2ed573;">승인됨</span>`
+                        : `<span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: rgba(255, 71, 87, 0.2); color: #ff4757;">대기중</span>`;
+
+                    const actionBtn = isApproved
+                        ? `<button class="btn btn-secondary" onclick="window.workToggleApproval('${doc.id}', false)" style="padding: 6px 12px; font-size: 0.8rem; border-color: #ffa502; color: #ffa502;">승인 해제</button>`
+                        : `<button class="btn btn-primary" onclick="window.workToggleApproval('${doc.id}', true)" style="padding: 6px 12px; font-size: 0.8rem;">가입 승인</button>`;
+
+                    item.innerHTML = `
+                        <div>
+                            <p style="margin: 0; font-weight: 700; font-size: 0.95rem;">${data.nickname} ${statusBadge}</p>
+                            <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">${data.email}</p>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            ${actionBtn}
+                            <button class="btn btn-secondary" onclick="window.workRejectUser('${doc.id}')" style="padding: 6px 12px; font-size: 0.8rem; border-color: #ff4757; color: #ff4757;" title="계정 삭제"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    `;
+                    masterApprovalList.appendChild(item);
+                });
+            })
+            .catch(err => {
+                console.error("회원 리스트 로드 실패:", err);
+                masterApprovalList.innerHTML = '<p style="text-align: center; color: #ff4757; font-size: 0.9rem;">리스트를 불러오는 중 오류가 발생했습니다.</p>';
+            });
+    }
+
+    window.workToggleApproval = function(userId, approve) {
+        const actionStr = approve ? "승인" : "승인 해제";
+        if (confirm(`이 회원을 ${actionStr} 처리하시겠습니까?`)) {
+            db.collection('workUsers').doc(userId).update({ isApproved: approve })
+                .then(() => {
+                    alert(`${actionStr} 완료되었습니다.`);
+                    loadMasterApprovalList();
+                })
+                .catch(err => {
+                    console.error("승인/해제 실패:", err);
+                    alert("처리 중 오류가 발생했습니다.");
+                });
+        }
+    };
+
+    window.workRejectUser = function(userId) {
+        if (confirm("이 회원의 가입을 거절하시겠습니까? 기록이 삭제됩니다.")) {
+            db.collection('workUsers').doc(userId).delete()
+                .then(() => {
+                    alert("거절 및 삭제되었습니다.");
+                    loadMasterApprovalList();
+                })
+                .catch(err => {
+                    alert("오류가 발생했습니다.");
+                });
+        }
+    };
+
+    const btnResignMaster = document.getElementById('btn-resign-master');
+    if (btnResignMaster) {
+        btnResignMaster.addEventListener('click', () => {
+            if (confirm("정말 마스터 권한을 포기하시겠습니까? 권한을 포기하면 다른 회원이 마스터가 될 수 있습니다.")) {
+                db.collection('workUsers').doc(currentUser.uid).update({
+                    isMaster: false
+                }).then(() => {
+                    alert("마스터 권한을 포기하셨습니다.");
+                    masterAdminModal.classList.add('hidden');
+                });
+            }
+        });
+    }
 
     // ----------------------------------------------------
     // 탭 네비게이션

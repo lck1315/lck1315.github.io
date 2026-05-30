@@ -86,6 +86,31 @@
 <body class="dark-theme">
     <canvas id="particle-canvas"></canvas>
 
+    <!-- Auth Overlay (Block access until approved) -->
+    <div id="auth-wall-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px;">
+        <h1 style="color: var(--primary-color); font-family: 'Outfit', sans-serif; font-size: 3rem; margin-bottom: 10px;">DODO.work</h1>
+        <p style="color: var(--text-color); font-size: 1.2rem; margin-bottom: 30px;">업무 아지트에 오신 것을 환영합니다.<br>로그인 후 마스터의 승인이 필요합니다.</p>
+        <button id="btn-work-login" class="btn btn-primary" style="font-size: 1.1rem; padding: 12px 30px; display: flex; align-items: center; gap: 10px;">
+            <i class="fa-brands fa-google"></i> Google 로그인
+        </button>
+        <div id="auth-status-message" style="margin-top: 20px; color: #ff4757; font-weight: bold; display: none;"></div>
+        <button id="btn-claim-master" class="btn btn-secondary" style="margin-top: 20px; display: none; border-color: #ffa502; color: #ffa502;">👑 최초 마스터 권한 획득하기</button>
+    </div>
+
+    <!-- 마스터 관리 모달 -->
+    <div id="master-admin-modal" class="auth-modal-overlay hidden" style="z-index: 10000;">
+        <div class="auth-modal">
+            <button class="modal-close-btn"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="modal-title" style="color: var(--primary-color);">👑 마스터 관리</h3>
+            <div id="master-approval-list" style="margin-top: 20px; max-height: 300px; overflow-y: auto;">
+                <p style="text-align: center; color: var(--text-muted);">대기 중인 회원이 없습니다.</p>
+            </div>
+            <div style="margin-top: 20px; border-top: 1px solid var(--card-border); padding-top: 20px; text-align: right;">
+                <button id="btn-resign-master" class="btn btn-secondary" style="border-color: #ff4757; color: #ff4757; font-size: 0.8rem;">마스터 권한 포기</button>
+            </div>
+        </div>
+    </div>
+
     <header id="main-header">
         <div class="header-container">
             <a href="work.html" class="logo">DODO<span>.work</span></a>
@@ -96,9 +121,18 @@
                 <button class="work-tab" data-tab="bookmarks"><i class="fa-solid fa-bookmark"></i> 북마크</button>
             </nav>
             <div class="header-actions">
+                <button id="btn-master-admin" class="theme-btn" style="display: none; color: #ffa502;" title="마스터 관리">
+                    <i class="fa-solid fa-crown"></i>
+                </button>
+                <div class="profile-icon" id="user-profile-icon" style="display: none;">
+                    <img src="https://via.placeholder.com/40" alt="Profile" id="user-profile-img">
+                </div>
                 <button id="theme-toggle" aria-label="테마 전환" class="theme-btn">
                     <i class="fa-solid fa-sun"></i>
                     <i class="fa-solid fa-moon"></i>
+                </button>
+                <button id="btn-work-logout" class="theme-btn" style="display: none; color: #ff4757;" title="로그아웃">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
                 </button>
             </div>
         </div>
