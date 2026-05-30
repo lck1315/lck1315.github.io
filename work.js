@@ -112,6 +112,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 workHeroEditTrigger.classList.add('hidden');
             }
         }
+        
+        const btnWriteNotice = document.getElementById('btn-write-notice');
+        if (btnWriteNotice) {
+            if (currentUserDoc && currentUserDoc.isMaster) {
+                btnWriteNotice.classList.remove('hidden');
+            } else {
+                btnWriteNotice.classList.add('hidden');
+            }
+        }
 
         // 프로젝트 탭 복구는 페이지 새로고침 필요하므로 일단 UI 초기화 (간단히 하기 위해 페이지 강제 리로드하거나 기존 렌더 함수 호출)
         renderWorkLinks();
@@ -119,6 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderPerformances();
         if (window.renderWorkMembers) window.renderWorkMembers();
         if (typeof renderPsScheduler === 'function') renderPsScheduler();
+        if (typeof renderNotices === 'function') renderNotices();
     }
 
     auth.onAuthStateChanged((user) => {
@@ -490,6 +500,93 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('modal-bookmarks').classList.add('hidden');
         });
     });
+
+    // ====================================================
+    // 공지사항 (Notices)
+    // ====================================================
+    const noticeContainer = document.getElementById('notice-list-container');
+    const noticeWriteModal = document.getElementById('notice-write-modal');
+    const noticeWriteClose = document.getElementById('notice-write-close');
+    const btnSubmitNotice = document.getElementById('btn-submit-notice');
+    
+    document.body.addEventListener('click', (e) => {
+        if (e.target.closest('#btn-write-notice')) {
+            document.getElementById('notice-write-title').value = '';
+            document.getElementById('notice-write-content').value = '';
+            noticeWriteModal.classList.remove('hidden');
+        }
+    });
+    
+    if (noticeWriteClose) {
+        noticeWriteClose.addEventListener('click', () => noticeWriteModal.classList.add('hidden'));
+    }
+    
+    if (btnSubmitNotice) {
+        btnSubmitNotice.addEventListener('click', () => {
+            const title = document.getElementById('notice-write-title').value.trim();
+            const content = document.getElementById('notice-write-content').value.trim();
+            if (!title || !content) return alert("제목과 내용을 입력하세요.");
+            
+            db.collection('workNotices').add({
+                title,
+                content,
+                authorId: currentUser.uid,
+                authorName: currentUser.displayName || currentUserDoc?.nickname || '관리자',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                noticeWriteModal.classList.add('hidden');
+                alert("공지사항이 등록되었습니다.");
+            }).catch(e => {
+                alert("공지 등록 실패: " + e.message);
+            });
+        });
+    }
+
+    let noticesData = [];
+    db.collection('workNotices').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
+        noticesData = [];
+        snapshot.forEach(doc => noticesData.push({ id: doc.id, ...doc.data() }));
+        if (typeof renderNotices === 'function') renderNotices();
+    });
+
+    window.renderNotices = function() {
+        if (!noticeContainer) return;
+        noticeContainer.innerHTML = '';
+        if (noticesData.length === 0) {
+            noticeContainer.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-muted);"><i class="fa-solid fa-bullhorn"></i> 등록된 공지사항이 없습니다.</div>';
+            return;
+        }
+        
+        noticesData.forEach(notice => {
+            const div = document.createElement('div');
+            div.style.cssText = "padding: 1rem; border-bottom: 1px solid var(--card-border); position: relative;";
+            
+            const dateStr = notice.createdAt ? new Date(notice.createdAt.toDate()).toLocaleDateString() : '';
+            
+            let delBtn = '';
+            if (currentUserDoc && currentUserDoc.isMaster) {
+                delBtn = `<button onclick="deleteNotice('${notice.id}')" style="position:absolute; right:10px; top:10px; background:none; border:none; color:var(--text-muted); cursor:pointer;"><i class="fa-solid fa-trash"></i></button>`;
+            }
+            
+            div.innerHTML = `
+                <div style="font-weight:700; color:var(--primary-color); margin-bottom:0.5rem; display:flex; align-items:center; gap:0.5rem; padding-right: 30px;">
+                    <i class="fa-solid fa-thumbtack"></i> ${notice.title}
+                </div>
+                <div style="font-size:0.9rem; color:var(--text-color); margin-bottom:0.5rem; white-space:pre-wrap;">${notice.content}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted);">작성자: ${notice.authorName} | ${dateStr}</div>
+                ${delBtn}
+            `;
+            noticeContainer.appendChild(div);
+        });
+    }
+
+    window.deleteNotice = function(id) {
+        if(confirm("정말 공지사항을 삭제하시겠습니까?")) {
+            db.collection('workNotices').doc(id).delete().then(() => {
+                alert("삭제되었습니다.");
+            }).catch(e => alert("삭제 실패: " + e.message));
+        }
+    }
 
     // ====================================================
     // 일정관리 (Schedule)

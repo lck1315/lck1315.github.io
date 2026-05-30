@@ -691,8 +691,11 @@
                                 </div>
                                 
                                 <div style="display: flex; gap: 10px; margin-top: 1rem;">
-                                    <button onclick="fetchWords()" class="btn btn-secondary w-100"><i class="fa-solid fa-rotate"></i> 단어 새로고침</button>
-                                    <button onclick="addWord()" class="btn btn-primary w-100"><i class="fa-solid fa-plus"></i> 추가하기</button>
+                                    <button onclick="fetchWords()" class="btn btn-secondary w-100"><i class="fa-solid fa-rotate"></i> 새로고침</button>
+                                    <button onclick="addWord()" class="btn btn-primary w-100"><i class="fa-solid fa-plus"></i> 단어 추가</button>
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <button onclick="deleteAllWords()" class="btn btn-secondary w-100" style="color: #ff4757; border-color: rgba(255, 71, 87, 0.3); background: rgba(255, 71, 87, 0.05);"><i class="fa-solid fa-trash-can"></i> 모든 단어 전체 삭제</button>
                                 </div>
                                 <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed rgba(255,255,255,0.1); text-align: center;">
                                     <input type="file" id="bulk-upload-input" accept=".txt,.csv" style="display: none;" onchange="handleBulkUpload(event)">
@@ -1336,6 +1339,44 @@
                 fetchWords(); // 목록 새로고침
             } catch (error) {
                 alert("단어 삭제에 실패했습니다.");
+            }
+        }
+
+        async function deleteAllWords() {
+            if(!confirm("모든 단어를 정말 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.")) return;
+
+            if (currentConnectionMode === 'cloud') {
+                try {
+                    await firebase.database().ref('device_wordbook').remove();
+                    alert("클라우드의 모든 단어가 삭제되었습니다.");
+                } catch (error) {
+                    alert("클라우드 단어 일괄 삭제에 실패했습니다.");
+                }
+                return;
+            }
+
+            const url = getDeviceUrl();
+            if(!url) return;
+            
+            try {
+                const response = await fetch(`${url}/api/words`);
+                const data = await response.json();
+                const total = data.words ? data.words.length : 0;
+                
+                if (total === 0) {
+                    alert("삭제할 단어가 없습니다.");
+                    return;
+                }
+                
+                document.getElementById('word-list-container').innerHTML = '<p style="text-align:center; padding:1rem;"><i class="fa-solid fa-spinner fa-spin"></i> 기기의 단어를 모두 삭제하는 중...</p>';
+                
+                for (let i = total - 1; i >= 0; i--) {
+                    await fetch(`${url}/api/words?id=${i}`, { method: 'DELETE' });
+                }
+                alert(`기기에서 ${total}개의 단어가 모두 삭제되었습니다.`);
+                fetchWords();
+            } catch (error) {
+                alert("기기 단어 일괄 삭제 중 오류가 발생했습니다. 연결 상태를 확인해주세요.");
             }
         }
 
