@@ -88,8 +88,11 @@
     <header id="main-header">
         <div class="header-container">
             <a href="index.html" class="logo">DODO<span>.work</span></a>
-            <nav class="nav-links">
-                <a href="index.html" class="nav-item"><i class="fa-solid fa-house"></i> Family Home</a>
+            <nav class="work-tabs" id="work-tabs" style="border: none; margin-bottom: 0; padding-bottom: 0; flex: 1; justify-content: center;">
+                <button class="work-tab active" data-tab="bookmarks"><i class="fa-solid fa-bookmark"></i> 북마크</button>
+                <button class="work-tab" data-tab="schedule"><i class="fa-regular fa-calendar-check"></i> 일정관리</button>
+                <button class="work-tab" data-tab="performance"><i class="fa-solid fa-trophy"></i> 개인성과</button>
+                <button class="work-tab" data-tab="projects"><i class="fa-solid fa-bars-progress"></i> 프로젝트</button>
             </nav>
             <div class="header-actions">
                 <button id="theme-toggle" aria-label="테마 전환" class="theme-btn">
@@ -108,13 +111,7 @@
                     <p class="section-subtitle">북마크, 일정, 성과, 프로젝트를 한 곳에서 편리하게 관리하세요.</p>
                 </div>
 
-                <!-- 탭 네비게이션 -->
-                <div class="work-tabs" id="work-tabs">
-                    <button class="work-tab active" data-tab="bookmarks"><i class="fa-solid fa-bookmark"></i> 북마크</button>
-                    <button class="work-tab" data-tab="schedule"><i class="fa-regular fa-calendar-check"></i> 일정관리</button>
-                    <button class="work-tab" data-tab="performance"><i class="fa-solid fa-trophy"></i> 개인성과</button>
-                    <button class="work-tab" data-tab="projects"><i class="fa-solid fa-bars-progress"></i> 프로젝트</button>
-                </div>
+
 
                 <!-- 탭 내용: 북마크 (기존) -->
                 <div id="tab-bookmarks" class="tab-content active">
