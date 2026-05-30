@@ -589,68 +589,136 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ====================================================
-    // 일정관리 (Schedule)
+    // 일정관리 (Schedule Calendar)
     // ====================================================
-    const scheduleContainer = document.getElementById('schedule-content-container');
     let schedulesData = [];
+    const workCalendarGrid = document.getElementById('work-calendar-grid');
+    const workCalendarMonthYear = document.getElementById('work-calendar-month-year');
+    
+    let workCurrentDate = new Date();
+    let workCurrentYear = workCurrentDate.getFullYear();
+    let workCurrentMonth = workCurrentDate.getMonth();
 
     db.collection('workSchedules').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
         schedulesData = [];
         snapshot.forEach(doc => schedulesData.push({ id: doc.id, ...doc.data() }));
-        renderSchedules();
+        if (typeof renderWorkCalendar === 'function') {
+            renderWorkCalendar();
+        }
     });
 
-    function renderSchedules() {
-        scheduleContainer.innerHTML = '';
-        if (schedulesData.length === 0) {
-            scheduleContainer.innerHTML = '<div style="text-align:center; padding: 50px; color: var(--text-muted);"><i class="fa-regular fa-calendar-check"></i> 등록된 일정이 없습니다.</div>';
-            return;
+    document.getElementById('work-prev-year-btn')?.addEventListener('click', () => { workCurrentYear--; renderWorkCalendar(); });
+    document.getElementById('work-next-year-btn')?.addEventListener('click', () => { workCurrentYear++; renderWorkCalendar(); });
+    document.getElementById('work-prev-month-btn')?.addEventListener('click', () => {
+        workCurrentMonth--;
+        if (workCurrentMonth < 0) { workCurrentMonth = 11; workCurrentYear--; }
+        renderWorkCalendar();
+    });
+    document.getElementById('work-next-month-btn')?.addEventListener('click', () => {
+        workCurrentMonth++;
+        if (workCurrentMonth > 11) { workCurrentMonth = 0; workCurrentYear++; }
+        renderWorkCalendar();
+    });
+
+    window.renderWorkCalendar = function() {
+        if (!workCalendarGrid) return;
+        workCalendarGrid.innerHTML = '';
+        
+        if (workCalendarMonthYear) {
+            workCalendarMonthYear.innerText = `${workCurrentYear}년 ${workCurrentMonth + 1}월`;
         }
         
-        const grid = document.createElement('div');
-        grid.className = 'work-grid';
+        const firstDay = new Date(workCurrentYear, workCurrentMonth, 1).getDay();
+        const daysInMonth = new Date(workCurrentYear, workCurrentMonth + 1, 0).getDate();
         
-        schedulesData.forEach(item => {
-            const isCompleted = item.completed;
-            const iconClass = isCompleted ? 'fa-solid fa-check-double' : 'fa-regular fa-calendar-check';
-            const iconColor = isCompleted ? 'style="background: #2ed573;"' : '';
-            const deleteBtn = currentUser ? `<button class="work-card-delete item-delete-btn" onclick="event.preventDefault(); window.deleteItem('workSchedules', '${item.id}')"><i class="fa-solid fa-trash"></i></button>` : '';
+        for (let i = 0; i < firstDay; i++) {
+            const blankCell = document.createElement('div');
+            blankCell.className = 'calendar-day empty';
+            blankCell.style.cssText = "min-height: 80px; background: rgba(255,255,255,0.02); border-radius: 8px;";
+            workCalendarGrid.appendChild(blankCell);
+        }
+        
+        const today = new Date();
+        const isCurrentMonth = (workCurrentYear === today.getFullYear() && workCurrentMonth === today.getMonth());
+        
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dayCell = document.createElement('div');
+            dayCell.className = 'calendar-day';
+            dayCell.style.cssText = "min-height: 80px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px; padding: 5px; position: relative; cursor: pointer; display: flex; flex-direction: column; gap: 4px;";
             
-            const card = document.createElement('a');
-            card.href = "#";
-            card.className = `work-card glass-card ${isCompleted ? 'completed' : ''}`;
-            if(isCompleted) card.style.opacity = '0.6';
-            card.onclick = (e) => {
-                e.preventDefault();
-                window.toggleSchedule(item.id, isCompleted);
+            const dayStr = String(d).padStart(2, '0');
+            const monthStr = String(workCurrentMonth + 1).padStart(2, '0');
+            const dateString = `${workCurrentYear}-${monthStr}-${dayStr}`;
+            
+            let dateColor = "var(--text-color)";
+            const dayOfWeek = new Date(workCurrentYear, workCurrentMonth, d).getDay();
+            if (dayOfWeek === 0) dateColor = "#ff4757"; // Sunday
+            if (dayOfWeek === 6) dateColor = "#3742fa"; // Saturday
+            if (isCurrentMonth && d === today.getDate()) {
+                dateColor = "var(--primary-color)";
+                dayCell.style.border = "2px solid var(--primary-color)";
+            }
+            
+            const dateSpan = document.createElement('span');
+            dateSpan.style.cssText = `font-size: 0.85rem; font-weight: bold; color: ${dateColor}; align-self: flex-start;`;
+            dateSpan.innerText = d;
+            dayCell.appendChild(dateSpan);
+            
+            dayCell.onclick = (e) => {
+                if (e.target.closest('.schedule-item')) return; // Ignore if clicked on a schedule
+                if (!currentUser) {
+                    const reqModal = document.getElementById('login-required-modal');
+                    if(reqModal) reqModal.classList.remove('hidden');
+                    return;
+                }
+                const dateInput = document.getElementById('sch-date');
+                if (dateInput) dateInput.value = dateString;
+                const titleInput = document.getElementById('sch-title');
+                if (titleInput) titleInput.value = '';
+                const modal = document.getElementById('modal-schedule');
+                if (modal) modal.classList.remove('hidden');
             };
-
-            card.innerHTML = `
-                <div class="work-icon-wrap" ${iconColor}><i class="${iconClass}"></i></div>
-                <div class="work-info">
-                    <h4 style="${isCompleted ? 'text-decoration: line-through;' : ''}">${item.title}</h4>
-                    <p>${item.date ? item.date : '기한 없음'}</p>
-                </div>
-                ${deleteBtn}
-            `;
-            grid.appendChild(card);
-        });
-        scheduleContainer.appendChild(grid);
+            
+            const daySchedules = schedulesData.filter(sch => sch.date === dateString);
+            daySchedules.forEach(sch => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'schedule-item';
+                itemDiv.style.cssText = `font-size: 0.75rem; padding: 4px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: ${sch.completed ? 'rgba(255,255,255,0.05)' : 'rgba(0, 206, 201, 0.2)'}; color: ${sch.completed ? 'var(--text-muted)' : '#00cec9'}; text-decoration: ${sch.completed ? 'line-through' : 'none'}; cursor: pointer;`;
+                itemDiv.innerText = sch.title;
+                itemDiv.title = sch.title;
+                
+                itemDiv.onclick = (e) => {
+                    e.stopPropagation();
+                    if (!currentUser) return;
+                    if (confirm(`'${sch.title}' 일정을 삭제하시겠습니까?`)) {
+                        window.deleteItem('workSchedules', sch.id);
+                    } else if (confirm(`'${sch.title}' 일정의 완료 상태를 변경하시겠습니까?`)) {
+                        window.toggleSchedule(sch.id, sch.completed);
+                    }
+                };
+                dayCell.appendChild(itemDiv);
+            });
+            
+            workCalendarGrid.appendChild(dayCell);
+        }
     }
 
-    document.getElementById('form-schedule').addEventListener('submit', (e) => {
-        e.preventDefault();
-        db.collection('workSchedules').add({
-            title: document.getElementById('sch-title').value.trim(),
-            date: document.getElementById('sch-date').value,
-            completed: false,
-            createdBy: currentUser.uid,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(() => {
-            e.target.reset();
-            document.getElementById('modal-schedule').classList.add('hidden');
+    const formSchedule = document.getElementById('form-schedule');
+    if (formSchedule) {
+        formSchedule.addEventListener('submit', (e) => {
+            e.preventDefault();
+            db.collection('workSchedules').add({
+                title: document.getElementById('sch-title').value.trim(),
+                date: document.getElementById('sch-date').value,
+                completed: false,
+                createdBy: currentUser.uid,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                e.target.reset();
+                document.getElementById('modal-schedule').classList.add('hidden');
+            });
         });
-    });
+    }
 
     // ====================================================
     // 개인성과 (Performance)
