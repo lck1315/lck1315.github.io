@@ -1702,10 +1702,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const blockRect = blockEl.getBoundingClientRect();
                 const mouseXInBlock = e.clientX - blockRect.left;
                 
-                // Ctrl/Meta 키 없이도 마우스로 블록을 잡았을 때 바로 리사이즈 혹은 이동을 활성화합니다
-                if (mouseXInBlock <= 12) {
+                // Ctrl/Meta(Cmd) 키를 누른 채 가장자리를 잡았을 때만 늘리기/줄이기(Resize)가 작동하도록 조건을 제한합니다
+                if ((e.ctrlKey || e.metaKey) && mouseXInBlock <= 12) {
                     isResizingLeft = true;
-                } else if (mouseXInBlock >= blockRect.width - 12) {
+                } else if ((e.ctrlKey || e.metaKey) && mouseXInBlock >= blockRect.width - 12) {
                     isResizingRight = true;
                 } else {
                     isMoving = true;
@@ -1795,8 +1795,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const blockRect = blockEl.getBoundingClientRect();
             const mouseXInBlock = e.clientX - blockRect.left;
             
-            // Ctrl/Meta 키 없이도 마우스 커서를 항상 grab 및 ew-resize로 세팅합니다
-            if (mouseXInBlock <= 12 || mouseXInBlock >= blockRect.width - 12) {
+            // Ctrl/Meta(Cmd) 키를 누른 채 가장자리에 올렸을 때만 늘리기/줄이기(ew-resize) 커서를 표시합니다
+            if ((e.ctrlKey || e.metaKey) && (mouseXInBlock <= 12 || mouseXInBlock >= blockRect.width - 12)) {
                 blockEl.style.cursor = 'ew-resize';
             } else {
                 blockEl.style.cursor = 'grab';
