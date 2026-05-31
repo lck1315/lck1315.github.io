@@ -1930,11 +1930,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dx = e.clientX - panStartX;
                 container.scrollLeft = panScrollLeft - dx;
             }
+            panStartX = null;
             e.preventDefault();
             return;
         }
         
-        if (!isDrawing && !isMoving && !isResizingLeft && !isResizingRight) return;
+        if (!isDrawing && !isMoving && !isResizingLeft && !isResizingRight) {
+            panStartX = null;
+            return;
+        }
         
         const ganttBody = document.getElementById('ps-gantt-body');
         const container = document.getElementById('ps-gantt-container');
