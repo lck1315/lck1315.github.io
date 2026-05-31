@@ -1285,6 +1285,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('로그인이 필요합니다.');
                 return;
             }
+            if (!e.ctrlKey && !e.metaKey) {
+                const rect = ganttBody.getBoundingClientRect();
+                const y = e.clientY - rect.top;
+                const rowIndex = Math.floor(y / 30);
+                if(rowIndex >= 0 && rowIndex < psRowIndexMap.length) {
+                    psSelectedId = psRowIndexMap[rowIndex];
+                    renderPsScheduler();
+                }
+                return;
+            }
             const container = document.getElementById('ps-gantt-container');
             const rect = ganttBody.getBoundingClientRect();
             const x = e.clientX - rect.left + container.scrollLeft;
@@ -1663,6 +1673,90 @@ document.addEventListener('DOMContentLoaded', () => {
                 img.src = event.target.result;
             };
             reader.readAsDataURL(file);
+        });
+    }
+
+    // ====================================================
+    // 프로젝트 데이터 내보내기 / 불러오기
+    // ====================================================
+    const psExportBtn = document.getElementById('ps-btn-export-file');
+    const psImportBtn = document.getElementById('ps-btn-import-file');
+    const psFileInput = document.getElementById('ps-file-input');
+
+    if (psExportBtn) {
+        psExportBtn.addEventListener('click', () => {
+            if (!currentUser) { alert('로그인이 필요합니다.'); return; }
+            if (psData.length === 0) { alert('내보낼 데이터가 없습니다.'); return; }
+            
+            const exportData = psData.map(item => {
+                const data = { ...item };
+                return data;
+            });
+
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `project_save_${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    }
+
+    if (psImportBtn && psFileInput) {
+        psImportBtn.addEventListener('click', () => {
+            if (!currentUser) { alert('로그인이 필요합니다.'); return; }
+            psFileInput.click();
+        });
+
+        psFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const parsedData = JSON.parse(event.target.result);
+                    if (!Array.isArray(parsedData)) {
+                        alert('잘못된 파일 형식입니다. (배열 형태의 JSON이 아닙니다)');
+                        return;
+                    }
+                    if (confirm('파일 데이터를 불러오면 기존 프로젝트 데이터가 모두 덮어씌워집니다. 계속하시겠습니까?')) {
+                        const batch = db.batch();
+                        db.collection('workProjects').get().then(snapshot => {
+                            // Delete existing data
+                            snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                            
+                            // Insert new data
+                            parsedData.forEach(item => {
+                                const docId = item.id;
+                                const itemData = { ...item };
+                                delete itemData.id; // ID 필드는 제외하고 저장
+                                
+                                const ref = docId ? db.collection('workProjects').doc(docId) : db.collection('workProjects').doc();
+                                batch.set(ref, itemData);
+                            });
+                            
+                            return batch.commit();
+                        }).then(() => {
+                            alert('프로젝트 데이터를 성공적으로 불러왔습니다!');
+                            psFileInput.value = '';
+                        }).catch(err => {
+                            console.error('불러오기 실패:', err);
+                            alert('데이터를 저장하는 중 오류가 발생했습니다.');
+                        });
+                    } else {
+                        psFileInput.value = '';
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('JSON 파일을 파싱하는 중 오류가 발생했습니다.');
+                }
+            };
+            reader.readAsText(file);
         });
     }
 
