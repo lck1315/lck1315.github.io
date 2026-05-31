@@ -573,9 +573,28 @@ document.addEventListener('DOMContentLoaded', () => {
             links.forEach(link => {
                 const iconClass = link.icon || 'fa-solid fa-link';
                 const deleteBtnHtml = currentUser ? `<button class="work-card-delete item-delete-btn" onclick="event.preventDefault(); window.deleteItem('workLinks', '${link.id}')"><i class="fa-solid fa-xmark"></i></button>` : '';
+                
+                // 도메인 추출 및 파비콘 이미지 적용
+                let domain = '';
+                try {
+                    let targetUrl = link.url;
+                    if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+                        targetUrl = 'https://' + targetUrl;
+                    }
+                    const urlObj = new URL(targetUrl);
+                    domain = urlObj.hostname;
+                } catch (e) {}
+
+                const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64` : '';
+                const iconHtml = faviconUrl 
+                    ? `<img src="${faviconUrl}" style="width: 24px; height: 24px; border-radius: 6px; object-fit: contain;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';"><i class="${iconClass}" style="display:none;"></i>`
+                    : `<i class="${iconClass}"></i>`;
+
                 grid.insertAdjacentHTML('beforeend', `
                     <a href="${link.url}" target="_blank" class="work-card glass-card">
-                        <div class="work-icon-wrap"><i class="${iconClass}"></i></div>
+                        <div class="work-icon-wrap" style="display: flex; align-items: center; justify-content: center; overflow: hidden; background: rgba(255,255,255,0.05); border: 1px solid var(--card-border); border-radius: 8px; width: 42px; height: 42px; padding: 0;">
+                            ${iconHtml}
+                        </div>
                         <div class="work-info"><h4>${link.title}</h4><p>${link.url}</p></div>
                         ${deleteBtnHtml}
                     </a>
@@ -1666,11 +1685,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let dragStartX = 0;
     let dragStartDayIndex = 0;
 
-
-    let isClickExtendCandidate = false;
-    let clickExtendTaskId = null;
-    let clickExtendDayIndex = 0;
-
     function getDayIndexFromX(x) {
         return Math.floor(x / psDayWidth);
     }
@@ -1689,9 +1703,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const ganttBody = document.getElementById('ps-gantt-body');
         if (!ganttBody || !ganttBody.contains(e.target)) return;
         if (!currentUser) { alert('로그인이 필요합니다.'); return; }
-        
-        isClickExtendCandidate = false;
-        clickExtendTaskId = null;
         
         const container = document.getElementById('ps-gantt-container');
         const rect = ganttBody.getBoundingClientRect();
@@ -1762,19 +1773,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (ganttRows[rowIndex]) ganttRows[rowIndex].classList.add('selected');
             
             const task = psData.find(p => p.id === taskId);
-            
-            if (task && task.startDate && task.endDate && !e.ctrlKey && !e.metaKey) {
-                // Prepare for extend OR pan
-                isClickExtendCandidate = true;
-                clickExtendTaskId = taskId;
-                clickExtendDayIndex = dayIndex;
-                
-                isPanning = false;
-                panStartX = e.clientX;
-                panScrollLeft = container.scrollLeft;
-                e.preventDefault();
-                return;
-            }
             
             if (!e.ctrlKey && !e.metaKey) {
                 // Just select row and prepare for panning
@@ -1887,24 +1885,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             e.preventDefault();
             return;
-        }
-        
-        if (isClickExtendCandidate) {
-            isClickExtendCandidate = false;
-            const task = psData.find(p => p.id === clickExtendTaskId);
-            if (task) {
-                const startDay = getDayIndexFromDateStr(task.startDate);
-                const endDay = getDayIndexFromDateStr(task.endDate);
-                let newStartDay = startDay;
-                let newEndDay = endDay;
-                if (clickExtendDayIndex < startDay) newStartDay = clickExtendDayIndex;
-                else if (clickExtendDayIndex > endDay) newEndDay = clickExtendDayIndex;
-                
-                if (newStartDay !== startDay || newEndDay !== endDay) {
-                    window.psUpdateField(clickExtendTaskId, 'startDate', getDateFromDayIndex(newStartDay));
-                    window.psUpdateField(clickExtendTaskId, 'endDate', getDateFromDayIndex(newEndDay));
-                }
-            }
         }
         
         if (!isDrawing && !isMoving && !isResizingLeft && !isResizingRight) return;
