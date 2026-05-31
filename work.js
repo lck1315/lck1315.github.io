@@ -1319,8 +1319,25 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('ps-year')?.addEventListener('change', (e) => { psYear = parseInt(e.target.value); renderPsScheduler(); });
     document.getElementById('ps-btn-today')?.addEventListener('click', () => { 
         psYear = new Date().getFullYear(); 
-        document.getElementById('ps-year').value = psYear; 
+        if (document.getElementById('ps-year')) {
+            document.getElementById('ps-year').value = psYear;
+        }
         renderPsScheduler(); 
+        
+        // 오늘 날짜 위치로 가로 스크롤 부드럽게 이동
+        const container = document.getElementById('ps-gantt-container');
+        if (container) {
+            const today = new Date();
+            const yStart = new Date(psYear, 0, 1);
+            const diffDays = Math.floor((today - yStart) / (1000 * 60 * 60 * 24));
+            if (diffDays >= 0 && diffDays < 366) {
+                const todayX = diffDays * psDayWidth;
+                container.scrollTo({
+                    left: todayX - (container.clientWidth / 2),
+                    behavior: 'smooth'
+                });
+            }
+        }
     });
 
     document.getElementById('ps-btn-zoom-in')?.addEventListener('click', () => { psDayWidth = Math.min(psDayWidth + 5, 100); renderPsScheduler(); });
@@ -1386,6 +1403,11 @@ document.addEventListener('DOMContentLoaded', () => {
     window.psUpdateField = (id, field, value) => {
         if(!currentUser) return alert('로그인이 필요합니다.');
         db.collection('workProjects').doc(id).update({ [field]: value }).catch(e => console.error(e));
+    };
+
+    window.psUpdateFields = (id, fieldsObj) => {
+        if(!currentUser) return alert('로그인이 필요합니다.');
+        db.collection('workProjects').doc(id).update(fieldsObj).catch(e => console.error(e));
     };
 
     function renderPsScheduler() {
@@ -1668,6 +1690,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!ganttBody || !ganttBody.contains(e.target)) return;
         if (!currentUser) { alert('로그인이 필요합니다.'); return; }
         
+        isClickExtendCandidate = false;
+        clickExtendTaskId = null;
+        
         const container = document.getElementById('ps-gantt-container');
         const rect = ganttBody.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -1911,8 +1936,10 @@ document.addEventListener('DOMContentLoaded', () => {
             finalEndDay = originalEndDay + deltaDays;
         }
         
-        window.psUpdateField(actionTaskId, 'startDate', getDateFromDayIndex(finalStartDay));
-        window.psUpdateField(actionTaskId, 'endDate', getDateFromDayIndex(finalEndDay));
+        window.psUpdateFields(actionTaskId, {
+            startDate: getDateFromDayIndex(finalStartDay),
+            endDate: getDateFromDayIndex(finalEndDay)
+        });
         
         if (isDrawing && actionBlock) {
             actionBlock.remove();
