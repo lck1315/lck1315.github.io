@@ -1278,6 +1278,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isMoving = false;
     let isResizingLeft = false;
     let isResizingRight = false;
+    let isPanning = false;
 
     let actionTaskId = null;
     let actionBlock = null;
@@ -1287,6 +1288,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let originalEndDay = 0;
     let dragStartX = 0;
     let dragStartDayIndex = 0;
+
+    let panStartX = 0;
+    let panScrollLeft = 0;
+    let isClickExtendCandidate = false;
+    let clickExtendTaskId = null;
+    let clickExtendDayIndex = 0;
 
     function getDayIndexFromX(x) {
         return Math.floor(x / psDayWidth);
@@ -1317,7 +1324,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const blockEl = e.target.closest('.ps-block');
         
         if (blockEl) {
-            // Clicked on an existing block
             actionTaskId = blockEl.dataset.taskId;
             psSelectedId = actionTaskId;
             renderPsScheduler();
@@ -1330,7 +1336,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 dragStartDayIndex = dayIndex;
                 actionBlock = blockEl;
                 
-                // Determine if we are resizing or moving
                 const blockRect = blockEl.getBoundingClientRect();
                 const mouseXInBlock = e.clientX - blockRect.left;
                 
@@ -1346,7 +1351,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // If clicking empty grid area
         if(rowIndex >= 0 && rowIndex < psRowIndexMap.length) {
             const taskId = psRowIndexMap[rowIndex];
             psSelectedId = taskId;
@@ -1355,24 +1359,26 @@ document.addEventListener('DOMContentLoaded', () => {
             const task = psData.find(p => p.id === taskId);
             
             if (task && task.startDate && task.endDate && !e.ctrlKey && !e.metaKey) {
-                // Feature: "다른 곳을 찍으면 전에 있던 바에 연결되게 하고" (Extend existing bar)
-                const startDay = getDayIndexFromDateStr(task.startDate);
-                const endDay = getDayIndexFromDateStr(task.endDate);
+                // Prepare for extend OR pan
+                isClickExtendCandidate = true;
+                clickExtendTaskId = taskId;
+                clickExtendDayIndex = dayIndex;
                 
-                let newStartDay = startDay;
-                let newEndDay = endDay;
-                
-                if (dayIndex < startDay) newStartDay = dayIndex;
-                else if (dayIndex > endDay) newEndDay = dayIndex;
-                else return; // Clicked inside range but not on block
-                
-                window.psUpdateField(taskId, 'startDate', getDateFromDayIndex(newStartDay));
-                window.psUpdateField(taskId, 'endDate', getDateFromDayIndex(newEndDay));
+                isPanning = false;
+                panStartX = e.clientX;
+                panScrollLeft = container.scrollLeft;
                 e.preventDefault();
                 return;
             }
             
-            if (!e.ctrlKey && !e.metaKey) return; // Just select row, don't draw
+            if (!e.ctrlKey && !e.metaKey) {
+                // Just select row and prepare for panning
+                isPanning = false;
+                panStartX = e.clientX;
+                panScrollLeft = container.scrollLeft;
+                e.preventDefault();
+                return;
+            }
             
             // Draw new block
             isDrawing = true;
@@ -1395,7 +1401,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const ganttBody = document.getElementById('ps-gantt-body');
         if(!ganttBody) return;
         
-        // Edge hover cursor change
         const blockEl = e.target.closest('.ps-block');
         if(blockEl && !isDrawing && !isMoving && !isResizingLeft && !isResizingRight) {
             const blockRect = blockEl.getBoundingClientRect();
@@ -1405,11 +1410,23 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 blockEl.style.cursor = 'grab';
             }
-        } else if (blockEl && !isDrawing && !isResizingLeft && !isResizingRight) {
-            // Restore default pointer if not near edge
         }
         
-        if (!isDrawing && !isMoving && !isResizingLeft && !isResizingRight) return;
+        if (!isDrawing && !isMoving && !isResizingLeft && !isResizingRight) {
+            // Check for panning
+            if (e.buttons === 1 && !e.ctrlKey && !e.metaKey && !blockEl) {
+                if (Math.abs(e.clientX - panStartX) > 3) {
+                    isPanning = true;
+                    isClickExtendCandidate = false; // Cancel extend if panning
+                    const container = document.getElementById('ps-gantt-container');
+                    if (container) {
+                        container.scrollLeft = panScrollLeft - (e.clientX - panStartX);
+                        container.style.cursor = 'grabbing';
+                    }
+                }
+            }
+            return;
+        }
         
         const container = document.getElementById('ps-gantt-container');
         const rect = ganttBody.getBoundingClientRect();
@@ -1444,6 +1461,30 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     document.addEventListener('mouseup', (e) => {
+        if (isPanning) {
+            isPanning = false;
+            const container = document.getElementById('ps-gantt-container');
+            if (container) container.style.cursor = '';
+        }
+        
+        if (isClickExtendCandidate) {
+            isClickExtendCandidate = false;
+            const task = psData.find(p => p.id === clickExtendTaskId);
+            if (task) {
+                const startDay = getDayIndexFromDateStr(task.startDate);
+                const endDay = getDayIndexFromDateStr(task.endDate);
+                let newStartDay = startDay;
+                let newEndDay = endDay;
+                if (clickExtendDayIndex < startDay) newStartDay = clickExtendDayIndex;
+                else if (clickExtendDayIndex > endDay) newEndDay = clickExtendDayIndex;
+                
+                if (newStartDay !== startDay || newEndDay !== endDay) {
+                    window.psUpdateField(clickExtendTaskId, 'startDate', getDateFromDayIndex(newStartDay));
+                    window.psUpdateField(clickExtendTaskId, 'endDate', getDateFromDayIndex(newEndDay));
+                }
+            }
+        }
+
         if (!isDrawing && !isMoving && !isResizingLeft && !isResizingRight) return;
         
         const ganttBody = document.getElementById('ps-gantt-body');
@@ -1489,6 +1530,22 @@ document.addEventListener('DOMContentLoaded', () => {
         actionBlock = null;
         actionTaskId = null;
     });
+
+    // Gantt Container Wheel Zoom (Ctrl + Mouse Wheel)
+    const ganttContainerEl = document.getElementById('ps-gantt-container');
+    if (ganttContainerEl) {
+        ganttContainerEl.addEventListener('wheel', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    psDayWidth = Math.min(psDayWidth + 5, 100);
+                } else {
+                    psDayWidth = Math.max(psDayWidth - 5, 10);
+                }
+                renderPsScheduler();
+            }
+        }, { passive: false });
+    }
 
     // ====================================================
     // 파티클 배경 로직 (기존 유지)
