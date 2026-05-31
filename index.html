@@ -24,7 +24,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=1.0.46">
+    <link rel="stylesheet" href="style.css?v=1.0.49">
 </head>
 <body class="dark-theme">
     <!-- 스크롤 진행 바 -->
@@ -835,18 +835,45 @@
 
                 <button type="submit" class="btn btn-primary" style="width:100%; padding:0.8rem; margin-top:4px; font-weight:700;"><i class="fa-solid fa-save"></i> 저장하기</button>
             </form>
+    <!-- 회원 관리 모달 (마스터 전용) -->
+    <div id="admin-approval-modal" class="calendar-modal-overlay">
+        <div class="calendar-modal-content glass-card" style="max-width: 600px; padding: 2rem;">
+            <span class="admin-modal-close" id="admin-modal-close" style="position: absolute; right: 20px; top: 15px; font-size: 1.8rem; cursor: pointer; color: var(--text-muted); transition: var(--transition-quick);">&times;</span>
+            <h3 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 1rem; background: linear-gradient(135deg, var(--text-color), var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"><i class="fa-solid fa-users-gear"></i> 마스터 회원 관리 센터</h3>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color);">
+                <button id="admin-tab-pending" class="btn btn-primary" style="flex: 1; border-bottom-left-radius: 0; border-bottom-right-radius: 0;">가입 대기 목록</button>
+                <button id="admin-tab-all" class="btn btn-secondary" style="flex: 1; border-bottom-left-radius: 0; border-bottom-right-radius: 0;">전체 회원 관리</button>
+            </div>
+
+            <div id="admin-approval-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto;">
+                <!-- JS를 통해 리스트 아이템 렌더링 (가입 대기) -->
+            </div>
+            
+            <div id="admin-all-users-list" style="display: none; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto;">
+                <!-- JS를 통해 리스트 아이템 렌더링 (전체 회원) -->
+            </div>
         </div>
     </div>
 
-    <!-- 회원 가입 승인 관리 모달 (마스터 전용) -->
-    <div id="admin-approval-modal" class="calendar-modal-overlay">
-        <div class="calendar-modal-content glass-card" style="max-width: 500px; padding: 2rem;">
-            <span class="admin-modal-close" id="admin-modal-close" style="position: absolute; right: 20px; top: 15px; font-size: 1.8rem; cursor: pointer; color: var(--text-muted); transition: var(--transition-quick);">&times;</span>
-            <h3 style="font-size: 1.5rem; font-weight: 800; margin-bottom: 1.5rem; background: linear-gradient(135deg, var(--text-color), var(--primary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"><i class="fa-solid fa-user-check"></i> 회원 가입 승인 대기 목록</h3>
+    <!-- 회원 정보 수정 모달 (마스터 전용) -->
+    <div id="admin-edit-user-modal" class="calendar-modal-overlay" style="z-index: 10001;">
+        <div class="calendar-modal-content glass-card" style="max-width: 400px; padding: 2rem;">
+            <span class="admin-edit-user-close" id="admin-edit-user-close" style="position: absolute; right: 20px; top: 15px; font-size: 1.8rem; cursor: pointer; color: var(--text-muted); transition: var(--transition-quick);">&times;</span>
+            <h3 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 1rem; color: var(--text-color);"><i class="fa-solid fa-user-pen"></i> 회원 정보 수정</h3>
             
-            <div id="admin-approval-list" style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto;">
-                <!-- JS를 통해 리스트 아이템 렌더링 -->
-            </div>
+            <form id="admin-edit-user-form">
+                <input type="hidden" id="admin-edit-uid">
+                <div style="margin-bottom: 15px;">
+                    <label style="display:block; margin-bottom:5px; font-size:0.9rem; color:var(--text-muted);">이름 (Name)</label>
+                    <input type="text" id="admin-edit-name" required style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color);">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display:block; margin-bottom:5px; font-size:0.9rem; color:var(--text-muted);">직책 (Role)</label>
+                    <input type="text" id="admin-edit-role" placeholder="예: 든든한 가장" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color);">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.8rem; font-weight: bold;"><i class="fa-solid fa-save"></i> 변경사항 저장</button>
+            </form>
         </div>
     </div>
 
@@ -957,7 +984,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     
-    <script src="app.js?v=1.0.46"></script>
+    <script src="app.js?v=1.0.49"></script>
 
     <!-- 단어장 연동 스크립트 -->
     <script>

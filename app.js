@@ -2779,11 +2779,15 @@ function initCardSliders(container) {
         });
     }
 
-    // 회원 승인 관리 모달 로직
+    // 회원 관리 모달 로직 (마스터 전용)
     const adminApprovalModal = document.getElementById('admin-approval-modal');
     const adminModalClose = document.getElementById('admin-modal-close');
     const dropdownAdminApprovalBtn = document.getElementById('dropdown-admin-approval-btn');
     const adminApprovalList = document.getElementById('admin-approval-list');
+    const adminAllUsersList = document.getElementById('admin-all-users-list');
+    
+    const adminTabPending = document.getElementById('admin-tab-pending');
+    const adminTabAll = document.getElementById('admin-tab-all');
 
     if (adminModalClose) {
         adminModalClose.addEventListener('click', () => {
@@ -2803,64 +2807,119 @@ function initCardSliders(container) {
         dropdownAdminApprovalBtn.addEventListener('click', () => {
             adminApprovalModal.classList.add('show');
             profileDropdown.classList.add('hidden');
-            loadPendingUsers();
+            loadAdminUsers();
+        });
+    }
+    
+    if (adminTabPending && adminTabAll) {
+        adminTabPending.addEventListener('click', () => {
+            adminTabPending.classList.replace('btn-secondary', 'btn-primary');
+            adminTabAll.classList.replace('btn-primary', 'btn-secondary');
+            adminApprovalList.style.display = 'flex';
+            adminAllUsersList.style.display = 'none';
+        });
+        
+        adminTabAll.addEventListener('click', () => {
+            adminTabAll.classList.replace('btn-secondary', 'btn-primary');
+            adminTabPending.classList.replace('btn-primary', 'btn-secondary');
+            adminApprovalList.style.display = 'none';
+            adminAllUsersList.style.display = 'flex';
         });
     }
 
-    function loadPendingUsers() {
-        if (!adminApprovalList) return;
+    function loadAdminUsers() {
+        if (!adminApprovalList || !adminAllUsersList) return;
         adminApprovalList.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">로딩 중...</p>';
+        adminAllUsersList.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">로딩 중...</p>';
         
         db.collection('users').get()
             .then(snapshot => {
                 adminApprovalList.innerHTML = '';
+                adminAllUsersList.innerHTML = '';
+                
                 if (snapshot.empty) {
                     adminApprovalList.innerHTML = '<div class="no-messages"><p style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">가입된 회원이 없습니다.</p></div>';
+                    adminAllUsersList.innerHTML = '<div class="no-messages"><p style="text-align: center; color: var(--text-muted); font-size: 0.9rem;">가입된 회원이 없습니다.</p></div>';
                     return;
                 }
                 
+                let pendingCount = 0;
+                let allCount = 0;
+
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    if (data.role === '아빠 👨') return; // 아빠는 목록에서 제외
+                    const isMaster = data.role === '아빠 👨';
+                    const isApproved = data.isApproved === true;
                     
+                    // Create list item UI
                     const item = document.createElement('div');
                     item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid var(--card-border);';
                     
-                    const isApproved = data.isApproved === true;
                     const statusBadge = isApproved 
                         ? `<span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: rgba(46, 213, 115, 0.2); color: #2ed573;">승인됨</span>`
                         : `<span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: rgba(255, 71, 87, 0.2); color: #ff4757;">대기중</span>`;
 
-                    const actionBtn = isApproved
-                        ? `<button class="btn btn-secondary" onclick="toggleApproval('${doc.id}', false)" style="padding: 6px 12px; font-size: 0.8rem; border-color: #ffa502; color: #ffa502;">승인 해제</button>`
-                        : `<button class="btn btn-primary" onclick="toggleApproval('${doc.id}', true)" style="padding: 6px 12px; font-size: 0.8rem;">가입 승인</button>`;
+                    let actionBtnsHTML = '';
+                    if (!isApproved) {
+                        actionBtnsHTML = `
+                            <button class="btn btn-primary" onclick="toggleApproval('${doc.id}', true)" style="padding: 6px 12px; font-size: 0.8rem;">가입 승인</button>
+                            <button class="btn btn-secondary" onclick="rejectUser('${doc.id}')" style="padding: 6px 12px; font-size: 0.8rem; border-color: #ff4757; color: #ff4757;" title="가입 거절 및 삭제"><i class="fa-solid fa-trash"></i></button>
+                        `;
+                    } else {
+                        if (!isMaster) {
+                            const escapedName = (data.nickname || '').replace(/'/g, "\\'");
+                            const escapedRole = (data.role || '').replace(/'/g, "\\'");
+                            actionBtnsHTML = `
+                                <button class="btn btn-secondary" onclick="openAdminEditModal('${doc.id}', '${escapedName}', '${escapedRole}')" style="padding: 6px 12px; font-size: 0.8rem; border-color: #3498db; color: #3498db;" title="정보 수정"><i class="fa-solid fa-pen"></i></button>
+                                <button class="btn btn-secondary" onclick="toggleApproval('${doc.id}', false)" style="padding: 6px 12px; font-size: 0.8rem; border-color: #ffa502; color: #ffa502;" title="승인 해제(대기 전환)"><i class="fa-solid fa-ban"></i></button>
+                                <button class="btn btn-secondary" onclick="rejectUser('${doc.id}')" style="padding: 6px 12px; font-size: 0.8rem; border-color: #ff4757; color: #ff4757;" title="강제 탈퇴"><i class="fa-solid fa-user-xmark"></i></button>
+                            `;
+                        } else {
+                            actionBtnsHTML = `<span style="font-size: 0.8rem; color: #ffb8b8; font-weight: bold;"><i class="fa-solid fa-crown"></i> 최고 관리자</span>`;
+                        }
+                    }
 
                     item.innerHTML = `
                         <div>
                             <p style="margin: 0; font-weight: 700; font-size: 0.95rem;">${data.nickname} <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(${data.role})</span> ${statusBadge}</p>
                             <p style="margin: 0; font-size: 0.8rem; color: var(--text-muted);">${data.email}</p>
                         </div>
-                        <div style="display: flex; gap: 6px;">
-                            ${actionBtn}
-                            <button class="btn btn-secondary" onclick="rejectUser('${doc.id}')" style="padding: 6px 12px; font-size: 0.8rem; border-color: #ff4757; color: #ff4757;" title="계정 삭제"><i class="fa-solid fa-trash"></i></button>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            ${actionBtnsHTML}
                         </div>
                     `;
-                    adminApprovalList.appendChild(item);
+
+                    // 분배 로직
+                    if (!isApproved) {
+                        adminApprovalList.appendChild(item);
+                        pendingCount++;
+                    } else {
+                        adminAllUsersList.appendChild(item);
+                        allCount++;
+                    }
                 });
+                
+                if (pendingCount === 0) {
+                    adminApprovalList.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.9rem; padding: 20px;">가입 대기 중인 회원이 없습니다.</p>';
+                }
+                if (allCount === 0) {
+                    adminAllUsersList.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.9rem; padding: 20px;">승인된 회원이 없습니다.</p>';
+                }
             })
             .catch(err => {
                 console.error("회원 리스트 로드 실패:", err);
                 adminApprovalList.innerHTML = '<p style="text-align: center; color: #ff4757; font-size: 0.9rem;">리스트를 불러오는 중 오류가 발생했습니다.</p>';
+                adminAllUsersList.innerHTML = '<p style="text-align: center; color: #ff4757; font-size: 0.9rem;">리스트를 불러오는 중 오류가 발생했습니다.</p>';
             });
     }
 
     window.toggleApproval = function(userId, approve) {
-        const actionStr = approve ? "승인" : "승인 해제";
+        const actionStr = approve ? "승인" : "승인 해제(대기 상태로 변경)";
         if (confirm(`이 회원을 ${actionStr} 처리하시겠습니까?`)) {
             db.collection('users').doc(userId).update({ isApproved: approve })
                 .then(() => {
                     alert(`${actionStr} 완료되었습니다.`);
-                    loadPendingUsers();
+                    loadAdminUsers();
                 })
                 .catch(err => {
                     console.error("승인/해제 실패:", err);
@@ -2870,18 +2929,78 @@ function initCardSliders(container) {
     };
 
     window.rejectUser = function(userId) {
-        if (confirm("이 회원의 가입을 거절하시겠습니까? 데이터가 삭제됩니다.")) {
+        if (confirm("이 회원을 정말 데이터베이스에서 삭제하시겠습니까? (복구 불가능하며 접속이 영구 차단됩니다.)")) {
             db.collection('users').doc(userId).delete()
                 .then(() => {
-                    alert("거절 및 삭제되었습니다.");
-                    loadPendingUsers();
+                    alert("회원 정보가 완전히 삭제(탈퇴) 처리되었습니다.");
+                    loadAdminUsers();
                 })
                 .catch(err => {
-                    console.error("거절 실패:", err);
-                    alert("거절 처리 중 오류가 발생했습니다.");
+                    console.error("삭제 실패:", err);
+                    alert("삭제 처리 중 오류가 발생했습니다.");
                 });
         }
     };
+
+    // 회원 정보 수정 모달 로직 (마스터 전용)
+    const adminEditUserModal = document.getElementById('admin-edit-user-modal');
+    const adminEditUserClose = document.getElementById('admin-edit-user-close');
+    const adminEditUserForm = document.getElementById('admin-edit-user-form');
+    
+    window.openAdminEditModal = function(uid, currentName, currentRole) {
+        document.getElementById('admin-edit-uid').value = uid;
+        document.getElementById('admin-edit-name').value = currentName || '';
+        document.getElementById('admin-edit-role').value = currentRole || '';
+        
+        if (adminEditUserModal) {
+            adminEditUserModal.classList.add('show');
+        }
+    };
+
+    if (adminEditUserClose) {
+        adminEditUserClose.addEventListener('click', () => {
+            adminEditUserModal.classList.remove('show');
+        });
+    }
+    
+    if (adminEditUserModal) {
+        adminEditUserModal.addEventListener('click', (e) => {
+            if (e.target === adminEditUserModal) {
+                adminEditUserModal.classList.remove('show');
+            }
+        });
+    }
+
+    if (adminEditUserForm) {
+        adminEditUserForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const uid = document.getElementById('admin-edit-uid').value;
+            const newName = document.getElementById('admin-edit-name').value.trim();
+            const newRole = document.getElementById('admin-edit-role').value.trim();
+            
+            if (!uid || !newName) return;
+            
+            const submitBtn = adminEditUserForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...';
+            
+            db.collection('users').doc(uid).update({
+                nickname: newName,
+                role: newRole
+            }).then(() => {
+                alert('회원 정보가 성공적으로 수정되었습니다.');
+                adminEditUserModal.classList.remove('show');
+                loadAdminUsers();
+            }).catch(err => {
+                console.error("회원 정보 수정 에러:", err);
+                alert("정보 수정 중 오류가 발생했습니다.");
+            }).finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> 변경사항 저장';
+            });
+        });
+    }
 
     if (familyEditForm) {
         familyEditForm.addEventListener('submit', (e) => {
