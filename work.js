@@ -1328,6 +1328,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let psDayWidth = 30; // DAY_WIDTH from python
     let psSelectedId = null;
     let psRowIndexMap = []; // Maps Y-index to Task ID
+    
+    // Display date range (auto-calculated from tasks)
+    let psDisplayStartYear = psYear;
+    let psDisplayStartMonth = 0;
+    let psDisplayEndYear = psYear;
+    let psDisplayEndMonth = 11;
 
     db.collection('workProjects').orderBy('order', 'asc').onSnapshot((snapshot) => {
         psData = [];
@@ -1475,8 +1481,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if(!treeBody || !ganttHeader || !ganttBody) return;
 
+        // --- 0. Calculate date range from tasks ---
+        let minDate = null;
+        let maxDate = null;
+        
+        if (psData.length > 0) {
+            const validDates = psData
+                .filter(task => task.startDate && task.endDate)
+                .map(task => ({
+                    start: new Date(task.startDate),
+                    end: new Date(task.endDate)
+                }));
+            
+            if (validDates.length > 0) {
+                minDate = new Date(Math.min(...validDates.map(d => d.start.getTime())));
+                maxDate = new Date(Math.max(...validDates.map(d => d.end.getTime())));
+                
+                psDisplayStartYear = minDate.getFullYear();
+                psDisplayStartMonth = minDate.getMonth();
+                psDisplayEndYear = maxDate.getFullYear();
+                psDisplayEndMonth = maxDate.getMonth();
+            }
+        }
+        
+        const displayStartYear = psDisplayStartYear;
+        const displayStartMonth = psDisplayStartMonth;
+        const displayEndYear = psDisplayEndYear;
+        const displayEndMonth = psDisplayEndMonth;
+
         // --- 1. Gantt Header & Grid ---
-        const isLeapYear = (psYear % 4 === 0 && psYear % 100 !== 0) || (psYear % 400 === 0);
+        const isLeapYear = (displayStartYear % 4 === 0 && displayStartYear % 100 !== 0) || (displayStartYear % 400 === 0);
         const daysInMonth = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
         
         let headerHtml = `
@@ -1501,19 +1535,28 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentWeekCount = 0;
         let daysInCurrentWeek = 0;
         
-        for (let m = 0; m < 12; m++) {
-            const mDays = daysInMonth[m];
+        // Generate months and days based on date range
+        const daysInMonthFunc = (year, month) => {
+            const isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+            return [31, isLeap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month];
+        };
+        
+        let currentYear = displayStartYear;
+        let currentMonth = displayStartMonth;
+        
+        while (currentYear < displayEndYear || (currentYear === displayEndYear && currentMonth <= displayEndMonth)) {
+            const mDays = daysInMonthFunc(currentYear, currentMonth);
             
             // Month
             const mDiv = document.createElement('div');
             mDiv.className = 'ps-gh-cell';
             mDiv.style.width = `${mDays * psDayWidth}px`;
             mDiv.style.minWidth = `${mDays * psDayWidth}px`;
-            mDiv.innerText = `${m + 1}월`;
+            mDiv.innerText = `${currentMonth + 1}월`;
             ghMonths.appendChild(mDiv);
             
             for (let d = 1; d <= mDays; d++) {
-                const dayDate = new Date(psYear, m, d);
+                const dayDate = new Date(currentYear, currentMonth, d);
                 const dayOfWeek = dayDate.getDay();
                 const isToday = (dayDate.getFullYear() === today.getFullYear() && dayDate.getMonth() === today.getMonth() && dayDate.getDate() === today.getDate());
                 
@@ -1548,8 +1591,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 bgGrid.appendChild(gridLine);
                 
                 // Weeks calculation (roughly matching PyQt ISO week, simplified)
+                totalDays++;
+                
+                // Weeks calculation
                 daysInCurrentWeek++;
-                if (dayOfWeek === 0 || (m === 11 && d === 31)) {
+                if (dayOfWeek === 0 || (currentMonth === displayEndMonth && currentYear === displayEndYear && d === daysInMonthFunc(currentYear, currentMonth))) {
                     currentWeekCount++;
                     const wDiv = document.createElement('div');
                     wDiv.className = 'ps-gh-cell';
@@ -1560,7 +1606,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     daysInCurrentWeek = 0;
                 }
             }
-            totalDays += mDays;
+            
+            // Move to next month
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
         }
 
         // 헤더와 바디의 가로 폭을 전체 스케줄 너비로 명시적으로 설정하여 가로 스크롤 가능 범위를 확보합니다.
@@ -1726,14 +1778,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return Math.floor(x / psDayWidth);
     }
     function getDateFromDayIndex(dayIndex) {
-        const d = new Date(psYear, 0, 1 + dayIndex);
+        const startDate = new Date(psDisplayStartYear, psDisplayStartMonth, 1);
+        const d = new Date(startDate.getTime() + dayIndex * 24 * 60 * 60 * 1000);
         return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
     function getDayIndexFromDateStr(dateStr) {
         if(!dateStr) return 0;
         const d = new Date(dateStr);
-        const yStart = new Date(psYear, 0, 1);
-        return Math.floor((d - yStart) / (1000 * 60 * 60 * 24));
+        const startDate = new Date(psDisplayStartYear, psDisplayStartMonth, 1);
+        return Math.floor((d - startDate) / (1000 * 60 * 60 * 24));
     }
 
     document.addEventListener('mousedown', (e) => {
@@ -1847,6 +1900,16 @@ document.addEventListener('DOMContentLoaded', () => {
             actionBlock.innerText = '설정 중...';
             document.getElementById('ps-gantt-blocks').appendChild(actionBlock);
             e.preventDefault();
+        }
+        
+        // Empty space - only allow panning
+        if (rowIndex < 0 || rowIndex >= psRowIndexMap.length) {
+            isPanning = false;
+            panPending = true;
+            panStartX = e.clientX;
+            panScrollLeft = container.scrollLeft;
+            e.preventDefault();
+            return;
         }
     });
     
