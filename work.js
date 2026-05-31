@@ -1334,6 +1334,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let psDisplayStartMonth = 0;
     let psDisplayEndYear = psYear;
     let psDisplayEndMonth = 11;
+    let psSearchFilter = '';
 
     db.collection('workProjects').orderBy('order', 'asc').onSnapshot((snapshot) => {
         psData = [];
@@ -1377,6 +1378,11 @@ document.addEventListener('DOMContentLoaded', () => {
         renderPsScheduler();
     });
 
+    document.getElementById('ps-search-input')?.addEventListener('input', (e) => {
+        psSearchFilter = e.target.value.trim();
+        renderPsScheduler();
+    });
+
     document.getElementById('ps-year')?.addEventListener('change', (e) => { psYear = parseInt(e.target.value); renderPsScheduler(); });
     document.getElementById('ps-btn-today')?.addEventListener('click', () => { 
         psYear = new Date().getFullYear(); 
@@ -1389,9 +1395,26 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('ps-gantt-container');
         if (container) {
             const today = new Date();
-            const yStart = new Date(psYear, 0, 1);
+            const yStart = new Date(psDisplayStartYear, psDisplayStartMonth, 1);
             const diffDays = Math.floor((today - yStart) / (1000 * 60 * 60 * 24));
-            if (diffDays >= 0 && diffDays < 366) {
+            if (diffDays >= 0) {
+                const todayX = diffDays * psDayWidth;
+                container.scrollTo({
+                    left: todayX - (container.clientWidth / 2),
+                    behavior: 'smooth'
+                });
+            }
+        }
+    });
+    
+    document.getElementById('ps-btn-fit-screen')?.addEventListener('click', () => {
+        // 화면 맞춤: 오늘 날짜로 스크롤
+        const container = document.getElementById('ps-gantt-container');
+        if (container) {
+            const today = new Date();
+            const yStart = new Date(psDisplayStartYear, psDisplayStartMonth, 1);
+            const diffDays = Math.floor((today - yStart) / (1000 * 60 * 60 * 24));
+            if (diffDays >= 0) {
                 const todayX = diffDays * psDayWidth;
                 container.scrollTo({
                     left: todayX - (container.clientWidth / 2),
@@ -1645,7 +1668,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         psRowIndexMap = []; // Reset map
 
-        const rootTasks = psData.filter(p => !p.parentId).sort((a,b) => a.order - b.order);
+        // Apply select-based filters and name search before rendering
+        let dataToRender = psData.slice();
+        const searchSelect = document.getElementById('ps-search');
+        if (searchSelect) {
+            const val = searchSelect.value || 'all';
+            if (val.startsWith('status:')) {
+                const st = val.split(':')[1];
+                dataToRender = dataToRender.filter(p => p.status === st);
+            } else if (val.startsWith('assignee:')) {
+                const a = val.split(':')[1];
+                dataToRender = dataToRender.filter(p => (p.assignee || '').trim() === a);
+            }
+        }
+        if (psSearchFilter && psSearchFilter.length > 0) {
+            const q = psSearchFilter.toLowerCase();
+            dataToRender = dataToRender.filter(p => (p.name || '').toLowerCase().includes(q));
+        }
+
+        const rootTasks = dataToRender.filter(p => !p.parentId).sort((a,b) => a.order - b.order);
         let globalIndex = 0;
 
         function renderRow(task, level, prefix) {
