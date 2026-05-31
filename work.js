@@ -1219,6 +1219,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (daysFromStart >= 0 && durationDays > 0) {
                         const block = document.createElement('div');
                         block.className = `ps-block ${isSelected ? 'selected' : ''}`;
+                        block.dataset.taskId = task.id;
                         block.style.left = `${daysFromStart * psDayWidth}px`;
                         block.style.width = `${durationDays * psDayWidth}px`;
                         block.style.top = `${(globalIndex - 1) * 30 + 5}px`;
@@ -1272,107 +1273,221 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- 4. Drag to Draw Block ---
+    // --- 4. Drag to Draw, Move, Resize Block ---
     let isDrawing = false;
+    let isMoving = false;
+    let isResizingLeft = false;
+    let isResizingRight = false;
+
+    let actionTaskId = null;
+    let actionBlock = null;
+    
     let drawStartDayIndex = 0;
-    let drawingTaskId = null;
-    let drawingBlock = null;
+    let originalStartDay = 0;
+    let originalEndDay = 0;
+    let dragStartX = 0;
+    let dragStartDayIndex = 0;
+
+    function getDayIndexFromX(x) {
+        return Math.floor(x / psDayWidth);
+    }
+    function getDateFromDayIndex(dayIndex) {
+        const d = new Date(psYear, 0, 1 + dayIndex);
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function getDayIndexFromDateStr(dateStr) {
+        if(!dateStr) return 0;
+        const d = new Date(dateStr);
+        const yStart = new Date(psYear, 0, 1);
+        return Math.floor((d - yStart) / (1000 * 60 * 60 * 24));
+    }
 
     document.addEventListener('mousedown', (e) => {
         const ganttBody = document.getElementById('ps-gantt-body');
-        if (ganttBody && ganttBody.contains(e.target)) {
-            if(!currentUser) {
-                alert('로그인이 필요합니다.');
-                return;
-            }
-            if (!e.ctrlKey && !e.metaKey) {
-                const rect = ganttBody.getBoundingClientRect();
-                const y = e.clientY - rect.top;
-                const rowIndex = Math.floor(y / 30);
-                if(rowIndex >= 0 && rowIndex < psRowIndexMap.length) {
-                    psSelectedId = psRowIndexMap[rowIndex];
-                    renderPsScheduler();
-                }
-                return;
-            }
-            const container = document.getElementById('ps-gantt-container');
-            const rect = ganttBody.getBoundingClientRect();
-            const x = e.clientX - rect.left + container.scrollLeft;
-            const y = e.clientY - rect.top;
+        if (!ganttBody || !ganttBody.contains(e.target)) return;
+        if (!currentUser) { alert('로그인이 필요합니다.'); return; }
+        
+        const container = document.getElementById('ps-gantt-container');
+        const rect = ganttBody.getBoundingClientRect();
+        const x = e.clientX - rect.left + container.scrollLeft;
+        const y = e.clientY - rect.top;
+        const dayIndex = getDayIndexFromX(x);
+        const rowIndex = Math.floor(y / 30);
+        
+        const blockEl = e.target.closest('.ps-block');
+        
+        if (blockEl) {
+            // Clicked on an existing block
+            actionTaskId = blockEl.dataset.taskId;
+            psSelectedId = actionTaskId;
+            renderPsScheduler();
             
-            const rowIndex = Math.floor(y / 30);
-            const dayIndex = Math.floor(x / psDayWidth);
-            
-            if(rowIndex >= 0 && rowIndex < psRowIndexMap.length) {
-                isDrawing = true;
-                drawStartDayIndex = dayIndex;
-                drawingTaskId = psRowIndexMap[rowIndex];
-                psSelectedId = drawingTaskId; // Update selection
-                renderPsScheduler(); // To highlight selected row
+            const task = psData.find(p => p.id === actionTaskId);
+            if(task && task.startDate && task.endDate) {
+                originalStartDay = getDayIndexFromDateStr(task.startDate);
+                originalEndDay = getDayIndexFromDateStr(task.endDate);
+                dragStartX = x;
+                dragStartDayIndex = dayIndex;
+                actionBlock = blockEl;
                 
-                // Create temporary block
-                drawingBlock = document.createElement('div');
-                drawingBlock.className = 'ps-block selected';
-                drawingBlock.style.left = `${dayIndex * psDayWidth}px`;
-                drawingBlock.style.width = `${psDayWidth}px`;
-                drawingBlock.style.top = `${rowIndex * 30 + 5}px`;
-                drawingBlock.style.background = 'rgba(255, 107, 129, 0.7)'; // Red-ish preview
-                drawingBlock.innerText = '설정 중...';
-                document.getElementById('ps-gantt-blocks').appendChild(drawingBlock);
-                e.preventDefault(); // Prevent text selection
+                // Determine if we are resizing or moving
+                const blockRect = blockEl.getBoundingClientRect();
+                const mouseXInBlock = e.clientX - blockRect.left;
+                
+                if (mouseXInBlock <= 10) {
+                    isResizingLeft = true;
+                } else if (mouseXInBlock >= blockRect.width - 10) {
+                    isResizingRight = true;
+                } else {
+                    isMoving = true;
+                }
+                e.preventDefault();
+                return;
             }
+        }
+        
+        // If clicking empty grid area
+        if(rowIndex >= 0 && rowIndex < psRowIndexMap.length) {
+            const taskId = psRowIndexMap[rowIndex];
+            psSelectedId = taskId;
+            renderPsScheduler();
+            
+            const task = psData.find(p => p.id === taskId);
+            
+            if (task && task.startDate && task.endDate && !e.ctrlKey && !e.metaKey) {
+                // Feature: "다른 곳을 찍으면 전에 있던 바에 연결되게 하고" (Extend existing bar)
+                const startDay = getDayIndexFromDateStr(task.startDate);
+                const endDay = getDayIndexFromDateStr(task.endDate);
+                
+                let newStartDay = startDay;
+                let newEndDay = endDay;
+                
+                if (dayIndex < startDay) newStartDay = dayIndex;
+                else if (dayIndex > endDay) newEndDay = dayIndex;
+                else return; // Clicked inside range but not on block
+                
+                window.psUpdateField(taskId, 'startDate', getDateFromDayIndex(newStartDay));
+                window.psUpdateField(taskId, 'endDate', getDateFromDayIndex(newEndDay));
+                e.preventDefault();
+                return;
+            }
+            
+            if (!e.ctrlKey && !e.metaKey) return; // Just select row, don't draw
+            
+            // Draw new block
+            isDrawing = true;
+            drawStartDayIndex = dayIndex;
+            actionTaskId = taskId;
+            
+            actionBlock = document.createElement('div');
+            actionBlock.className = 'ps-block selected';
+            actionBlock.style.left = `${dayIndex * psDayWidth}px`;
+            actionBlock.style.width = `${psDayWidth}px`;
+            actionBlock.style.top = `${rowIndex * 30 + 5}px`;
+            actionBlock.style.background = 'rgba(255, 107, 129, 0.7)';
+            actionBlock.innerText = '설정 중...';
+            document.getElementById('ps-gantt-blocks').appendChild(actionBlock);
+            e.preventDefault();
         }
     });
     
     document.addEventListener('mousemove', (e) => {
-        if(isDrawing && drawingBlock) {
-            const ganttBody = document.getElementById('ps-gantt-body');
-            const container = document.getElementById('ps-gantt-container');
-            const rect = ganttBody.getBoundingClientRect();
-            let x = e.clientX - rect.left + container.scrollLeft;
-            if(x < 0) x = 0;
-            const dayIndex = Math.floor(x / psDayWidth);
-            
+        const ganttBody = document.getElementById('ps-gantt-body');
+        if(!ganttBody) return;
+        
+        // Edge hover cursor change
+        const blockEl = e.target.closest('.ps-block');
+        if(blockEl && !isDrawing && !isMoving && !isResizingLeft && !isResizingRight) {
+            const blockRect = blockEl.getBoundingClientRect();
+            const mouseXInBlock = e.clientX - blockRect.left;
+            if (mouseXInBlock <= 10 || mouseXInBlock >= blockRect.width - 10) {
+                blockEl.style.cursor = 'ew-resize';
+            } else {
+                blockEl.style.cursor = 'grab';
+            }
+        } else if (blockEl && !isDrawing && !isResizingLeft && !isResizingRight) {
+            // Restore default pointer if not near edge
+        }
+        
+        if (!isDrawing && !isMoving && !isResizingLeft && !isResizingRight) return;
+        
+        const container = document.getElementById('ps-gantt-container');
+        const rect = ganttBody.getBoundingClientRect();
+        let x = e.clientX - rect.left + container.scrollLeft;
+        if(x < 0) x = 0;
+        const dayIndex = getDayIndexFromX(x);
+        
+        if (isDrawing && actionBlock) {
             const minDay = Math.min(drawStartDayIndex, dayIndex);
             const maxDay = Math.max(drawStartDayIndex, dayIndex);
-            
-            drawingBlock.style.left = `${minDay * psDayWidth}px`;
-            drawingBlock.style.width = `${(maxDay - minDay + 1) * psDayWidth}px`;
+            actionBlock.style.left = `${minDay * psDayWidth}px`;
+            actionBlock.style.width = `${(maxDay - minDay + 1) * psDayWidth}px`;
+        }
+        else if (isResizingLeft && actionBlock) {
+            const minDay = Math.min(dayIndex, originalEndDay);
+            const maxDay = originalEndDay;
+            actionBlock.style.left = `${minDay * psDayWidth}px`;
+            actionBlock.style.width = `${(maxDay - minDay + 1) * psDayWidth}px`;
+        }
+        else if (isResizingRight && actionBlock) {
+            const minDay = originalStartDay;
+            const maxDay = Math.max(dayIndex, originalStartDay);
+            actionBlock.style.left = `${minDay * psDayWidth}px`;
+            actionBlock.style.width = `${(maxDay - minDay + 1) * psDayWidth}px`;
+        }
+        else if (isMoving && actionBlock) {
+            const deltaDays = dayIndex - dragStartDayIndex;
+            const newStartDay = originalStartDay + deltaDays;
+            actionBlock.style.left = `${newStartDay * psDayWidth}px`;
+            actionBlock.style.cursor = 'grabbing';
         }
     });
     
     document.addEventListener('mouseup', (e) => {
-        if(isDrawing) {
-            isDrawing = false;
-            if(drawingBlock && drawingTaskId) {
-                const ganttBody = document.getElementById('ps-gantt-body');
-                const container = document.getElementById('ps-gantt-container');
-                const rect = ganttBody.getBoundingClientRect();
-                let x = e.clientX - rect.left + container.scrollLeft;
-                if (x < 0) x = 0;
-                const dayIndex = Math.floor(x / psDayWidth);
-                
-                const minDay = Math.min(drawStartDayIndex, dayIndex);
-                const maxDay = Math.max(drawStartDayIndex, dayIndex);
-                
-                // Convert minDay and maxDay to Date
-                const yearStart = new Date(psYear, 0, 1);
-                
-                // Add minDay days to yearStart
-                const sDate = new Date(psYear, 0, 1 + minDay);
-                const eDate = new Date(psYear, 0, 1 + maxDay);
-                
-                const sDateStr = sDate.getFullYear() + '-' + String(sDate.getMonth() + 1).padStart(2, '0') + '-' + String(sDate.getDate()).padStart(2, '0');
-                const eDateStr = eDate.getFullYear() + '-' + String(eDate.getMonth() + 1).padStart(2, '0') + '-' + String(eDate.getDate()).padStart(2, '0');
-                
-                // Update Firebase
-                window.psUpdateField(drawingTaskId, 'startDate', sDateStr);
-                window.psUpdateField(drawingTaskId, 'endDate', eDateStr);
-                
-                drawingBlock.remove();
-                drawingBlock = null;
-            }
+        if (!isDrawing && !isMoving && !isResizingLeft && !isResizingRight) return;
+        
+        const ganttBody = document.getElementById('ps-gantt-body');
+        const container = document.getElementById('ps-gantt-container');
+        if(!ganttBody || !container || !actionTaskId) return;
+        
+        const rect = ganttBody.getBoundingClientRect();
+        let x = e.clientX - rect.left + container.scrollLeft;
+        if (x < 0) x = 0;
+        const dayIndex = getDayIndexFromX(x);
+        
+        let finalStartDay = originalStartDay;
+        let finalEndDay = originalEndDay;
+
+        if (isDrawing) {
+            finalStartDay = Math.min(drawStartDayIndex, dayIndex);
+            finalEndDay = Math.max(drawStartDayIndex, dayIndex);
+        } else if (isResizingLeft) {
+            finalStartDay = Math.min(dayIndex, originalEndDay);
+            finalEndDay = originalEndDay;
+        } else if (isResizingRight) {
+            finalStartDay = originalStartDay;
+            finalEndDay = Math.max(dayIndex, originalStartDay);
+        } else if (isMoving) {
+            const deltaDays = dayIndex - dragStartDayIndex;
+            finalStartDay = originalStartDay + deltaDays;
+            finalEndDay = originalEndDay + deltaDays;
         }
+        
+        window.psUpdateField(actionTaskId, 'startDate', getDateFromDayIndex(finalStartDay));
+        window.psUpdateField(actionTaskId, 'endDate', getDateFromDayIndex(finalEndDay));
+        
+        if (isDrawing && actionBlock) {
+            actionBlock.remove();
+        } else if (actionBlock) {
+            actionBlock.style.cursor = '';
+        }
+        
+        isDrawing = false;
+        isMoving = false;
+        isResizingLeft = false;
+        isResizingRight = false;
+        actionBlock = null;
+        actionTaskId = null;
     });
 
     // ====================================================
