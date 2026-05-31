@@ -2402,6 +2402,16 @@ body.light-theme .mobile-dropdown-item:hover {
     transform: scale(1.15);
 }
 
+button.mobile-dropdown-item {
+    background: transparent;
+    border: none;
+    font-family: inherit;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    outline: none;
+}
+
 /* 드롭다운 하강/페이드인 애니메이션 */
 @keyframes slideDownFade {
     from {
@@ -2842,45 +2852,6 @@ body.light-theme .mobile-dropdown-item:hover {
     
     #work-tabs {
         display: none !important;
-        flex-direction: column;
-        position: fixed;
-        top: 75px;
-        right: 20px;
-        background: var(--card-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid var(--card-border);
-        border-radius: 16px;
-        width: 180px;
-        padding: 0.8rem;
-        gap: 8px;
-        z-index: 1050;
-        box-shadow: 0 8px 32px 0 var(--card-shadow);
-        margin-top: 0;
-        overflow: hidden !important;
-    }
-    
-    #work-tabs.show-mobile {
-        display: flex !important;
-        animation: fadeIn 0.2s ease;
-    }
-    
-    .work-tab {
-        width: 100%;
-        text-align: left;
-        padding: 10px 15px;
-        border-radius: 10px;
-        background: rgba(255,255,255,0.05);
-        border: none !important;
-        border-bottom: none !important;
-        font-size: 0.95rem;
-    }
-    .work-tab::after {
-        display: none !important;
-    }
-    .work-tab:hover, .work-tab.active {
-        background: var(--primary-gradient);
-        color: white;
     }
 
     /* ps-desktop-app layout for Project Tab */

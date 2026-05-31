@@ -44,25 +44,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // 모바일 퀵 내비게이션 (Tabs Dropdown)
     // ----------------------------------------------------
     const mobileNavBtn = document.getElementById('work-mobile-nav-btn');
-    const mobileNavDropdown = document.getElementById('work-tabs');
+    const mobileNavDropdown = document.getElementById('work-mobile-nav-dropdown');
 
     if (mobileNavBtn && mobileNavDropdown) {
         mobileNavBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            mobileNavDropdown.classList.toggle('show-mobile');
+            mobileNavDropdown.classList.toggle('hidden');
         });
 
         // 화면 바깥을 클릭하면 모바일 메뉴 닫기
         document.addEventListener('click', (e) => {
             if (!mobileNavBtn.contains(e.target) && !mobileNavDropdown.contains(e.target)) {
-                mobileNavDropdown.classList.remove('show-mobile');
+                mobileNavDropdown.classList.add('hidden');
             }
         });
         
         // 탭 메뉴 항목을 클릭하면 모바일 메뉴 닫기
         mobileNavDropdown.addEventListener('click', (e) => {
             if (e.target.closest('.work-tab')) {
-                mobileNavDropdown.classList.remove('show-mobile');
+                mobileNavDropdown.classList.add('hidden');
             }
         });
     }
