@@ -1286,7 +1286,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isPanning = false;
     let panStartX = 0;
     let panScrollLeft = 0;
-    let isPanning = false;
+
 
     let actionTaskId = null;
     let actionBlock = null;
@@ -1297,8 +1297,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let dragStartX = 0;
     let dragStartDayIndex = 0;
 
-    let panStartX = 0;
-    let panScrollLeft = 0;
+
     let isClickExtendCandidate = false;
     let clickExtendTaskId = null;
     let clickExtendDayIndex = 0;
