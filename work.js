@@ -1708,7 +1708,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isResizingLeft = false;
     let isResizingRight = false;
     let isPanning = false;
-    let panStartX = 0;
+    let panStartX = null;
     let panScrollLeft = 0;
 
 
