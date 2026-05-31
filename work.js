@@ -1455,10 +1455,29 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!psSelectedId) return alert('항목을 선택하세요.');
         const task = psData.find(p => p.id === psSelectedId);
         if(!task) return;
-        const colors = ['#fffacd', '#e0f7fa', '#f8bbd0', '#dcedc8', '#ffcc80', '#e1bee7', '#b3e5fc', '#ffecb3'];
-        let idx = colors.indexOf(task.color);
-        const nextColor = colors[(idx + 1) % colors.length];
-        window.psUpdateField(psSelectedId, 'color', nextColor);
+        
+        // 숨겨진 color input 생성 또는 재사용
+        let colorInput = document.getElementById('ps-hidden-color-input');
+        if (!colorInput) {
+            colorInput = document.createElement('input');
+            colorInput.id = 'ps-hidden-color-input';
+            colorInput.type = 'color';
+            colorInput.style.display = 'none';
+            document.body.appendChild(colorInput);
+        }
+        
+        // 현재 색상을 HEX로 변환
+        const currentColor = task.color || '#fffacd';
+        colorInput.value = currentColor.startsWith('#') ? currentColor : '#fffacd';
+        
+        // color input 변경 이벤트
+        colorInput.onchange = (e) => {
+            const selectedColor = e.target.value;
+            window.psUpdateField(psSelectedId, 'color', selectedColor);
+        };
+        
+        // 색상 선택 창 열기
+        colorInput.click();
     });
 
     window.psUpdateField = (id, field, value) => {
