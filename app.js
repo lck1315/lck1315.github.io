@@ -363,6 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             googleCalendarUrls = [];
                         }
                         fillGcalSlots();
+                        renderGoogleCalendarFilters();
                         fetchGoogleCalendarEvents();
                     });
                 })
@@ -418,6 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
             googleCalendarUrls = [];
             googleEvents = {};
             fillGcalSlots();
+            renderGoogleCalendarFilters();
             if (typeof renderCalendar === 'function') renderCalendar();
 
             // 메인 이미지 수정 배지 숨김
@@ -3239,6 +3241,77 @@ function initCardSliders(container) {
         } finally {
             if (syncIcon) syncIcon.classList.remove('fa-spin');
         }
+    }
+
+    // 구글 캘린더 개별 표시 필터 렌더링
+    function renderGoogleCalendarFilters() {
+        const filterContainer = document.getElementById('gcal-filter-container');
+        if (!filterContainer) return;
+
+        const activeCals = googleCalendarUrls.filter(cal => cal && cal.url && cal.name);
+        if (activeCals.length === 0) {
+            filterContainer.innerHTML = '';
+            filterContainer.classList.add('hidden');
+            return;
+        }
+
+        filterContainer.classList.remove('hidden');
+
+        // 5가지 구글 캘린더 테마 파스텔톤 색상 지정
+        const googleCalendarColors = [
+            '#4285F4', // 1번: 블루
+            '#34A853', // 2번: 그린
+            '#E67C73', // 3번: 레드/자몽
+            '#F7CB4D', // 4번: 옐로우/바나나
+            '#7986CB'  // 5번: 라벤더/퍼플
+        ];
+
+        let html = '<span style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-right: 5px;"><i class="fa-solid fa-filter"></i> 캘린더 필터:</span>';
+        
+        googleCalendarUrls.forEach((cal, index) => {
+            if (!cal || !cal.url || !cal.name) return;
+
+            const calColor = googleCalendarColors[index % googleCalendarColors.length] || '#4285F4';
+            const isChecked = cal.enabled !== false;
+
+            html += `
+                <label class="gcal-filter-item" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 6px 12px; border-radius: 20px; background: rgba(255,255,255,0.04); font-size: 0.85rem; border: 1px solid var(--card-border); user-select: none; transition: all 0.2s ease;">
+                    <input type="checkbox" data-index="${index}" ${isChecked ? 'checked' : ''} style="width: 14px; height: 14px; cursor: pointer; accent-color: ${calColor}; margin: 0;">
+                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: ${calColor};"></span>
+                    <span style="color: ${isChecked ? 'var(--text-color)' : 'var(--text-muted)'}; font-weight: ${isChecked ? '600' : '400'};">${cal.name}</span>
+                </label>
+            `;
+        });
+
+        filterContainer.innerHTML = html;
+
+        // 이벤트 바인딩
+        const checkboxes = filterContainer.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(chk => {
+            chk.addEventListener('change', (e) => {
+                const idx = parseInt(e.target.getAttribute('data-index'), 10);
+                const isChecked = e.target.checked;
+                
+                if (googleCalendarUrls[idx]) {
+                    googleCalendarUrls[idx].enabled = isChecked;
+                    
+                    // 로컬 슬롯 체크박스 UI도 즉시 반영
+                    fillGcalSlots();
+
+                    // Firestore에 실시간 저장
+                    if (currentUserInfo && currentUserInfo.uid) {
+                        db.collection('users').doc(currentUserInfo.uid).set({
+                            googleCalendarUrls: googleCalendarUrls
+                        }, { merge: true }).catch(err => {
+                            console.error("Firestore 필터 동기화 실패:", err);
+                        });
+                    }
+
+                    // 캘린더 표시 갱신
+                    fetchGoogleCalendarEvents();
+                }
+            });
+        });
     }
 
     // 구글 캘린더 UI 팝업 및 기능
