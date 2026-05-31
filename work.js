@@ -1759,6 +1759,77 @@ document.addEventListener('DOMContentLoaded', () => {
             reader.readAsText(file);
         });
     }
+    // ====================================================
+    // 프로젝트 엑셀 출력 (CSV 변환)
+    // ====================================================
+    const psExcelAllBtn = document.getElementById('ps-btn-excel-all');
+    const psExcelSelectedBtn = document.getElementById('ps-btn-excel-selected');
+
+    function exportToCsv(data, filename) {
+        if (!data || data.length === 0) {
+            alert('출력할 데이터가 없습니다.');
+            return;
+        }
+        
+        const headers = ['ID', 'Parent ID', 'Project/Task Name', 'Assignee', 'Status', 'Start Date', 'End Date', 'Order', 'Color'];
+        let csvContent = '\uFEFF' + headers.join(',') + '\n';
+        
+        data.forEach(item => {
+            const row = [
+                item.id || '',
+                item.parentId || '',
+                `"${(item.name || '').replace(/"/g, '""')}"`,
+                `"${(item.assignee || '').replace(/"/g, '""')}"`,
+                item.status || '',
+                item.startDate || '',
+                item.endDate || '',
+                item.order || '',
+                item.color || ''
+            ];
+            csvContent += row.join(',') + '\n';
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    if (psExcelAllBtn) {
+        psExcelAllBtn.addEventListener('click', () => {
+            if (!currentUser) { alert('로그인이 필요합니다.'); return; }
+            exportToCsv(psData, `project_all_${new Date().toISOString().slice(0, 10)}.csv`);
+        });
+    }
+
+    if (psExcelSelectedBtn) {
+        psExcelSelectedBtn.addEventListener('click', () => {
+            if (!currentUser) { alert('로그인이 필요합니다.'); return; }
+            if (!psSelectedId) {
+                alert('엑셀로 출력할 프로젝트/태스크를 먼저 선택하세요.');
+                return;
+            }
+            
+            const selectedItems = [];
+            
+            function findChildren(parentId) {
+                const item = psData.find(p => p.id === parentId);
+                if (item && !selectedItems.find(p => p.id === item.id)) {
+                    selectedItems.push(item);
+                }
+                const children = psData.filter(p => p.parentId === parentId);
+                children.forEach(child => findChildren(child.id));
+            }
+            
+            findChildren(psSelectedId);
+            exportToCsv(selectedItems, `project_selected_${new Date().toISOString().slice(0, 10)}.csv`);
+        });
+    }
 
     initParticles();
     animateParticles();
