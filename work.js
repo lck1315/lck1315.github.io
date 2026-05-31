@@ -1354,6 +1354,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         isMoving = true;
                     }
+                    actionBlock.classList.add('dragging');
                     e.preventDefault();
                     return;
                 } else {
@@ -1402,7 +1403,7 @@ document.addEventListener('DOMContentLoaded', () => {
             actionTaskId = taskId;
             
             actionBlock = document.createElement('div');
-            actionBlock.className = 'ps-block selected';
+            actionBlock.className = 'ps-block selected dragging';
             actionBlock.style.left = `${dayIndex * psDayWidth}px`;
             actionBlock.style.width = `${psDayWidth}px`;
             actionBlock.style.top = `${rowIndex * 30 + 5}px`;
@@ -1558,6 +1559,7 @@ document.addEventListener('DOMContentLoaded', () => {
             actionBlock.remove();
         } else if (actionBlock) {
             actionBlock.style.cursor = '';
+            actionBlock.classList.remove('dragging');
         }
         
         isDrawing = false;
