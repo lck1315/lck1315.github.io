@@ -1279,6 +1279,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let isResizingLeft = false;
     let isResizingRight = false;
     let isPanning = false;
+    let panStartX = 0;
+    let panScrollLeft = 0;
+    let isPanning = false;
 
     let actionTaskId = null;
     let actionBlock = null;
@@ -1339,9 +1342,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const blockRect = blockEl.getBoundingClientRect();
                 const mouseXInBlock = e.clientX - blockRect.left;
                 
-                if (mouseXInBlock <= 10) {
+                if ((e.ctrlKey || e.metaKey) && mouseXInBlock <= 10) {
                     isResizingLeft = true;
-                } else if (mouseXInBlock >= blockRect.width - 10) {
+                } else if ((e.ctrlKey || e.metaKey) && mouseXInBlock >= blockRect.width - 10) {
                     isResizingRight = true;
                 } else {
                     isMoving = true;
@@ -1398,6 +1401,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     document.addEventListener('mousemove', (e) => {
+        if (isPanning) {
+            const container = document.getElementById('ps-gantt-container');
+            if (container) {
+                container.scrollLeft = panScrollLeft - (e.clientX - panStartX);
+                container.style.cursor = 'grabbing';
+            }
+            return;
+        }
+
         const ganttBody = document.getElementById('ps-gantt-body');
         if(!ganttBody) return;
         
@@ -1405,7 +1417,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(blockEl && !isDrawing && !isMoving && !isResizingLeft && !isResizingRight) {
             const blockRect = blockEl.getBoundingClientRect();
             const mouseXInBlock = e.clientX - blockRect.left;
-            if (mouseXInBlock <= 10 || mouseXInBlock >= blockRect.width - 10) {
+            if ((e.ctrlKey || e.metaKey) && (mouseXInBlock <= 10 || mouseXInBlock >= blockRect.width - 10)) {
                 blockEl.style.cursor = 'ew-resize';
             } else {
                 blockEl.style.cursor = 'grab';
@@ -1413,7 +1425,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (!isDrawing && !isMoving && !isResizingLeft && !isResizingRight) {
-            // Check for panning
+            // Check for panning initiation
             if (e.buttons === 1 && !e.ctrlKey && !e.metaKey && !blockEl) {
                 if (Math.abs(e.clientX - panStartX) > 3) {
                     isPanning = true;
@@ -1485,6 +1497,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        if (isPanning) {
+            const container = document.getElementById('ps-gantt-container');
+            const dx = e.clientX - panStartX;
+            container.scrollLeft = panScrollLeft - dx;
+            e.preventDefault();
+            return;
+        }
+        
         if (!isDrawing && !isMoving && !isResizingLeft && !isResizingRight) return;
         
         const ganttBody = document.getElementById('ps-gantt-body');
