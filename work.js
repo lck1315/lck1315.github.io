@@ -1691,25 +1691,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 const blockRect = blockEl.getBoundingClientRect();
                 const mouseXInBlock = e.clientX - blockRect.left;
                 
-                if (e.ctrlKey || e.metaKey) {
-                    if (mouseXInBlock <= 10) {
-                        isResizingLeft = true;
-                    } else if (mouseXInBlock >= blockRect.width - 10) {
-                        isResizingRight = true;
-                    } else {
-                        isMoving = true;
-                    }
-                    actionBlock.classList.add('dragging');
-                    e.preventDefault();
-                    return;
+                // Ctrl/Meta 키 없이도 마우스로 블록을 잡았을 때 바로 리사이즈 혹은 이동을 활성화합니다
+                if (mouseXInBlock <= 12) {
+                    isResizingLeft = true;
+                } else if (mouseXInBlock >= blockRect.width - 12) {
+                    isResizingRight = true;
                 } else {
-                    // Start panning even if clicking on a block
-                    isPanning = false;
-                    panStartX = e.clientX;
-                    panScrollLeft = container.scrollLeft;
-                    e.preventDefault();
-                    return;
+                    isMoving = true;
                 }
+                
+                actionBlock.classList.add('dragging');
+                
+                // 들리는 입체적인 입체 효과 부여 (스케일 업 및 부드러운 하이라이트 그림자)
+                actionBlock.style.transform = 'translateY(-3px) scale(1.02)';
+                actionBlock.style.boxShadow = '0 10px 24px rgba(0, 0, 0, 0.45)';
+                actionBlock.style.zIndex = '999';
+                actionBlock.style.transition = 'transform 0.15s ease, box-shadow 0.15s ease';
+
+                e.preventDefault();
+                return;
             }
         }
         
@@ -1783,14 +1783,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if(blockEl && !isDrawing && !isMoving && !isResizingLeft && !isResizingRight) {
             const blockRect = blockEl.getBoundingClientRect();
             const mouseXInBlock = e.clientX - blockRect.left;
-            if (e.ctrlKey || e.metaKey) {
-                if (mouseXInBlock <= 10 || mouseXInBlock >= blockRect.width - 10) {
-                    blockEl.style.cursor = 'ew-resize';
-                } else {
-                    blockEl.style.cursor = 'grab';
-                }
+            
+            // Ctrl/Meta 키 없이도 마우스 커서를 항상 grab 및 ew-resize로 세팅합니다
+            if (mouseXInBlock <= 12 || mouseXInBlock >= blockRect.width - 12) {
+                blockEl.style.cursor = 'ew-resize';
             } else {
-                blockEl.style.cursor = 'default';
+                blockEl.style.cursor = 'grab';
             }
         }
         
@@ -1909,6 +1907,10 @@ document.addEventListener('DOMContentLoaded', () => {
             actionBlock.remove();
         } else if (actionBlock) {
             actionBlock.style.cursor = '';
+            actionBlock.style.transform = '';
+            actionBlock.style.boxShadow = '';
+            actionBlock.style.zIndex = '';
+            actionBlock.style.transition = '';
             actionBlock.classList.remove('dragging');
         }
         
