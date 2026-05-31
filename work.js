@@ -1342,15 +1342,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 const blockRect = blockEl.getBoundingClientRect();
                 const mouseXInBlock = e.clientX - blockRect.left;
                 
-                if ((e.ctrlKey || e.metaKey) && mouseXInBlock <= 10) {
-                    isResizingLeft = true;
-                } else if ((e.ctrlKey || e.metaKey) && mouseXInBlock >= blockRect.width - 10) {
-                    isResizingRight = true;
+                if (e.ctrlKey || e.metaKey) {
+                    if (mouseXInBlock <= 10) {
+                        isResizingLeft = true;
+                    } else if (mouseXInBlock >= blockRect.width - 10) {
+                        isResizingRight = true;
+                    } else {
+                        isMoving = true;
+                    }
+                    e.preventDefault();
+                    return;
                 } else {
-                    isMoving = true;
+                    // Start panning even if clicking on a block
+                    isPanning = false;
+                    panStartX = e.clientX;
+                    panScrollLeft = container.scrollLeft;
+                    e.preventDefault();
+                    return;
                 }
-                e.preventDefault();
-                return;
             }
         }
         
@@ -1426,8 +1435,8 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (!isDrawing && !isMoving && !isResizingLeft && !isResizingRight) {
             // Check for panning initiation
-            if (e.buttons === 1 && !e.ctrlKey && !e.metaKey && !blockEl) {
-                if (Math.abs(e.clientX - panStartX) > 3) {
+            if (e.buttons === 1 && !e.ctrlKey && !e.metaKey) {
+                if (panStartX !== null && Math.abs(e.clientX - panStartX) > 3) {
                     isPanning = true;
                     isClickExtendCandidate = false; // Cancel extend if panning
                     const container = document.getElementById('ps-gantt-container');
