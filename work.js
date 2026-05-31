@@ -28,17 +28,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const body = document.body;
     const savedTheme = localStorage.getItem('dodo-theme') || 'dark-theme';
     body.className = savedTheme;
-
-    themeToggleBtn.addEventListener('click', () => {
-        if (body.classList.contains('dark-theme')) {
-            body.classList.replace('dark-theme', 'light-theme');
-            localStorage.setItem('dodo-theme', 'light-theme');
-        } else {
-            body.classList.replace('light-theme', 'dark-theme');
-            localStorage.setItem('dodo-theme', 'dark-theme');
-        }
-        initParticles();
-    });
+ 
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            if (body.classList.contains('dark-theme')) {
+                body.classList.replace('dark-theme', 'light-theme');
+                localStorage.setItem('dodo-theme', 'light-theme');
+            } else {
+                body.classList.replace('light-theme', 'dark-theme');
+                localStorage.setItem('dodo-theme', 'dark-theme');
+            }
+            initParticles();
+        });
+    }
 
     // ----------------------------------------------------
     // 모바일 퀵 내비게이션 (Tabs Dropdown)
@@ -77,7 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const authStatusHeader = document.getElementById('auth-status-header');
     const btnClaimMaster = document.getElementById('btn-claim-master');
     const btnWorkLogin = document.getElementById('btn-work-login');
-    const btnWorkLogout = document.getElementById('btn-work-logout');
     const userProfileIcon = document.getElementById('user-profile-icon');
     const userProfileImg = document.getElementById('user-profile-img');
     const btnMasterAdmin = document.getElementById('btn-master-admin');
