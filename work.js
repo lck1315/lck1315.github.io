@@ -1430,10 +1430,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if(blockEl && !isDrawing && !isMoving && !isResizingLeft && !isResizingRight) {
             const blockRect = blockEl.getBoundingClientRect();
             const mouseXInBlock = e.clientX - blockRect.left;
-            if ((e.ctrlKey || e.metaKey) && (mouseXInBlock <= 10 || mouseXInBlock >= blockRect.width - 10)) {
-                blockEl.style.cursor = 'ew-resize';
+            if (e.ctrlKey || e.metaKey) {
+                if (mouseXInBlock <= 10 || mouseXInBlock >= blockRect.width - 10) {
+                    blockEl.style.cursor = 'ew-resize';
+                } else {
+                    blockEl.style.cursor = 'grab';
+                }
             } else {
-                blockEl.style.cursor = 'grab';
+                blockEl.style.cursor = 'default';
             }
         }
         
