@@ -89,9 +89,22 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = 'index.html?login=true';
     });
 
-    if (btnWorkLogout) {
-        btnWorkLogout.addEventListener('click', () => {
-            auth.signOut();
+    const btnMasterLogout = document.getElementById('btn-master-logout');
+    
+    if (userProfileIcon) {
+        userProfileIcon.style.cursor = 'pointer';
+        userProfileIcon.addEventListener('click', () => {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                auth.signOut().then(() => location.reload());
+            }
+        });
+    }
+
+    if (btnMasterLogout) {
+        btnMasterLogout.addEventListener('click', () => {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                auth.signOut().then(() => location.reload());
+            }
         });
     }
 
@@ -162,6 +175,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (user) {
+            // Check googleCalendarUrls in users collection
+            if (userGoogleCalendarListener) {
+                userGoogleCalendarListener();
+                userGoogleCalendarListener = null;
+            }
+            userGoogleCalendarListener = db.collection('users').doc(user.uid).onSnapshot((uDoc) => {
+                if (uDoc.exists && uDoc.data().googleCalendarUrls && Array.isArray(uDoc.data().googleCalendarUrls)) {
+                    googleCalendarUrls = uDoc.data().googleCalendarUrls;
+                } else if (uDoc.exists && uDoc.data().googleCalendarUrl) {
+                    googleCalendarUrls = [{ name: '내 캘린더', url: uDoc.data().googleCalendarUrl }];
+                } else {
+                    googleCalendarUrls = [];
+                }
+                fillGcalSlots();
+                fetchGoogleCalendarEvents();
+            }, err => console.error("DODO.work 구글 캘린더 리스너 에러:", err));
+
             // Check workUsers collection
             const userRef = db.collection('workUsers').doc(user.uid);
             
@@ -187,20 +217,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     // 승인됨 -> 화면 표시
                     authStatusHeader.style.display = 'none';
                     btnWorkLogin.style.display = 'none';
-                    if (userProfileIcon) {
-                        userProfileIcon.style.display = 'block';
-                        let pUrl = currentUserDoc.photoURL;
-                        const DEFAULT_AVATAR = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2IwYmVjNSI+PHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDQgMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPjwvc3ZnPg==';
-                        userProfileImg.src = (pUrl && pUrl !== 'null' && pUrl.trim() !== '') ? pUrl : DEFAULT_AVATAR;
-                    }
-                    if (btnWorkLogout) btnWorkLogout.style.display = 'inline-block';
                     
                     if (currentUserDoc.isMaster) {
                         btnMasterAdmin.style.display = 'inline-block';
+                        if (userProfileIcon) userProfileIcon.style.display = 'none';
                     } else {
                         btnMasterAdmin.style.display = 'none';
+                        if (userProfileIcon) {
+                            userProfileIcon.style.display = 'block';
+                            let pUrl = currentUserDoc.photoURL;
+                            const DEFAULT_AVATAR = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2IwYmVjNSI+PHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDQgMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPjwvc3ZnPg==';
+                            userProfileImg.src = (pUrl && pUrl !== 'null' && pUrl.trim() !== '') ? pUrl : DEFAULT_AVATAR;
+                        }
                     }
-
+ 
                     // 리로드하여 HTML 복구 (만약 보안 메시지로 덮어씌워졌었다면)
                     if (document.querySelector('.ps-desktop-app').innerHTML.includes('fa-lock')) {
                         location.reload();
@@ -217,7 +247,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         const DEFAULT_AVATAR = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2IwYmVjNSI+PHBhdGggZD0iTTEyIDEyYzIuMjEgMCA0LTEuNzkgNC00cy0xLjc5LTQtNC00LTQgMS43OS00IDQgMS43OSA0IDQgNHptMCAyYy0yLjY3IDAtOCAxLjM0LTggNHYyaDE2di0yYzAtMi42Ni01LjMzLTQtOC00eiIvPjwvc3ZnPg==';
                         userProfileImg.src = (pUrl && pUrl !== 'null' && pUrl.trim() !== '') ? pUrl : DEFAULT_AVATAR;
                     }
-                    if (btnWorkLogout) btnWorkLogout.style.display = 'inline-block';
                     if (btnMasterAdmin) btnMasterAdmin.style.display = 'none';
                     
                     renderRestrictedContent();
@@ -232,7 +261,16 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (userProfileIcon) userProfileIcon.style.display = 'none';
             if (btnMasterAdmin) btnMasterAdmin.style.display = 'none';
-            if (btnWorkLogout) btnWorkLogout.style.display = 'none';
+ 
+            if (userGoogleCalendarListener) {
+                userGoogleCalendarListener();
+                userGoogleCalendarListener = null;
+            }
+            googleCalendarUrls = [];
+            googleEvents = {};
+            if (typeof renderWorkCalendar === 'function') {
+                renderWorkCalendar();
+            }
 
             // 로그아웃 상태일 때도 restricted message 렌더링
             renderRestrictedContent();
@@ -426,7 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const btnOpenModal = document.getElementById('btn-open-modal');
             if (btnOpenModal) {
-                if (currentTab === 'main' || currentTab === 'members') {
+                if (currentTab === 'main' || currentTab === 'members' || currentTab === 'projects') {
                     btnOpenModal.style.display = 'none';
                 } else {
                     btnOpenModal.style.display = 'flex';
@@ -650,6 +688,144 @@ document.addEventListener('DOMContentLoaded', () => {
     let workCurrentYear = workCurrentDate.getFullYear();
     let workCurrentMonth = workCurrentDate.getMonth();
 
+    // 구글 캘린더 연동 변수
+    let googleCalendarUrls = [];
+    let googleEvents = {};
+    let userGoogleCalendarListener = null;
+
+    // iCal 텍스트를 파싱하여 이벤트 객체 배열 반환
+    function parseICalText(text) {
+        const events = [];
+        const unfoldedText = text.replace(/\r?\n[ \t]/g, '');
+        const lines = unfoldedText.split(/\r?\n/);
+        let currentEvent = null;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            if (line.startsWith('BEGIN:VEVENT')) {
+                currentEvent = {};
+            } else if (line.startsWith('END:VEVENT')) {
+                if (currentEvent && currentEvent.title && currentEvent.dateStr) {
+                    events.push(currentEvent);
+                }
+                currentEvent = null;
+            } else if (currentEvent) {
+                if (line.startsWith('SUMMARY:')) {
+                    currentEvent.title = line.substring(8).trim();
+                } else if (line.startsWith('DTSTART')) {
+                    const colonIdx = line.indexOf(':');
+                    if (colonIdx !== -1) {
+                        const dStr = line.substring(colonIdx + 1).trim();
+                        if (dStr.length >= 8) {
+                            currentEvent.dateStr = `${dStr.substring(0,4)}-${dStr.substring(4,6)}-${dStr.substring(6,8)}`;
+                        }
+                    }
+                }
+            }
+        }
+        return events;
+    }
+
+    // webcal 및 다중 프록시를 적용해 캘린더 데이터를 가져오는 헬퍼 함수
+    async function fetchWithProxy(url, proxyIndexOffset = 0) {
+        let targetUrl = url.trim();
+        if (targetUrl.startsWith('webcal://')) {
+            targetUrl = 'https://' + targetUrl.substring(9);
+        }
+
+        const proxies = [
+            (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+            (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+            (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
+        ];
+
+        let lastError = null;
+        for (let i = 0; i < proxies.length; i++) {
+            const idx = (i + proxyIndexOffset) % proxies.length;
+            const getProxyUrl = proxies[idx];
+            try {
+                const proxyUrl = getProxyUrl(targetUrl);
+                const res = await fetch(proxyUrl);
+                if (!res.ok) throw new Error(`HTTP 에러! 상태코드: ${res.status}`);
+                const text = await res.text();
+                if (text && (text.includes('BEGIN:VCALENDAR') || text.includes('begin:vcalendar'))) {
+                    return text;
+                } else {
+                    throw new Error('올바른 iCal(ICS) 형식이 아닙니다.');
+                }
+            } catch (err) {
+                console.warn(`프록시 실패 (${getProxyUrl(targetUrl)}): ${err.message}`);
+                lastError = err;
+            }
+        }
+        throw lastError || new Error('모든 프록시 서버 연결 실패');
+    }
+
+    // 다중 캘린더 동시 fetch
+    async function fetchGoogleCalendarEvents() {
+        if (!googleCalendarUrls || googleCalendarUrls.length === 0) {
+            googleEvents = {};
+            if (typeof renderWorkCalendar === 'function') renderWorkCalendar();
+            return;
+        }
+        const syncIcon = document.querySelector('#work-calendar-sync-btn i');
+        if (syncIcon) syncIcon.classList.add('fa-spin');
+
+        const results = [];
+        for (let i = 0; i < googleCalendarUrls.length; i++) {
+            const cal = googleCalendarUrls[i];
+            if (i > 0) {
+                await new Promise(resolve => setTimeout(resolve, 150));
+            }
+            try {
+                const text = await fetchWithProxy(cal.url, i);
+                const events = parseICalText(text);
+                console.log(`[DODO.work - ${cal.name}] 구글 캘린더 동기화 완료: ${events.length}개 일정`);
+                results.push({ name: cal.name, events: events, success: true, index: i });
+            } catch (err) {
+                console.error(`[DODO.work - ${cal.name}] 구글 캘린더 동기화 실패:`, err);
+                results.push({ name: cal.name, events: [], success: false, error: err.message, index: i });
+            }
+        }
+
+        try {
+            googleEvents = {};
+            let failedList = [];
+            const googleCalendarColors = ['#4285F4', '#34A853', '#E67C73', '#F7CB4D', '#7986CB'];
+
+            results.forEach(result => {
+                if (!result.success) failedList.push(result.name);
+                const calColor = googleCalendarColors[result.index % googleCalendarColors.length] || '#4285F4';
+                result.events.forEach(ev => {
+                    if (!googleEvents[ev.dateStr]) googleEvents[ev.dateStr] = [];
+                    googleEvents[ev.dateStr].push({
+                        title: `[${result.name}] ${ev.title}`,
+                        color: calColor,
+                        isGoogle: true
+                    });
+                });
+            });
+            if (typeof renderWorkCalendar === 'function') renderWorkCalendar();
+            if (failedList.length > 0) {
+                console.warn(`일부 캘린더 동기화 실패: ${failedList.join(', ')}`);
+            }
+        } catch (e) {
+            console.error("구글 캘린더 통합 렌더링 중 오류:", e);
+        } finally {
+            if (syncIcon) syncIcon.classList.remove('fa-spin');
+        }
+    }
+
+    // 5칸 고정 입력필드에 저장된 데이터 채우기
+    function fillGcalSlots() {
+        for (let i = 0; i < 5; i++) {
+            const nameEl = document.getElementById(`work-gcal-name-${i}`);
+            const urlEl = document.getElementById(`work-gcal-url-${i}`);
+            if (nameEl) nameEl.value = (googleCalendarUrls[i] && googleCalendarUrls[i].name) || '';
+            if (urlEl) urlEl.value = (googleCalendarUrls[i] && googleCalendarUrls[i].url) || '';
+        }
+    }
+
     db.collection('workSchedules').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
         schedulesData = [];
         snapshot.forEach(doc => schedulesData.push({ id: doc.id, ...doc.data() }));
@@ -669,6 +845,43 @@ document.addEventListener('DOMContentLoaded', () => {
         workCurrentMonth++;
         if (workCurrentMonth > 11) { workCurrentMonth = 0; workCurrentYear++; }
         renderWorkCalendar();
+    });
+
+    // 구글 캘린더 UI 연동
+    document.getElementById('work-calendar-sync-btn')?.addEventListener('click', () => {
+        fetchGoogleCalendarEvents();
+    });
+    document.getElementById('work-calendar-settings-btn')?.addEventListener('click', () => {
+        document.getElementById('work-calendar-settings-modal')?.classList.remove('hidden');
+    });
+    document.getElementById('work-calendar-settings-close')?.addEventListener('click', () => {
+        document.getElementById('work-calendar-settings-modal')?.classList.add('hidden');
+    });
+    document.getElementById('work-calendar-settings-form')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!currentUser) return;
+        
+        const newList = [];
+        for (let i = 0; i < 5; i++) {
+            const nameVal = document.getElementById(`work-gcal-name-${i}`).value.trim();
+            const urlVal = document.getElementById(`work-gcal-url-${i}`).value.trim();
+            if (urlVal) {
+                newList.push({
+                    name: nameVal || `캘린더 ${i+1}`,
+                    url: urlVal
+                });
+            }
+        }
+        
+        db.collection('users').doc(currentUser.uid).set({
+            googleCalendarUrls: newList
+        }, { merge: true }).then(() => {
+            alert("구글 캘린더 설정이 저장되었습니다.");
+            document.getElementById('work-calendar-settings-modal')?.classList.add('hidden');
+        }).catch(err => {
+            console.error("캘린더 설정 저장 오류:", err);
+            alert("설정 저장 중 오류가 발생했습니다.");
+        });
     });
 
     window.renderWorkCalendar = function() {
@@ -730,23 +943,55 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (modal) modal.classList.remove('hidden');
             };
             
+            let combinedEvents = [];
+            
+            // 기존 Firestore 일정 데이터를 combinedEvents 형태로 변환
             const daySchedules = schedulesData.filter(sch => sch.date === dateString);
             daySchedules.forEach(sch => {
+                combinedEvents.push({
+                    id: sch.id,
+                    title: sch.title,
+                    completed: sch.completed,
+                    isGoogle: false
+                });
+            });
+            
+            // 구글 캘린더 일정 추가
+            if (googleEvents[dateString]) {
+                googleEvents[dateString].forEach(gev => {
+                    combinedEvents.push({
+                        title: gev.title,
+                        color: gev.color,
+                        isGoogle: true
+                    });
+                });
+            }
+            
+            combinedEvents.forEach(evt => {
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'schedule-item';
-                itemDiv.style.cssText = `font-size: 0.75rem; padding: 4px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: ${sch.completed ? 'rgba(255,255,255,0.05)' : 'rgba(0, 206, 201, 0.2)'}; color: ${sch.completed ? 'var(--text-muted)' : '#00cec9'}; text-decoration: ${sch.completed ? 'line-through' : 'none'}; cursor: pointer;`;
-                itemDiv.innerText = sch.title;
-                itemDiv.title = sch.title;
                 
-                itemDiv.onclick = (e) => {
-                    e.stopPropagation();
-                    if (!currentUser) return;
-                    if (confirm(`'${sch.title}' 일정을 삭제하시겠습니까?`)) {
-                        window.deleteItem('workSchedules', sch.id);
-                    } else if (confirm(`'${sch.title}' 일정의 완료 상태를 변경하시겠습니까?`)) {
-                        window.toggleSchedule(sch.id, sch.completed);
-                    }
-                };
+                if (evt.isGoogle) {
+                    itemDiv.style.cssText = `font-size: 0.75rem; padding: 4px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: ${evt.color || '#4285F4'}40; color: ${evt.color || '#4285F4'}; cursor: default; border-left: 3px solid ${evt.color || '#4285F4'};`;
+                    itemDiv.innerHTML = `<i class="fa-brands fa-google"></i> ${evt.title}`;
+                    itemDiv.onclick = (e) => {
+                        e.stopPropagation();
+                        alert(`[구글 일정] ${evt.title}`);
+                    };
+                } else {
+                    itemDiv.style.cssText = `font-size: 0.75rem; padding: 4px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: ${evt.completed ? 'rgba(255,255,255,0.05)' : 'rgba(0, 206, 201, 0.2)'}; color: ${evt.completed ? 'var(--text-muted)' : '#00cec9'}; text-decoration: ${evt.completed ? 'line-through' : 'none'}; cursor: pointer;`;
+                    itemDiv.innerText = evt.title;
+                    itemDiv.onclick = (e) => {
+                        e.stopPropagation();
+                        if (!currentUser) return;
+                        if (confirm(`'${evt.title}' 일정을 삭제하시겠습니까?`)) {
+                            window.deleteItem('workSchedules', evt.id);
+                        } else if (confirm(`'${evt.title}' 일정의 완료 상태를 변경하시겠습니까?`)) {
+                            window.toggleSchedule(evt.id, evt.completed);
+                        }
+                    };
+                }
+                itemDiv.title = evt.title;
                 dayCell.appendChild(itemDiv);
             });
             
@@ -1143,6 +1388,10 @@ document.addEventListener('DOMContentLoaded', () => {
             totalDays += mDays;
         }
 
+        // 헤더와 바디의 가로 폭을 전체 스케줄 너비로 명시적으로 설정하여 가로 스크롤 가능 범위를 확보합니다.
+        ganttHeader.style.width = `${totalDays * psDayWidth}px`;
+        ganttBody.style.width = `${totalDays * psDayWidth}px`;
+
         // --- 2. Tree Body & Gantt Blocks ---
         treeBody.innerHTML = '';
         bgHlines.innerHTML = '';
@@ -1371,7 +1620,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if(rowIndex >= 0 && rowIndex < psRowIndexMap.length) {
             const taskId = psRowIndexMap[rowIndex];
             psSelectedId = taskId;
-            renderPsScheduler();
+            
+            document.querySelectorAll('.ps-tree-row').forEach(r => r.classList.remove('selected'));
+            const treeRows = document.querySelectorAll('.ps-tree-row');
+            if (treeRows[rowIndex]) treeRows[rowIndex].classList.add('selected');
+            
+            document.querySelectorAll('.ps-gantt-row').forEach(r => r.classList.remove('selected'));
+            const ganttRows = document.querySelectorAll('.ps-gantt-row');
+            if (ganttRows[rowIndex]) ganttRows[rowIndex].classList.add('selected');
             
             const task = psData.find(p => p.id === taskId);
             
@@ -1494,7 +1750,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isPanning) {
             isPanning = false;
             const container = document.getElementById('ps-gantt-container');
-            if (container) container.style.cursor = '';
+            if (container) {
+                container.style.cursor = '';
+                const dx = e.clientX - panStartX;
+                container.scrollLeft = panScrollLeft - dx;
+            }
+            e.preventDefault();
+            return;
         }
         
         if (isClickExtendCandidate) {
@@ -1513,14 +1775,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.psUpdateField(clickExtendTaskId, 'endDate', getDateFromDayIndex(newEndDay));
                 }
             }
-        }
-
-        if (isPanning) {
-            const container = document.getElementById('ps-gantt-container');
-            const dx = e.clientX - panStartX;
-            container.scrollLeft = panScrollLeft - dx;
-            e.preventDefault();
-            return;
         }
         
         if (!isDrawing && !isMoving && !isResizingLeft && !isResizingRight) return;
