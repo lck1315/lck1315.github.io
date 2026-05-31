@@ -1165,7 +1165,12 @@ document.addEventListener('DOMContentLoaded', () => {
             // Tree Row
             const tr = document.createElement('div');
             tr.className = `ps-tree-row ${isSelected ? 'selected' : ''}`;
-            tr.onclick = () => { psSelectedId = task.id; renderPsScheduler(); };
+            tr.onclick = (e) => { 
+                if (psSelectedId === task.id) return;
+                psSelectedId = task.id; 
+                document.querySelectorAll('.ps-tree-row').forEach(r => r.classList.remove('selected'));
+                tr.classList.add('selected');
+            };
             
             const disabledAttr = !currentUser ? 'disabled' : '';
 
