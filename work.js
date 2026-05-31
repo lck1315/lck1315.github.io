@@ -1446,6 +1446,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 dDiv.style.width = `${psDayWidth}px`;
                 dDiv.style.minWidth = `${psDayWidth}px`;
                 dDiv.innerText = d;
+                if (isToday) dDiv.classList.add('today');
                 ghDays.appendChild(dDiv);
                 
                 // Weekday
@@ -1456,6 +1457,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 wdDiv.innerText = weekdaysStr[dayOfWeek];
                 if(dayOfWeek === 0) wdDiv.classList.add('weekend-sun');
                 if(dayOfWeek === 6) wdDiv.classList.add('weekend-sat');
+                if (isToday) wdDiv.classList.add('today');
                 ghWeekdays.appendChild(wdDiv);
                 
                 // Background Grid Line
@@ -1678,7 +1680,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (blockEl) {
             actionTaskId = blockEl.dataset.taskId;
             psSelectedId = actionTaskId;
-            renderPsScheduler();
+            
+            // 드래그 시작 전 DOM을 전면 리빌드(renderPsScheduler)하면 포커스가 날아가고 스크롤 튕김 오류가 발생하므로 클래스명만 수동 제어합니다.
+            document.querySelectorAll('.ps-block, .ps-tree-row').forEach(el => el.classList.remove('selected'));
+            blockEl.classList.add('selected');
+            
+            const targetRowIndex = psRowIndexMap.indexOf(actionTaskId);
+            if (targetRowIndex !== -1) {
+                const treeRows = document.querySelectorAll('.ps-tree-row');
+                if (treeRows[targetRowIndex]) treeRows[targetRowIndex].classList.add('selected');
+            }
             
             const task = psData.find(p => p.id === actionTaskId);
             if(task && task.startDate && task.endDate) {

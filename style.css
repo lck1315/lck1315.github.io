@@ -2826,7 +2826,21 @@ button.mobile-dropdown-item {
 }
 .ps-gantt-bg-day.weekend-sat { background: #f0f5ff; }
 .ps-gantt-bg-day.weekend-sun { background: #fff0f0; }
-.ps-gantt-bg-day.today { background: #ffffcc; }
+.ps-gantt-bg-day.today {
+    background: rgba(255, 107, 129, 0.08) !important;
+    border-left: 2px dashed rgba(255, 107, 129, 0.4) !important;
+    border-right: 2px dashed rgba(255, 107, 129, 0.4) !important;
+    position: relative;
+    z-index: 1;
+}
+
+.ps-gh-cell.today {
+    background: linear-gradient(135deg, #6c5ce7, #a8a5ff) !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 8px rgba(108, 92, 231, 0.3) !important;
+}
 
 .ps-gantt-horizontal-lines {
     position: absolute;
