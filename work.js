@@ -122,22 +122,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderRestrictedContent() {
+        const psApp = document.querySelector('.ps-desktop-app');
+        const psLock = document.getElementById('ps-auth-lock');
+
         if (!currentUser || !currentUserDoc || !currentUserDoc.isApproved) {
             showAuthRequiredMessage('work-content-container');
             showAuthRequiredMessage('schedule-content-container');
             showAuthRequiredMessage('performance-content-container');
             showAuthRequiredMessage('members-content-container');
             
-            // 프로젝트 탭은 .ps-desktop-app 내부를 가림
-            const psApp = document.querySelector('.ps-desktop-app');
-            if (psApp) {
-                psApp.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; color: #333;">
+            // 프로젝트 탭은 .ps-desktop-app을 숨기고, #ps-auth-lock을 노출
+            if (psApp) psApp.style.setProperty('display', 'none', 'important');
+            if (psLock) {
+                psLock.classList.remove('hidden');
+                psLock.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:300px; color: var(--text-muted);">
                     <i class="fa-solid fa-lock" style="font-size: 3rem; margin-bottom: 20px; color: #ff4757;"></i>
                     <h3 style="font-size: 1.5rem; margin-bottom: 10px;">접근 권한이 없습니다</h3>
                     <p>내용을 보려면 로그인 및 마스터의 승인이 필요합니다.</p>
                 </div>`;
             }
             return;
+        }
+
+        // 로그인 및 승인됨 -> 정상 렌더링 복구
+        if (psApp) psApp.style.display = ''; // 원래 display로 복귀
+        if (psLock) {
+            psLock.classList.add('hidden');
+            psLock.innerHTML = '';
         }
 
         // 로그인 및 승인됨 -> 정상 렌더링
@@ -232,12 +243,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
  
-                    // 리로드하여 HTML 복구 (만약 보안 메시지로 덮어씌워졌었다면)
-                    if (document.querySelector('.ps-desktop-app').innerHTML.includes('fa-lock')) {
-                        location.reload();
-                    } else {
-                        renderRestrictedContent();
-                    }
+                    renderRestrictedContent();
+                    if (typeof renderPsScheduler === 'function') renderPsScheduler();
                 } else {
                     // 승인 대기중 -> 화면 가림
                     authStatusHeader.style.display = 'inline-block';
