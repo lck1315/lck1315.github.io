@@ -1708,6 +1708,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isResizingLeft = false;
     let isResizingRight = false;
     let isPanning = false;
+    let panPending = false;
     let panStartX = null;
     let panScrollLeft = 0;
 
@@ -1756,6 +1757,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 커맨드 키 없이 블럭 클릭 시에는 이동/선택 대신 팬 동작만 허용합니다.
             if (!e.ctrlKey && !e.metaKey) {
                 isPanning = false;
+                panPending = true;
                 panStartX = e.clientX;
                 panScrollLeft = container.scrollLeft;
                 e.preventDefault();
@@ -1824,6 +1826,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!e.ctrlKey && !e.metaKey) {
                 // Just select row and prepare for panning
                 isPanning = false;
+                panPending = true;
                 panStartX = e.clientX;
                 panScrollLeft = container.scrollLeft;
                 e.preventDefault();
@@ -1875,13 +1878,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (!isDrawing && !isMoving && !isResizingLeft && !isResizingRight) {
             // Check for panning initiation
-            if (e.buttons === 1 && !e.ctrlKey && !e.metaKey) {
-                if (panStartX !== null && Math.abs(e.clientX - panStartX) > 3) {
+            if (e.buttons === 1 && !e.ctrlKey && !e.metaKey && panStartX !== null) {
+                const deltaX = e.clientX - panStartX;
+                if (panPending && Math.abs(deltaX) > 8) {
                     isPanning = true;
+                    panPending = false;
                     isClickExtendCandidate = false; // Cancel extend if panning
+                }
+                if (isPanning) {
                     const container = document.getElementById('ps-gantt-container');
                     if (container) {
-                        container.scrollLeft = panScrollLeft - (e.clientX - panStartX);
+                        container.scrollLeft = panScrollLeft - deltaX;
                         container.style.cursor = 'grabbing';
                     }
                 }
@@ -1924,6 +1931,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mouseup', (e) => {
         if (isPanning) {
             isPanning = false;
+            panPending = false;
             const container = document.getElementById('ps-gantt-container');
             if (container) {
                 container.style.cursor = '';
@@ -1936,6 +1944,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (!isDrawing && !isMoving && !isResizingLeft && !isResizingRight) {
+            panPending = false;
             panStartX = null;
             return;
         }
