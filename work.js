@@ -1391,11 +1391,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderPsScheduler() {
         const treeBody = document.getElementById('ps-tree-body');
         const ganttHeader = document.getElementById('ps-gantt-header');
+        const ganttBody = document.getElementById('ps-gantt-body');
         const bgGrid = document.getElementById('ps-gantt-bg-grid');
         const bgHlines = document.getElementById('ps-gantt-horizontal-lines');
         const ganttBlocks = document.getElementById('ps-gantt-blocks');
 
-        if(!treeBody || !ganttHeader) return;
+        if(!treeBody || !ganttHeader || !ganttBody) return;
 
         // --- 1. Gantt Header & Grid ---
         const isLeapYear = (psYear % 4 === 0 && psYear % 100 !== 0) || (psYear % 400 === 0);
