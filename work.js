@@ -816,7 +816,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 result.events.forEach(ev => {
                     if (!googleEvents[ev.dateStr]) googleEvents[ev.dateStr] = [];
                     googleEvents[ev.dateStr].push({
-                        title: `[${result.name}] ${ev.title}`,
+                        title: ev.title,
                         color: calColor,
                         isGoogle: true
                     });

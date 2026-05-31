@@ -3221,7 +3221,7 @@ function initCardSliders(container) {
                     if (!googleEvents[ev.dateStr]) googleEvents[ev.dateStr] = [];
                     // 캘린더 구분을 위해 일정 제목에 [캘린더이름] 접두사 추가 및 고유색 지정
                     googleEvents[ev.dateStr].push({
-                        title: `[${result.name}] ${ev.title}`,
+                        title: ev.title,
                         color: calColor,
                         isGoogle: true
                     });

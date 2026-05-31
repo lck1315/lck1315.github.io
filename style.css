@@ -2950,3 +2950,15 @@ button.mobile-dropdown-item {
         padding-top: 120px !important; /* Make room for the expanded header */
     }
 }
+
+/* 가족 홈페이지 캘린더 영역 가로 1.5배(1350px)로 확장 */
+#calendar .container {
+    max-width: 1350px !important;
+    width: 95% !important;
+}
+
+/* DODO.work 일정관리 및 프로젝트 탭 영역 가로 1.5배(1400px)로 확장 */
+.work-main-container {
+    max-width: 1400px !important;
+    width: 95% !important;
+}
