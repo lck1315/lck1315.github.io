@@ -782,6 +782,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const results = [];
         for (let i = 0; i < googleCalendarUrls.length; i++) {
             const cal = googleCalendarUrls[i];
+            
+            // 비활성화된 것은 페치를 건너뜁니다
+            if (cal.enabled === false) {
+                continue;
+            }
+            
             if (i > 0) {
                 await new Promise(resolve => setTimeout(resolve, 150));
             }
@@ -829,8 +835,12 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < 5; i++) {
             const nameEl = document.getElementById(`work-gcal-name-${i}`);
             const urlEl = document.getElementById(`work-gcal-url-${i}`);
+            const enableEl = document.getElementById(`work-gcal-enable-${i}`);
             if (nameEl) nameEl.value = (googleCalendarUrls[i] && googleCalendarUrls[i].name) || '';
             if (urlEl) urlEl.value = (googleCalendarUrls[i] && googleCalendarUrls[i].url) || '';
+            if (enableEl) {
+                enableEl.checked = !(googleCalendarUrls[i] && googleCalendarUrls[i].enabled === false);
+            }
         }
     }
 
@@ -873,10 +883,13 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < 5; i++) {
             const nameVal = document.getElementById(`work-gcal-name-${i}`).value.trim();
             const urlVal = document.getElementById(`work-gcal-url-${i}`).value.trim();
+            const enableEl = document.getElementById(`work-gcal-enable-${i}`);
+            const enabled = enableEl ? enableEl.checked : true;
             if (urlVal) {
                 newList.push({
                     name: nameVal || `캘린더 ${i+1}`,
-                    url: urlVal
+                    url: urlVal,
+                    enabled: enabled
                 });
             }
         }

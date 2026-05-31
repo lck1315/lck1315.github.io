@@ -3111,8 +3111,12 @@ function initCardSliders(container) {
         for (let i = 0; i < 5; i++) {
             const nameEl = document.getElementById(`gcal-name-${i}`);
             const urlEl = document.getElementById(`gcal-url-${i}`);
+            const enableEl = document.getElementById(`gcal-enable-${i}`);
             if (nameEl) nameEl.value = (googleCalendarUrls[i] && googleCalendarUrls[i].name) || '';
             if (urlEl) urlEl.value = (googleCalendarUrls[i] && googleCalendarUrls[i].url) || '';
+            if (enableEl) {
+                enableEl.checked = !(googleCalendarUrls[i] && googleCalendarUrls[i].enabled === false);
+            }
         }
     }
 
@@ -3167,6 +3171,11 @@ function initCardSliders(container) {
         const results = [];
         for (let i = 0; i < googleCalendarUrls.length; i++) {
             const cal = googleCalendarUrls[i];
+            
+            // 비활성화된 캘린더는 페치를 건너뜁니다
+            if (cal.enabled === false) {
+                continue;
+            }
             
             // 두 번째 요청부터는 150ms 딜레이를 줌
             if (i > 0) {
@@ -3301,7 +3310,9 @@ function initCardSliders(container) {
                         }
                     }
 
-                    newList.push({ name, url });
+                    const enableEl = document.getElementById(`gcal-enable-${i}`);
+                    const enabled = enableEl ? enableEl.checked : true;
+                    newList.push({ name, url, enabled });
                 }
             }
 
