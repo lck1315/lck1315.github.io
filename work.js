@@ -1332,6 +1332,42 @@ document.addEventListener('DOMContentLoaded', () => {
     db.collection('workProjects').orderBy('order', 'asc').onSnapshot((snapshot) => {
         psData = [];
         snapshot.forEach(doc => psData.push({ id: doc.id, ...doc.data() }));
+        updateSearchDropdown();
+        renderPsScheduler();
+    });
+
+    function updateSearchDropdown() {
+        const searchSelect = document.getElementById('ps-search');
+        if (!searchSelect) return;
+
+        const currentVal = searchSelect.value || 'all';
+
+        let html = '<option value="all">🔍 전체보기 (필터)</option>';
+        html += '<optgroup label="진행 상태">';
+        html += '<option value="status:대기중">상태: 대기중</option>';
+        html += '<option value="status:진행중">상태: 진행중</option>';
+        html += '<option value="status:완료">상태: 완료</option>';
+        html += '</optgroup>';
+
+        const assignees = [...new Set(psData.map(p => p.assignee ? p.assignee.trim() : '').filter(name => name !== ''))];
+        if (assignees.length > 0) {
+            html += '<optgroup label="담당자별 필터">';
+            assignees.forEach(name => {
+                html += `<option value="assignee:${name}">${name}</option>`;
+            });
+            html += '</optgroup>';
+        }
+
+        searchSelect.innerHTML = html;
+
+        if (searchSelect.querySelector(`option[value="${currentVal}"]`)) {
+            searchSelect.value = currentVal;
+        } else {
+            searchSelect.value = 'all';
+        }
+    }
+
+    document.getElementById('ps-search')?.addEventListener('change', () => {
         renderPsScheduler();
     });
 
@@ -1714,6 +1750,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const blockEl = e.target.closest('.ps-block');
         
         if (blockEl) {
+            const task = psData.find(p => p.id === blockEl.dataset.taskId);
+            if (!task) return;
+
+            // 커맨드 키 없이 블럭 클릭 시에는 이동/선택 대신 팬 동작만 허용합니다.
+            if (!e.ctrlKey && !e.metaKey) {
+                isPanning = false;
+                panStartX = e.clientX;
+                panScrollLeft = container.scrollLeft;
+                e.preventDefault();
+                return;
+            }
+
             actionTaskId = blockEl.dataset.taskId;
             psSelectedId = actionTaskId;
             
@@ -1727,8 +1775,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (treeRows[targetRowIndex]) treeRows[targetRowIndex].classList.add('selected');
             }
             
-            const task = psData.find(p => p.id === actionTaskId);
-            if(task && task.startDate && task.endDate) {
+            if(task.startDate && task.endDate) {
                 originalStartDay = getDayIndexFromDateStr(task.startDate);
                 originalEndDay = getDayIndexFromDateStr(task.endDate);
                 dragStartX = x;
