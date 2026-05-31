@@ -1323,7 +1323,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const container = document.getElementById('ps-gantt-container');
         const rect = ganttBody.getBoundingClientRect();
-        const x = e.clientX - rect.left + container.scrollLeft;
+        const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         const dayIndex = getDayIndexFromX(x);
         const rowIndex = Math.floor(y / 30);
@@ -1459,7 +1459,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const container = document.getElementById('ps-gantt-container');
         const rect = ganttBody.getBoundingClientRect();
-        let x = e.clientX - rect.left + container.scrollLeft;
+        let x = e.clientX - rect.left;
         if(x < 0) x = 0;
         const dayIndex = getDayIndexFromX(x);
         
@@ -1529,7 +1529,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!ganttBody || !container || !actionTaskId) return;
         
         const rect = ganttBody.getBoundingClientRect();
-        let x = e.clientX - rect.left + container.scrollLeft;
+        let x = e.clientX - rect.left;
         if (x < 0) x = 0;
         const dayIndex = getDayIndexFromX(x);
         
