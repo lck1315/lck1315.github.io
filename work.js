@@ -1799,21 +1799,85 @@ document.addEventListener('DOMContentLoaded', () => {
     const psFileInput = document.getElementById('ps-file-input');
 
     if (psExportBtn) {
-        psExportBtn.addEventListener('click', () => {
+        psExportBtn.addEventListener('click', async () => {
             if (!currentUser) { alert('로그인이 필요합니다.'); return; }
             if (psData.length === 0) { alert('내보낼 데이터가 없습니다.'); return; }
             
-            const exportData = psData.map(item => {
-                const data = { ...item };
-                return data;
+            const nestedData = {
+                year: psYear,
+                layout: {
+                    splitter_sizes: [650, 749],
+                    left_column_widths: [136, 200, 80, 80, 100, 100]
+                },
+                left_panel: [],
+                right_panel: {}
+            };
+
+            const rootItems = psData.filter(p => !p.parentId).sort((a, b) => a.order - b.order);
+            
+            function buildChildren(parentId, prefix) {
+                const children = psData.filter(p => p.parentId === parentId).sort((a, b) => a.order - b.order);
+                return children.map((child, index) => {
+                    const currentPrefix = `${prefix}-${index + 1}`;
+                    return {
+                        col0: currentPrefix,
+                        col1: child.name || "",
+                        assignee: child.assignee || "",
+                        status: child.status || "대기중",
+                        start: child.startDate || "",
+                        end: child.endDate || "",
+                        expanded: child.expanded ?? true,
+                        uid: child.id,
+                        children: buildChildren(child.id, currentPrefix)
+                    };
+                });
+            }
+
+            nestedData.left_panel = rootItems.map((root, index) => {
+                const prefix = String(index + 1);
+                return {
+                    col0: prefix,
+                    col1: root.name || "",
+                    assignee: root.assignee || "",
+                    status: root.status || "대기중",
+                    start: root.startDate || "",
+                    end: root.endDate || "",
+                    expanded: root.expanded ?? true,
+                    uid: root.id,
+                    children: buildChildren(root.id, prefix)
+                };
             });
 
-            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataStr = JSON.stringify(nestedData, null, 2);
+            const defaultFilename = `schedule_${psYear}.json`;
+
+            try {
+                if (window.showSaveFilePicker) {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: defaultFilename,
+                        types: [{
+                            description: 'JSON Files',
+                            accept: { 'application/json': ['.json'] },
+                        }],
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(dataStr);
+                    await writable.close();
+                    return;
+                }
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.error('File System Access API failed:', err);
+                }
+                return; // User cancelled the save dialog
+            }
+
+            // Fallback for browsers that don't support showSaveFilePicker
             const blob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `project_save_${new Date().toISOString().slice(0, 10)}.json`;
+            a.download = defaultFilename;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1832,43 +1896,83 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = (event) => {
+            reader.onload = async (event) => {
                 try {
                     const parsedData = JSON.parse(event.target.result);
-                    if (!Array.isArray(parsedData)) {
-                        alert('잘못된 파일 형식입니다. (배열 형태의 JSON이 아닙니다)');
+                    
+                    // 호환성 체크: 윈도우 프로그램 형식인지, 아니면 이전 배열 형식인지
+                    let isNestedFormat = false;
+                    let importItems = [];
+                    
+                    if (parsedData.left_panel && Array.isArray(parsedData.left_panel)) {
+                        isNestedFormat = true;
+                    } else if (!Array.isArray(parsedData)) {
+                        alert('지원하지 않는 파일 형식입니다.');
                         return;
                     }
+
                     if (confirm('파일 데이터를 불러오면 기존 프로젝트 데이터가 모두 덮어씌워집니다. 계속하시겠습니까?')) {
                         const batch = db.batch();
-                        db.collection('workProjects').get().then(snapshot => {
-                            // Delete existing data
-                            snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                        
+                        // 기존 데이터 삭제
+                        const snapshot = await db.collection('workProjects').get();
+                        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                        
+                        if (isNestedFormat) {
+                            // 중첩된 윈도우 데이터 평면화
+                            let orderCounter = 0;
+                            function flatten(items, parentId) {
+                                items.forEach(item => {
+                                    orderCounter += 1000;
+                                    const docId = item.uid || db.collection('workProjects').doc().id;
+                                    const flatItem = {
+                                        parentId: parentId,
+                                        name: item.col1 || "",
+                                        assignee: item.assignee || "",
+                                        status: item.status || "대기중",
+                                        startDate: item.start || "",
+                                        endDate: item.end || "",
+                                        expanded: item.expanded ?? true,
+                                        color: parentId ? '#e0f7fa' : '#fffacd',
+                                        order: orderCounter,
+                                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                                    };
+                                    const ref = db.collection('workProjects').doc(docId);
+                                    batch.set(ref, flatItem);
+                                    
+                                    if (item.children && item.children.length > 0) {
+                                        flatten(item.children, docId);
+                                    }
+                                });
+                            }
+                            flatten(parsedData.left_panel, null);
                             
-                            // Insert new data
+                            if (parsedData.year) {
+                                psYear = parsedData.year;
+                                const yearInput = document.getElementById('ps-year');
+                                if (yearInput) yearInput.value = psYear;
+                            }
+                        } else {
+                            // 구버전 평면 배열 형식 호환
                             parsedData.forEach(item => {
                                 const docId = item.id;
                                 const itemData = { ...item };
-                                delete itemData.id; // ID 필드는 제외하고 저장
-                                
+                                delete itemData.id;
                                 const ref = docId ? db.collection('workProjects').doc(docId) : db.collection('workProjects').doc();
                                 batch.set(ref, itemData);
                             });
-                            
-                            return batch.commit();
-                        }).then(() => {
-                            alert('프로젝트 데이터를 성공적으로 불러왔습니다!');
-                            psFileInput.value = '';
-                        }).catch(err => {
-                            console.error('불러오기 실패:', err);
-                            alert('데이터를 저장하는 중 오류가 발생했습니다.');
-                        });
+                        }
+                        
+                        await batch.commit();
+                        alert('프로젝트 데이터를 성공적으로 불러왔습니다!');
+                        psFileInput.value = '';
+                        renderPsScheduler(); // 반영 후 새로고침
                     } else {
                         psFileInput.value = '';
                     }
                 } catch (err) {
-                    console.error(err);
-                    alert('JSON 파일을 파싱하는 중 오류가 발생했습니다.');
+                    console.error('불러오기 실패:', err);
+                    alert('JSON 파일을 파싱하고 저장하는 중 오류가 발생했습니다.');
                 }
             };
             reader.readAsText(file);
