@@ -1365,6 +1365,16 @@ document.addEventListener('DOMContentLoaded', () => {
             html += '</optgroup>';
         }
 
+        // Project name quick-jump list
+        if (psData.length > 0) {
+            html += '<optgroup label="프로젝트 이동">';
+            psData.forEach(p => {
+                const displayName = (p.name || '(무제)') + (p.parentId ? ' (하위)' : '');
+                html += `<option value="goto:${p.id}">${displayName}</option>`;
+            });
+            html += '</optgroup>';
+        }
+
         searchSelect.innerHTML = html;
 
         if (searchSelect.querySelector(`option[value="${currentVal}"]`)) {
@@ -1374,8 +1384,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    document.getElementById('ps-search')?.addEventListener('change', () => {
-        renderPsScheduler();
+    document.getElementById('ps-search')?.addEventListener('change', (e) => {
+        const val = e.target.value || 'all';
+        if (val.startsWith('goto:')) {
+            const id = val.split(':')[1];
+            // Clear name filter and render so DOM rows exist
+            psSearchFilter = '';
+            renderPsScheduler();
+            // After render, scroll to the target row if present
+            setTimeout(() => {
+                const row = Array.from(document.querySelectorAll('.ps-tree-row')).find(r => r.dataset && r.dataset.taskId === id);
+                const container = document.getElementById('ps-gantt-container');
+                if (row && container) {
+                    // scroll tree area to show the row
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 80);
+        } else {
+            renderPsScheduler();
+        }
     });
 
     document.getElementById('ps-search-input')?.addEventListener('input', (e) => {
@@ -1408,20 +1435,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     document.getElementById('ps-btn-fit-screen')?.addEventListener('click', () => {
-        // 화면 맞춤: 오늘 날짜로 스크롤
+        // 화면 맞춤: 전체 날짜 범위를 한 화면에 맞춥니다
         const container = document.getElementById('ps-gantt-container');
-        if (container) {
-            const today = new Date();
-            const yStart = new Date(psDisplayStartYear, psDisplayStartMonth, 1);
-            const diffDays = Math.floor((today - yStart) / (1000 * 60 * 60 * 24));
-            if (diffDays >= 0) {
-                const todayX = diffDays * psDayWidth;
-                container.scrollTo({
-                    left: todayX - (container.clientWidth / 2),
-                    behavior: 'smooth'
-                });
-            }
-        }
+        if (!container) return;
+        const displayStart = new Date(psDisplayStartYear, psDisplayStartMonth, 1);
+        const displayEnd = new Date(psDisplayEndYear, psDisplayEndMonth + 1, 0);
+        const msPerDay = 1000 * 60 * 60 * 24;
+        const totalDays = Math.floor((displayEnd - displayStart) / msPerDay) + 1;
+        if (totalDays <= 0) return;
+        const targetWidth = container.clientWidth - 40; // leave some margin
+        let newDayWidth = Math.floor(targetWidth / totalDays);
+        newDayWidth = Math.max(8, Math.min(newDayWidth, 120));
+        psDayWidth = newDayWidth;
+        renderPsScheduler();
+        // scroll to start of timeline
+        container.scrollTo({ left: 0, behavior: 'smooth' });
     });
 
     document.getElementById('ps-btn-zoom-in')?.addEventListener('click', () => { psDayWidth = Math.min(psDayWidth + 5, 100); renderPsScheduler(); });
@@ -1701,6 +1729,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Tree Row
             const tr = document.createElement('div');
             tr.className = `ps-tree-row ${isSelected ? 'selected' : ''}`;
+            tr.dataset.taskId = task.id;
             tr.onclick = (e) => { 
                 if (psSelectedId === task.id) return;
                 psSelectedId = task.id; 
@@ -1742,38 +1771,37 @@ document.addEventListener('DOMContentLoaded', () => {
             hline.style.width = `${totalDays * psDayWidth}px`;
             bgHlines.appendChild(hline);
             
-            // Gantt Block
+            // Gantt Block (based on display range)
             if (task.startDate && task.endDate) {
                 const sDate = new Date(task.startDate);
                 const eDate = new Date(task.endDate);
-                
-                if (sDate.getFullYear() <= psYear && eDate.getFullYear() >= psYear) {
-                    const yearStart = new Date(psYear, 0, 1);
-                    const yearEnd = new Date(psYear, 11, 31);
-                    
-                    let drawStart = sDate < yearStart ? yearStart : sDate;
-                    let drawEnd = eDate > yearEnd ? yearEnd : eDate;
-                    
-                    const daysFromStart = Math.floor((drawStart - yearStart) / (1000 * 60 * 60 * 24));
-                    const durationDays = Math.floor((drawEnd - drawStart) / (1000 * 60 * 60 * 24)) + 1;
-                    
-                    if (daysFromStart >= 0 && durationDays > 0) {
-                        const block = document.createElement('div');
-                        block.className = `ps-block ${isSelected ? 'selected' : ''}`;
-                        block.dataset.taskId = task.id;
-                        block.style.left = `${daysFromStart * psDayWidth}px`;
-                        block.style.width = `${durationDays * psDayWidth}px`;
-                        block.style.top = `${(globalIndex - 1) * 30 + 5}px`;
-                        block.style.background = task.color || '#fffacd';
-                        block.innerText = task.name;
-                        
-                        block.onclick = (e) => {
-                            e.stopPropagation();
-                            psSelectedId = task.id;
-                            renderPsScheduler();
-                        };
-                        ganttBlocks.appendChild(block);
-                    }
+
+                const displayStart = new Date(displayStartYear, displayStartMonth, 1);
+                const displayEnd = new Date(displayEndYear, displayEndMonth + 1, 0); // last day
+
+                let drawStart = sDate < displayStart ? displayStart : sDate;
+                let drawEnd = eDate > displayEnd ? displayEnd : eDate;
+
+                const msPerDay = 1000 * 60 * 60 * 24;
+                const daysFromStart = Math.floor((drawStart - displayStart) / msPerDay);
+                const durationDays = Math.floor((drawEnd - drawStart) / msPerDay) + 1;
+
+                if (durationDays > 0 && daysFromStart + durationDays > 0) {
+                    const block = document.createElement('div');
+                    block.className = `ps-block ${isSelected ? 'selected' : ''}`;
+                    block.dataset.taskId = task.id;
+                    block.style.left = `${Math.max(0, daysFromStart) * psDayWidth}px`;
+                    block.style.width = `${Math.max(0, durationDays) * psDayWidth}px`;
+                    block.style.top = `${(globalIndex - 1) * 30 + 5}px`;
+                    block.style.background = task.color || '#fffacd';
+                    block.innerText = task.name;
+
+                    block.onclick = (e) => {
+                        e.stopPropagation();
+                        psSelectedId = task.id;
+                        renderPsScheduler();
+                    };
+                    ganttBlocks.appendChild(block);
                 }
             }
 
