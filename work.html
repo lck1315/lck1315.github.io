@@ -464,7 +464,7 @@
         <div class="header-container">
             <a href="work.html" class="logo">DODO<span>.work</span></a>
             <nav class="work-tabs" id="work-tabs"
-                style="border: none; margin-bottom: 0; padding-bottom: 0; flex: 1; justify-content: center; overflow: visible;">
+                style="border: none; margin-bottom: 0; padding-bottom: 0; flex: 1; justify-content: center; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch;">
                 <button class="work-tab" data-tab="schedule"><i class="fa-regular fa-calendar-check"></i> 일정관리</button>
                 <button class="work-tab" data-tab="performance"><i class="fa-solid fa-trophy"></i> 개인성과</button>
                 <button class="work-tab" data-tab="projects"><i class="fa-solid fa-bars-progress"></i> 프로젝트</button>
@@ -491,6 +491,9 @@
                 <button id="theme-toggle" aria-label="테마 전환" class="theme-btn">
                     <i class="fa-solid fa-sun"></i>
                     <i class="fa-solid fa-moon"></i>
+                </button>
+                <button id="work-mobile-nav-btn" class="theme-btn" aria-label="모바일 메뉴" style="display: none;">
+                    <i class="fa-solid fa-bars"></i>
                 </button>
                 <button id="btn-work-logout" class="theme-btn" style="display: none; color: #ff4757;" title="로그아웃">
                     <i class="fa-solid fa-arrow-right-from-bracket"></i>

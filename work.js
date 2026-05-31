@@ -41,6 +41,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ----------------------------------------------------
+    // 모바일 퀵 내비게이션 (Tabs Dropdown)
+    // ----------------------------------------------------
+    const mobileNavBtn = document.getElementById('work-mobile-nav-btn');
+    const mobileNavDropdown = document.getElementById('work-tabs');
+
+    if (mobileNavBtn && mobileNavDropdown) {
+        mobileNavBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            mobileNavDropdown.classList.toggle('show-mobile');
+        });
+
+        // 화면 바깥을 클릭하면 모바일 메뉴 닫기
+        document.addEventListener('click', (e) => {
+            if (!mobileNavBtn.contains(e.target) && !mobileNavDropdown.contains(e.target)) {
+                mobileNavDropdown.classList.remove('show-mobile');
+            }
+        });
+        
+        // 탭 메뉴 항목을 클릭하면 모바일 메뉴 닫기
+        mobileNavDropdown.addEventListener('click', (e) => {
+            if (e.target.closest('.work-tab')) {
+                mobileNavDropdown.classList.remove('show-mobile');
+            }
+        });
+    }
+
+    // ----------------------------------------------------
     // 인증 및 승인 관리 (workUsers)
     // ----------------------------------------------------
     let currentUser = null;
