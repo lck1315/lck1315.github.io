@@ -1851,7 +1851,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     block.ondblclick = (e) => {
                         e.stopPropagation();
                         if (window.openMemoModal) {
-                            window.openMemoModal(task);
+                            window.openMemoModal(task, e.clientX, e.clientY);
                         }
                     };
                     ganttBlocks.appendChild(block);
@@ -2897,13 +2897,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const memoModal = document.getElementById('ps-memo-modal');
     const memoContent = document.getElementById('ps-memo-content');
     
-    window.openMemoModal = function(task) {
+    window.openMemoModal = function(task, clientX, clientY) {
         if (!memoModal || !memoContent) return;
         currentMemoTask = task;
         memoContent.value = task.memo || '';
         memoModal.classList.remove('hidden');
+        
+        if (clientX !== undefined && clientY !== undefined) {
+            let left = clientX + 15;
+            let top = clientY + 15;
+            if (left + 320 > window.innerWidth) left = window.innerWidth - 330;
+            if (top + 200 > window.innerHeight) top = window.innerHeight - 210;
+            memoModal.style.left = left + 'px';
+            memoModal.style.top = top + 'px';
+        } else {
+            memoModal.style.left = (window.innerWidth / 2 - 160) + 'px';
+            memoModal.style.top = (window.innerHeight / 2 - 100) + 'px';
+        }
+
         setTimeout(() => memoContent.focus(), 100);
     };
+
+    document.getElementById('ps-btn-memo')?.addEventListener('click', (e) => {
+        if (!psSelectedId) {
+            alert('먼저 메모를 작성할 프로젝트/태스크 바를 선택하세요.');
+            return;
+        }
+        const task = psData.find(p => p.id === psSelectedId);
+        if (task && window.openMemoModal) {
+            window.openMemoModal(task, e.clientX, e.clientY);
+        }
+    });
 
     document.getElementById('ps-memo-close')?.addEventListener('click', () => {
         memoModal?.classList.add('hidden');
