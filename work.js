@@ -1869,9 +1869,9 @@ document.addEventListener('DOMContentLoaded', () => {
             renderRow(root, 0, `${idx + 1}`);
         });
 
-        // 오른쪽 갠트 차트 배경 높이를 왼쪽 트리 아이템 총 높이와 정확히 맞춤
+        // 오른쪽 갠트 차트 배경 높이를 왼쪽 트리 아이템 총 높이와 정확히 맞춤 + 하단 20px 여백 추가
         // (Math.max를 사용하면 스크롤바 높이 차이로 인해 내부 세로 오버플로우가 발생하여 어긋날 수 있음)
-        ganttBody.style.height = `${globalIndex * 30}px`;
+        ganttBody.style.height = `${globalIndex * 30 + 20}px`;
 
         if(psData.length === 0) {
             treeBody.innerHTML = '<div style="text-align:center; padding: 20px; color: #888;">등록된 일정이 없습니다.</div>';

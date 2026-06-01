@@ -2709,7 +2709,8 @@ button.mobile-dropdown-item {
 .ps-tree-body {
     flex: 1;
     overflow-y: auto; /* 명시적으로 세로 스크롤바 표시 */
-    overflow-x: scroll; /* 가로 스크롤바 유지 (높이 정렬용) */
+    overflow-x: auto; /* 불필요한 가로 스크롤바로 인한 높이 오차 방지 */
+    padding-bottom: 20px; /* 가로 스크롤바에 가려지지 않도록 여유 공간 확보 */
 }
 
 .ps-tree-row {
@@ -2775,7 +2776,7 @@ button.mobile-dropdown-item {
 .ps-gantt-container {
     flex: 1;
     overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: auto;
     position: relative;
     background: #ffffff;
 }
