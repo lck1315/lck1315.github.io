@@ -187,14 +187,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (user) {
-            // Check googleCalendarUrls in users collection
+            // Check workCalendarUrls in users collection
             if (userGoogleCalendarListener) {
                 userGoogleCalendarListener();
                 userGoogleCalendarListener = null;
             }
             userGoogleCalendarListener = db.collection('users').doc(user.uid).onSnapshot((uDoc) => {
-                if (uDoc.exists && uDoc.data().googleCalendarUrls && Array.isArray(uDoc.data().googleCalendarUrls)) {
-                    googleCalendarUrls = uDoc.data().googleCalendarUrls;
+                if (uDoc.exists && uDoc.data().workCalendarUrls && Array.isArray(uDoc.data().workCalendarUrls)) {
+                    googleCalendarUrls = uDoc.data().workCalendarUrls;
                 } else if (uDoc.exists && uDoc.data().googleCalendarUrl) {
                     googleCalendarUrls = [{ name: '내 캘린더', url: uDoc.data().googleCalendarUrl }];
                 } else {
@@ -924,7 +924,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Firestore에 실시간 저장
                     if (currentUser && currentUser.uid) {
                         db.collection('users').doc(currentUser.uid).set({
-                            googleCalendarUrls: googleCalendarUrls
+                            workCalendarUrls: googleCalendarUrls
                         }, { merge: true }).catch(err => {
                             console.error("Firestore 필터 동기화 실패:", err);
                         });
@@ -988,7 +988,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         db.collection('users').doc(currentUser.uid).set({
-            googleCalendarUrls: newList
+            workCalendarUrls: newList
         }, { merge: true }).then(() => {
             alert("구글 캘린더 설정이 저장되었습니다.");
             document.getElementById('work-calendar-settings-modal')?.classList.add('hidden');

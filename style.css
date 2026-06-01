@@ -2810,7 +2810,7 @@ button.mobile-dropdown-item {
 
 .ps-gantt-body {
     position: relative;
-    min-height: 100%;
+    /* min-height: 100% 제거 (컨텐츠 길이에 맞게 스크롤바가 자동 조절되도록) */
 }
 
 .ps-gantt-bg-grid {
