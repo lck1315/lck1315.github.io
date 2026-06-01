@@ -1882,13 +1882,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let isSyncingLeft = false;
         let isSyncingRight = false;
         
-        // 왼쪽 창은 overflow-y: hidden 이므로 휠 이벤트를 오른쪽 창으로 전달
-        treeBody.addEventListener('wheel', (e) => {
-            if (e.deltaY !== 0) {
-                ganttContainer.scrollTop += e.deltaY;
-            }
-        });
-        
         treeBody.onscroll = () => {
             if(!isSyncingLeft) {
                 isSyncingRight = true;

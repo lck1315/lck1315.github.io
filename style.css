@@ -2653,6 +2653,7 @@ button.mobile-dropdown-item {
     background: #ffffff;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .ps-left-toolbar {
@@ -2707,7 +2708,7 @@ button.mobile-dropdown-item {
 
 .ps-tree-body {
     flex: 1;
-    overflow-y: hidden; /* JS가 오른쪽 스크롤과 동기화하므로 숨김 처리 */
+    overflow-y: auto; /* 명시적으로 세로 스크롤바 표시 */
     overflow-x: scroll; /* 가로 스크롤바 유지 (높이 정렬용) */
 }
 
