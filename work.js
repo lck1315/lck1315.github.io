@@ -1444,8 +1444,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalDays = Math.floor((displayEnd - displayStart) / msPerDay) + 1;
         if (totalDays <= 0) return;
         const targetWidth = container.clientWidth - 40; // leave some margin
-        let newDayWidth = Math.floor(targetWidth / totalDays);
-        newDayWidth = Math.max(8, Math.min(newDayWidth, 120));
+        let newDayWidth = targetWidth / totalDays;
+        newDayWidth = Math.max(1, newDayWidth); // 1년 전체를 볼 수 있도록 최소폭을 1px로 완화
         psDayWidth = newDayWidth;
         renderPsScheduler();
         // scroll to start of timeline
@@ -1949,7 +1949,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 panStartX = e.clientX;
                 panStartY = e.clientY;
                 panScrollLeft = container.scrollLeft;
-                panScrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+                panScrollTop = container.scrollTop;
                 e.preventDefault();
                 return;
             }
@@ -2020,7 +2020,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 panStartX = e.clientX;
                 panStartY = e.clientY;
                 panScrollLeft = container.scrollLeft;
-                panScrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+                panScrollTop = container.scrollTop;
                 e.preventDefault();
                 return;
             }
@@ -2056,7 +2056,7 @@ document.addEventListener('DOMContentLoaded', () => {
             panStartX = e.clientX;
             panStartY = e.clientY;
             panScrollLeft = container.scrollLeft;
-            panScrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+            panScrollTop = container.scrollTop;
             e.preventDefault();
             return;
         }
@@ -2067,7 +2067,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const container = document.getElementById('ps-gantt-container');
             if (container) {
                 container.scrollLeft = panScrollLeft - (e.clientX - panStartX);
-                window.scrollTo(window.scrollX, panScrollTop - (e.clientY - panStartY));
+                container.scrollTop = panScrollTop - (e.clientY - panStartY);
                 container.style.cursor = 'grabbing';
             }
             return;
@@ -2103,7 +2103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const container = document.getElementById('ps-gantt-container');
                     if (container) {
                         container.scrollLeft = panScrollLeft - deltaX;
-                        window.scrollTo(window.scrollX, panScrollTop - deltaY);
+                        container.scrollTop = panScrollTop - deltaY;
                         container.style.cursor = 'grabbing';
                     }
                 }
@@ -2159,7 +2159,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dx = e.clientX - panStartX;
                 const dy = e.clientY - panStartY;
                 container.scrollLeft = panScrollLeft - dx;
-                window.scrollTo(window.scrollX, panScrollTop - dy);
+                container.scrollTop = panScrollTop - dy;
             }
             panStartX = null;
             panStartY = null;

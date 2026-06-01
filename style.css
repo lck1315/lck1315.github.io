@@ -2569,11 +2569,11 @@ button.mobile-dropdown-item {
     font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
     display: flex;
     flex-direction: column;
-    height: auto;
+    height: calc(100vh - 120px); /* 내부 스크롤을 위해 고정 높이 지정 */
     min-height: 400px;
     border: 1px solid #ced4da;
     border-radius: 4px;
-    overflow: visible;
+    overflow: hidden;
     position: relative;
     /* Reset dark mode inheritance */
     --text-color: #333333;
@@ -2707,8 +2707,8 @@ button.mobile-dropdown-item {
 
 .ps-tree-body {
     flex: 1;
-    overflow-y: visible; /* Scroll controlled by browser */
-    overflow-x: scroll; /* Match right panel scrollbar height to remove empty space */
+    overflow-y: hidden; /* JS가 오른쪽 스크롤과 동기화하므로 숨김 처리 */
+    overflow-x: scroll; /* 가로 스크롤바 유지 (높이 정렬용) */
 }
 
 .ps-tree-row {
