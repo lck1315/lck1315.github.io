@@ -1817,7 +1817,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // 오른쪽 갠트 차트 배경 높이를 왼쪽 트리 아이템 총 높이와 맞춤 (어느 범위 아래로 날짜바가 안 나오는 현상 수정)
-        ganttBody.style.height = `${globalIndex * 30}px`;
+        // 화면 전체 스크롤 시 빈 공간까지 그리드를 채우기 위해 Math.max 사용
+        ganttBody.style.height = `${Math.max(treeBody.clientHeight, globalIndex * 30)}px`;
 
         if(psData.length === 0) {
             treeBody.innerHTML = '<div style="text-align:center; padding: 20px; color: #888;">등록된 일정이 없습니다.</div>';

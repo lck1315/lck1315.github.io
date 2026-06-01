@@ -2569,11 +2569,11 @@ button.mobile-dropdown-item {
     font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 180px);
+    height: auto;
     min-height: 400px;
     border: 1px solid #ced4da;
     border-radius: 4px;
-    overflow: hidden;
+    overflow: visible;
     position: relative;
     /* Reset dark mode inheritance */
     --text-color: #333333;
@@ -2707,7 +2707,7 @@ button.mobile-dropdown-item {
 
 .ps-tree-body {
     flex: 1;
-    overflow-y: hidden; /* Scroll controlled by JS */
+    overflow-y: visible; /* Scroll controlled by browser */
     overflow-x: hidden;
 }
 
@@ -2774,7 +2774,7 @@ button.mobile-dropdown-item {
 .ps-gantt-container {
     flex: 1;
     overflow-x: auto;
-    overflow-y: scroll;
+    overflow-y: hidden;
     position: relative;
     background: #ffffff;
 }
@@ -2808,7 +2808,7 @@ button.mobile-dropdown-item {
 
 .ps-gantt-body {
     position: relative;
-    min-height: calc(100% - 160px);
+    min-height: 100%;
 }
 
 .ps-gantt-bg-grid {
