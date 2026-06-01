@@ -1895,7 +1895,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let isPanning = false;
     let panPending = false;
     let panStartX = null;
+    let panStartY = null;
     let panScrollLeft = 0;
+    let panScrollTop = 0;
 
 
     let actionTaskId = null;
@@ -1945,7 +1947,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 isPanning = false;
                 panPending = true;
                 panStartX = e.clientX;
+                panStartY = e.clientY;
                 panScrollLeft = container.scrollLeft;
+                panScrollTop = document.documentElement.scrollTop || document.body.scrollTop;
                 e.preventDefault();
                 return;
             }
@@ -2014,7 +2018,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 isPanning = false;
                 panPending = true;
                 panStartX = e.clientX;
+                panStartY = e.clientY;
                 panScrollLeft = container.scrollLeft;
+                panScrollTop = document.documentElement.scrollTop || document.body.scrollTop;
                 e.preventDefault();
                 return;
             }
@@ -2048,7 +2054,9 @@ document.addEventListener('DOMContentLoaded', () => {
             isPanning = false;
             panPending = true;
             panStartX = e.clientX;
+            panStartY = e.clientY;
             panScrollLeft = container.scrollLeft;
+            panScrollTop = document.documentElement.scrollTop || document.body.scrollTop;
             e.preventDefault();
             return;
         }
@@ -2059,6 +2067,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const container = document.getElementById('ps-gantt-container');
             if (container) {
                 container.scrollLeft = panScrollLeft - (e.clientX - panStartX);
+                window.scrollTo(window.scrollX, panScrollTop - (e.clientY - panStartY));
                 container.style.cursor = 'grabbing';
             }
             return;
@@ -2084,7 +2093,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Check for panning initiation
             if (e.buttons === 1 && !e.ctrlKey && !e.metaKey && panStartX !== null) {
                 const deltaX = e.clientX - panStartX;
-                if (panPending && Math.abs(deltaX) > 8) {
+                const deltaY = e.clientY - panStartY;
+                if (panPending && (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8)) {
                     isPanning = true;
                     panPending = false;
                     isClickExtendCandidate = false; // Cancel extend if panning
@@ -2093,6 +2103,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const container = document.getElementById('ps-gantt-container');
                     if (container) {
                         container.scrollLeft = panScrollLeft - deltaX;
+                        window.scrollTo(window.scrollX, panScrollTop - deltaY);
                         container.style.cursor = 'grabbing';
                     }
                 }
@@ -2146,9 +2157,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (container) {
                 container.style.cursor = '';
                 const dx = e.clientX - panStartX;
+                const dy = e.clientY - panStartY;
                 container.scrollLeft = panScrollLeft - dx;
+                window.scrollTo(window.scrollX, panScrollTop - dy);
             }
             panStartX = null;
+            panStartY = null;
             e.preventDefault();
             return;
         }
@@ -2156,6 +2170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isDrawing && !isMoving && !isResizingLeft && !isResizingRight) {
             panPending = false;
             panStartX = null;
+            panStartY = null;
             return;
         }
         
