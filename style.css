@@ -2708,7 +2708,7 @@ button.mobile-dropdown-item {
 .ps-tree-body {
     flex: 1;
     overflow-y: visible; /* Scroll controlled by browser */
-    overflow-x: hidden;
+    overflow-x: scroll; /* Match right panel scrollbar height to remove empty space */
 }
 
 .ps-tree-row {
