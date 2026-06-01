@@ -1835,12 +1835,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     block.style.width = `${Math.max(0, durationDays) * psDayWidth}px`;
                     block.style.top = `${(globalIndex - 1) * 30 + 5}px`;
                     block.style.background = task.color || '#fffacd';
-                    block.innerText = task.name;
+                    if (task.memo) {
+                        block.innerHTML = `${task.name} <i class="fa-solid fa-note-sticky" style="margin-left:5px; font-size:11px; opacity:0.8;"></i>`;
+                        block.title = task.memo; // Hover to see memo
+                    } else {
+                        block.innerText = task.name;
+                    }
 
                     block.onclick = (e) => {
                         e.stopPropagation();
                         psSelectedId = task.id;
                         renderPsScheduler();
+                    };
+
+                    block.ondblclick = (e) => {
+                        if (e.ctrlKey || e.metaKey) {
+                            e.stopPropagation();
+                            if (window.openMemoModal) {
+                                window.openMemoModal(task);
+                            }
+                        }
                     };
                     ganttBlocks.appendChild(block);
                 }
@@ -2879,6 +2893,30 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // UI 렌더링이 안정화될 수 있도록 약간의 지연 후 리사이저 초기화
     setTimeout(initColumnResizers, 500);
+
+    // --- 6. Memo Modal Logic ---
+    let currentMemoTask = null;
+    const memoModal = document.getElementById('ps-memo-modal');
+    const memoContent = document.getElementById('ps-memo-content');
+    
+    window.openMemoModal = function(task) {
+        if (!memoModal || !memoContent) return;
+        currentMemoTask = task;
+        memoContent.value = task.memo || '';
+        memoModal.classList.remove('hidden');
+        setTimeout(() => memoContent.focus(), 100);
+    };
+
+    document.getElementById('ps-memo-close')?.addEventListener('click', () => {
+        memoModal?.classList.add('hidden');
+    });
+
+    document.getElementById('ps-btn-save-memo')?.addEventListener('click', () => {
+        if (!currentMemoTask || !memoContent || !memoModal) return;
+        const newMemo = memoContent.value.trim();
+        window.psUpdateField(currentMemoTask.id, 'memo', newMemo);
+        memoModal.classList.add('hidden');
+    });
 
     initParticles();
     animateParticles();
