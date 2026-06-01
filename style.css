@@ -2698,8 +2698,8 @@ button.mobile-dropdown-item {
 }
 
 /* Column widths mimicking PyQt defaults */
-.ps-col-0 { width: 50px; }
-.ps-col-1 { width: 220px; flex: 1; justify-content: flex-start !important; padding-left: 10px; }
+.ps-col-0 { width: 65px; }
+.ps-col-1 { width: 205px; flex: 1; justify-content: flex-start !important; padding-left: 10px; }
 .ps-col-2 { width: 100px; }
 .ps-col-3 { width: 100px; }
 .ps-col-4 { width: 90px; }

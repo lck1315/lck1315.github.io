@@ -2808,6 +2808,78 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- 5. Column Resizer ---
+    function initColumnResizers() {
+        const headers = document.querySelectorAll('.ps-tree-header > div');
+        headers.forEach((header, index) => {
+            if (index === headers.length - 1) return; // 마지막 컬럼은 리사이즈 제외
+            
+            const resizer = document.createElement('div');
+            resizer.style.width = '8px';
+            resizer.style.cursor = 'col-resize';
+            resizer.style.position = 'absolute';
+            resizer.style.right = '-4px';
+            resizer.style.top = '0';
+            resizer.style.bottom = '0';
+            resizer.style.zIndex = '10';
+            
+            header.style.position = 'relative';
+            header.appendChild(resizer);
+            
+            let startX, startWidth;
+            resizer.addEventListener('mousedown', function(e) {
+                startX = e.clientX;
+                startWidth = header.offsetWidth;
+                
+                const mouseMoveHandler = function(e) {
+                    const newWidth = Math.max(30, startWidth + (e.clientX - startX));
+                    updateColumnWidth(index, newWidth);
+                };
+                
+                const mouseUpHandler = function() {
+                    document.removeEventListener('mousemove', mouseMoveHandler);
+                    document.removeEventListener('mouseup', mouseUpHandler);
+                    if (window.psColWidths) {
+                        localStorage.setItem('psColWidths', JSON.stringify(window.psColWidths));
+                    }
+                };
+                
+                document.addEventListener('mousemove', mouseMoveHandler);
+                document.addEventListener('mouseup', mouseUpHandler);
+                e.stopPropagation();
+                e.preventDefault();
+            });
+        });
+
+        const saved = localStorage.getItem('psColWidths');
+        if (saved) {
+            try {
+                window.psColWidths = JSON.parse(saved);
+                updateColumnWidth(-1, 0); // 초기 렌더링
+            } catch(e){}
+        }
+    }
+
+    function updateColumnWidth(index, width) {
+        let styleEl = document.getElementById('ps-dynamic-col-style');
+        if (!styleEl) {
+            styleEl = document.createElement('style');
+            styleEl.id = 'ps-dynamic-col-style';
+            document.head.appendChild(styleEl);
+        }
+        if (!window.psColWidths) window.psColWidths = {};
+        if (index >= 0) window.psColWidths[index] = width;
+        
+        let cssStr = '';
+        for (let i in window.psColWidths) {
+            cssStr += `.ps-col-${i} { width: ${window.psColWidths[i]}px !important; flex: none !important; }\n`;
+        }
+        styleEl.innerHTML = cssStr;
+    }
+    
+    // UI 렌더링이 안정화될 수 있도록 약간의 지연 후 리사이저 초기화
+    setTimeout(initColumnResizers, 500);
+
     initParticles();
     animateParticles();
 });
