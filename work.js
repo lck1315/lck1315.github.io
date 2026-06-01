@@ -1469,7 +1469,9 @@ document.addEventListener('DOMContentLoaded', () => {
             order: Date.now(),
             expanded: true,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        }).then(() => {
+            alert('새 프로젝트가 추가되었습니다. 목록 맨 아래를 확인해주세요.');
+        }).catch(err => alert("추가 실패: " + err.message));
     });
 
     document.getElementById('ps-btn-add-task')?.addEventListener('click', () => {
@@ -1489,16 +1491,55 @@ document.addEventListener('DOMContentLoaded', () => {
             color: '#e0f7fa',
             order: Date.now(),
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        }).catch(err => alert("추가 실패: " + err.message));
+        
+        // 부모 태스크가 닫혀있다면 열어주기
+        if (parentTask.expanded === false) {
+            window.psUpdateField(parentId, 'expanded', true);
+        }
     });
     
     document.getElementById('ps-btn-delete')?.addEventListener('click', () => {
         if(!currentUser) return alert('로그인이 필요합니다.');
         if(!psSelectedId) return alert('삭제할 항목을 선택하세요.');
         if(confirm('선택한 항목을 삭제하시겠습니까? (하위 태스크가 있다면 함께 삭제되지 않을 수 있습니다)')) {
-            db.collection('workProjects').doc(psSelectedId).delete();
+            db.collection('workProjects').doc(psSelectedId).delete().catch(err => alert("삭제 실패: " + err.message));
             psSelectedId = null;
         }
+    });
+
+    let psCopiedTask = null;
+
+    document.getElementById('ps-btn-copy')?.addEventListener('click', () => {
+        if(!currentUser) return alert('로그인이 필요합니다.');
+        if(!psSelectedId) return alert('복사할 항목을 선택하세요.');
+        const task = psData.find(p => p.id === psSelectedId);
+        if(task) {
+            psCopiedTask = { ...task };
+            delete psCopiedTask.id; 
+            alert(`'${task.name}' 복사되었습니다. 원하는 위치를 선택하고 붙여넣기 하세요.`);
+        }
+    });
+
+    document.getElementById('ps-btn-paste')?.addEventListener('click', () => {
+        if(!currentUser) return alert('로그인이 필요합니다.');
+        if(!psCopiedTask) return alert('먼저 복사할 항목을 선택하세요.');
+        
+        let parentId = null;
+        if (psSelectedId) {
+            const parentTask = psData.find(p => p.id === psSelectedId);
+            if (parentTask) {
+                parentId = parentTask.parentId ? parentTask.parentId : parentTask.id;
+            }
+        }
+        
+        const newTask = { ...psCopiedTask };
+        newTask.parentId = parentId;
+        newTask.name = newTask.name + ' (복사본)';
+        newTask.order = Date.now();
+        newTask.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        
+        db.collection('workProjects').add(newTask).catch(err => alert("붙여넣기 실패: " + err.message));
     });
 
     document.getElementById('ps-btn-color')?.addEventListener('click', () => {
@@ -1750,10 +1791,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     <input class="ps-tree-input" value="${task.assignee || ''}" onchange="window.psUpdateField('${task.id}', 'assignee', this.value)" ${disabledAttr}>
                 </div>
                 <div class="ps-col-3">
-                    <select class="ps-tree-combo" onchange="window.psUpdateField('${task.id}', 'status', this.value)" ${disabledAttr}>
-                        <option value="대기중" ${task.status === '대기중' ? 'selected' : ''}>대기중</option>
-                        <option value="진행중" ${task.status === '진행중' ? 'selected' : ''}>진행중</option>
-                        <option value="완료" ${task.status === '완료' ? 'selected' : ''}>완료</option>
+                    <select class="ps-tree-combo" onchange="window.psUpdateField('${task.id}', 'status', this.value)" ${disabledAttr} style="color: ${task.status === '완료' ? '#10b981' : task.status === '진행중' ? '#3b82f6' : '#6b7280'}; font-weight: bold;">
+                        <option value="대기중" ${task.status === '대기중' ? 'selected' : ''} style="color: #6b7280;">대기중</option>
+                        <option value="진행중" ${task.status === '진행중' ? 'selected' : ''} style="color: #3b82f6;">진행중</option>
+                        <option value="완료" ${task.status === '완료' ? 'selected' : ''} style="color: #10b981;">완료</option>
                     </select>
                 </div>
                 <div class="ps-col-4">
