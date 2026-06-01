@@ -1857,9 +1857,9 @@ document.addEventListener('DOMContentLoaded', () => {
             renderRow(root, 0, `${idx + 1}`);
         });
 
-        // 오른쪽 갠트 차트 배경 높이를 왼쪽 트리 아이템 총 높이와 맞춤 (어느 범위 아래로 날짜바가 안 나오는 현상 수정)
-        // 화면 전체 스크롤 시 빈 공간까지 그리드를 채우기 위해 Math.max 사용
-        ganttBody.style.height = `${Math.max(treeBody.clientHeight, globalIndex * 30)}px`;
+        // 오른쪽 갠트 차트 배경 높이를 왼쪽 트리 아이템 총 높이와 정확히 맞춤
+        // (Math.max를 사용하면 스크롤바 높이 차이로 인해 내부 세로 오버플로우가 발생하여 어긋날 수 있음)
+        ganttBody.style.height = `${globalIndex * 30}px`;
 
         if(psData.length === 0) {
             treeBody.innerHTML = '<div style="text-align:center; padding: 20px; color: #888;">등록된 일정이 없습니다.</div>';
@@ -2024,6 +2024,14 @@ document.addEventListener('DOMContentLoaded', () => {
             drawStartDayIndex = dayIndex;
             actionTaskId = taskId;
             
+            if (task.startDate && task.endDate) {
+                originalStartDay = getDayIndexFromDateStr(task.startDate);
+                originalEndDay = getDayIndexFromDateStr(task.endDate);
+            } else {
+                originalStartDay = null;
+                originalEndDay = null;
+            }
+            
             actionBlock = document.createElement('div');
             actionBlock.className = 'ps-block selected dragging';
             actionBlock.style.left = `${dayIndex * psDayWidth}px`;
@@ -2099,8 +2107,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const dayIndex = getDayIndexFromX(x);
         
         if (isDrawing && actionBlock) {
-            const minDay = Math.min(drawStartDayIndex, dayIndex);
-            const maxDay = Math.max(drawStartDayIndex, dayIndex);
+            let minDay = Math.min(drawStartDayIndex, dayIndex);
+            let maxDay = Math.max(drawStartDayIndex, dayIndex);
+            
+            if (originalStartDay !== null && originalEndDay !== null) {
+                minDay = Math.min(minDay, originalStartDay);
+                maxDay = Math.max(maxDay, originalEndDay);
+            }
+            
             actionBlock.style.left = `${minDay * psDayWidth}px`;
             actionBlock.style.width = `${(maxDay - minDay + 1) * psDayWidth}px`;
         }
@@ -2158,8 +2172,15 @@ document.addEventListener('DOMContentLoaded', () => {
         let finalEndDay = originalEndDay;
 
         if (isDrawing) {
-            finalStartDay = Math.min(drawStartDayIndex, dayIndex);
-            finalEndDay = Math.max(drawStartDayIndex, dayIndex);
+            let minDay = Math.min(drawStartDayIndex, dayIndex);
+            let maxDay = Math.max(drawStartDayIndex, dayIndex);
+            
+            if (originalStartDay !== null && originalEndDay !== null) {
+                minDay = Math.min(minDay, originalStartDay);
+                maxDay = Math.max(maxDay, originalEndDay);
+            }
+            finalStartDay = minDay;
+            finalEndDay = maxDay;
         } else if (isResizingLeft) {
             finalStartDay = Math.min(dayIndex, originalEndDay);
             finalEndDay = originalEndDay;
