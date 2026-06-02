@@ -2699,7 +2699,7 @@ button.mobile-dropdown-item {
 }
 
 /* Column widths mimicking PyQt defaults */
-.ps-col-0 { width: 65px; }
+.ps-col-0 { width: 90px; }
 .ps-col-1 { width: 205px; flex: 1; justify-content: flex-start !important; padding-left: 10px; }
 .ps-col-2 { width: 100px; }
 .ps-col-3 { width: 100px; }
@@ -2708,9 +2708,9 @@ button.mobile-dropdown-item {
 
 .ps-tree-body {
     flex: 1;
-    overflow-y: auto; /* 명시적으로 세로 스크롤바 표시 */
-    overflow-x: auto; /* 불필요한 가로 스크롤바로 인한 높이 오차 방지 */
-    padding-bottom: 20px; /* 가로 스크롤바에 가려지지 않도록 여유 공간 확보 */
+    overflow-y: hidden; /* 왼쪽 스크롤바 숨김 (우측에만 표시) */
+    overflow-x: auto;
+    padding-bottom: 20px;
 }
 
 .ps-tree-row {
@@ -2776,7 +2776,7 @@ button.mobile-dropdown-item {
 .ps-gantt-container {
     flex: 1;
     overflow-x: auto;
-    overflow-y: auto;
+    overflow-y: auto; /* 우측에만 스크롤바 표시 */
     position: relative;
     background: #ffffff;
 }
@@ -2810,7 +2810,7 @@ button.mobile-dropdown-item {
 
 .ps-gantt-body {
     position: relative;
-    /* min-height: 100% 제거 (컨텐츠 길이에 맞게 스크롤바가 자동 조절되도록) */
+    min-height: 100%; /* 하단 빈공간 채우기 위해 min-height 복원 */
 }
 
 .ps-gantt-bg-grid {

@@ -195,8 +195,6 @@ document.addEventListener('DOMContentLoaded', () => {
             userGoogleCalendarListener = db.collection('users').doc(user.uid).onSnapshot((uDoc) => {
                 if (uDoc.exists && uDoc.data().workCalendarUrls && Array.isArray(uDoc.data().workCalendarUrls)) {
                     googleCalendarUrls = uDoc.data().workCalendarUrls;
-                } else if (uDoc.exists && uDoc.data().googleCalendarUrl) {
-                    googleCalendarUrls = [{ name: '내 캘린더', url: uDoc.data().googleCalendarUrl }];
                 } else {
                     googleCalendarUrls = [];
                 }
@@ -1897,6 +1895,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             isSyncingRight = false;
         };
+
+        // 왼쪽 트리 스크롤바가 숨겨져 있으므로 마우스 휠 이벤트로 우측 스크롤 조작
+        treeBody.addEventListener('wheel', (e) => {
+            if (!e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                ganttContainer.scrollTop += e.deltaY;
+                treeBody.scrollLeft += e.deltaX;
+            }
+        });
     }
 
     // --- 4. Drag to Draw, Move, Resize Block ---
