@@ -1876,9 +1876,23 @@ document.addEventListener('DOMContentLoaded', () => {
             renderRow(root, 0, `${idx + 1}`);
         });
 
-        // 오른쪽 갠트 차트 배경 높이를 왼쪽 트리 아이템 총 높이와 정확히 맞춤 + 하단 20px 여백 추가
-        // (Math.max를 사용하면 스크롤바 높이 차이로 인해 내부 세로 오버플로우가 발생하여 어긋날 수 있음)
-        ganttBody.style.height = `${globalIndex * 30 + 20}px`;
+        // 오른쪽 갠트 차트 배경 높이를 왼쪽 트리 아이템 총 높이와 정확히 일치시킴
+        ganttBody.style.height = `${globalIndex * 30}px`;
+
+        // 가로 스크롤바 존재 여부에 따라 왼쪽 트리의 하단 여백을 동적으로 조절하여 세로 스크롤 싱크 완벽하게 맞춤
+        requestAnimationFrame(() => {
+            const ganttContainer = document.getElementById('ps-gantt-container');
+            if (ganttContainer) {
+                const hScrollbarHeight = ganttContainer.offsetHeight - ganttContainer.clientHeight;
+                const treeBody = document.getElementById('ps-tree-body');
+                if (treeBody) {
+                    // 가로 스크롤바가 있으면 그 높이만큼 왼쪽 패널 하단에 여백을 주어 스크롤 높이를 똑같이 맞춤
+                    // 또한, 원래 있던 하단 여백 20px도 양쪽에 공평하게 추가
+                    treeBody.style.paddingBottom = `${(hScrollbarHeight > 0 ? hScrollbarHeight : 0) + 20}px`;
+                    ganttBody.style.height = `${globalIndex * 30 + 20}px`; 
+                }
+            }
+        });
 
         if(psData.length === 0) {
             treeBody.innerHTML = '<div style="text-align:center; padding: 20px; color: #888;">등록된 일정이 없습니다.</div>';
