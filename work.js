@@ -3448,6 +3448,233 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     initPerformanceLogic();
 
+    // --- 10. Idea Board Logic ---
+    function initIdeasLogic() {
+        const btnAddIdea = document.getElementById('btn-add-idea');
+        const ideaModal = document.getElementById('idea-write-modal');
+        const closeIdeaModal = document.getElementById('close-idea-write');
+        const btnSubmitIdea = document.getElementById('btn-submit-idea');
+        const ideaTitle = document.getElementById('idea-title');
+        const ideaContent = document.getElementById('idea-content');
+        
+        const imageInput = document.getElementById('idea-image-input');
+        const btnSelectImage = document.getElementById('btn-select-idea-image');
+        const imagePreviewContainer = document.getElementById('idea-image-preview-container');
+        const imagePreview = document.getElementById('idea-image-preview');
+        const btnRemoveImage = document.getElementById('btn-remove-idea-image');
+        
+        const ideasGrid = document.getElementById('ideas-grid');
+        
+        let currentImageBase64 = null;
+        let ideasUnsubscribe = null;
+
+        // 모달 열기/닫기
+        btnAddIdea?.addEventListener('click', () => {
+            if (!auth.currentUser) return alert('아이디어를 등록하려면 로그인이 필요합니다.');
+            ideaModal.classList.remove('hidden');
+        });
+        
+        closeIdeaModal?.addEventListener('click', () => {
+            ideaModal.classList.add('hidden');
+            resetIdeaForm();
+        });
+
+        // 폼 초기화
+        function resetIdeaForm() {
+            if (ideaTitle) ideaTitle.value = '';
+            if (ideaContent) ideaContent.value = '';
+            if (imageInput) imageInput.value = '';
+            currentImageBase64 = null;
+            if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
+            if (imagePreview) imagePreview.src = '';
+            if (btnSelectImage) btnSelectImage.style.display = 'flex';
+        }
+
+        // 이미지 첨부 버튼 클릭
+        btnSelectImage?.addEventListener('click', () => {
+            imageInput?.click();
+        });
+        
+        // 이미지 삭제 버튼
+        btnRemoveImage?.addEventListener('click', () => {
+            if (imageInput) imageInput.value = '';
+            currentImageBase64 = null;
+            if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
+            if (imagePreview) imagePreview.src = '';
+            if (btnSelectImage) btnSelectImage.style.display = 'flex';
+        });
+
+        // 이미지 파일 선택 시 압축 (Canvas 이용)
+        imageInput?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                alert('이미지 파일만 첨부할 수 있습니다.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const MAX_SIZE = 800; // 최대 폭/높이 800px로 제한
+
+                    if (width > height) {
+                        if (width > MAX_SIZE) {
+                            height *= MAX_SIZE / width;
+                            width = MAX_SIZE;
+                        }
+                    } else {
+                        if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height;
+                            height = MAX_SIZE;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // JPEG 70% 품질로 압축 (용량 획기적 감소)
+                    currentImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    
+                    // 미리보기 표시
+                    if (imagePreview) imagePreview.src = currentImageBase64;
+                    if (imagePreviewContainer) imagePreviewContainer.style.display = 'block';
+                    if (btnSelectImage) btnSelectImage.style.display = 'none';
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // 아이디어 등록
+        btnSubmitIdea?.addEventListener('click', async () => {
+            if (!auth.currentUser) return alert('로그인이 필요합니다.');
+            const title = ideaTitle?.value.trim();
+            const content = ideaContent?.value.trim();
+            
+            if (!title) return alert('아이디어 제목을 입력해주세요!');
+            
+            btnSubmitIdea.disabled = true;
+            btnSubmitIdea.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 등록 중...';
+            
+            try {
+                await db.collection('workIdeas').add({
+                    title: title,
+                    content: content,
+                    image: currentImageBase64,
+                    authorId: auth.currentUser.uid,
+                    authorName: currentUser?.name || auth.currentUser.displayName || '익명',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                ideaModal?.classList.add('hidden');
+                resetIdeaForm();
+            } catch (error) {
+                console.error('Idea upload error:', error);
+                alert('아이디어 등록 실패: ' + error.message);
+            } finally {
+                btnSubmitIdea.disabled = false;
+                btnSubmitIdea.innerHTML = '아이디어 등록 🚀';
+            }
+        });
+
+        // 아이디어 실시간 목록 렌더링
+        function subscribeIdeas() {
+            if (ideasUnsubscribe) ideasUnsubscribe();
+            
+            ideasUnsubscribe = db.collection('workIdeas')
+                .orderBy('createdAt', 'desc')
+                .onSnapshot(snapshot => {
+                    if (!ideasGrid) return;
+                    ideasGrid.innerHTML = '';
+                    
+                    if (snapshot.empty) {
+                        ideasGrid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 50px; color: #888;">아직 등록된 아이디어가 없습니다. 첫 번째 아이디어를 올려보세요!</div>';
+                        return;
+                    }
+                    
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const card = document.createElement('div');
+                        card.style.cssText = 'background: #fff; border: 1px solid var(--card-border); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s ease, box-shadow 0.2s ease;';
+                        card.onmouseover = () => { card.style.transform = 'translateY(-5px)'; card.style.boxShadow = '0 8px 15px rgba(0,0,0,0.1)'; };
+                        card.onmouseout = () => { card.style.transform = 'none'; card.style.boxShadow = '0 4px 6px rgba(0,0,0,0.05)'; };
+                        
+                        let imgHtml = '';
+                        if (data.image) {
+                            imgHtml = `<img src="${data.image}" style="width: 100%; height: 200px; object-fit: cover; border-bottom: 1px solid #eee;">`;
+                        } else {
+                            imgHtml = `<div style="width: 100%; height: 120px; background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #eee;"><i class="fa-solid fa-lightbulb" style="font-size: 3rem; color: #e2e8f0;"></i></div>`;
+                        }
+                        
+                        const date = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleDateString('ko-KR') : '방금 전';
+                        
+                        let deleteBtnHtml = '';
+                        if (auth.currentUser && auth.currentUser.uid === data.authorId) {
+                            deleteBtnHtml = `<button class="btn-delete-idea" data-id="${doc.id}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 5px;" title="삭제"><i class="fa-solid fa-trash-can"></i></button>`;
+                        }
+                        
+                        card.innerHTML = `
+                            ${imgHtml}
+                            <div style="padding: 15px;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: bold; color: var(--text-color); line-height: 1.3;">${data.title}</h3>
+                                    ${deleteBtnHtml}
+                                </div>
+                                ${data.content ? `<p style="margin: 0 0 15px 0; font-size: 0.9rem; color: #555; white-space: pre-wrap; word-break: break-all; max-height: 80px; overflow-y: auto;">${data.content}</p>` : ''}
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f0f0f0; padding-top: 10px;">
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--primary-color); color: white; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold;">
+                                            ${(data.authorName || '?').charAt(0)}
+                                        </div>
+                                        <span style="font-size: 0.8rem; color: #666; font-weight: 500;">${data.authorName}</span>
+                                    </div>
+                                    <span style="font-size: 0.75rem; color: #999;">${date}</span>
+                                </div>
+                            </div>
+                        `;
+                        ideasGrid.appendChild(card);
+                    });
+                    
+                    // 삭제 버튼 이벤트 바인딩
+                    document.querySelectorAll('.btn-delete-idea').forEach(btn => {
+                        btn.addEventListener('click', async (e) => {
+                            e.stopPropagation();
+                            if (confirm('이 아이디어를 삭제하시겠습니까?')) {
+                                try {
+                                    await db.collection('workIdeas').doc(btn.dataset.id).delete();
+                                } catch (err) {
+                                    alert('삭제 실패: ' + err.message);
+                                }
+                            }
+                        });
+                    });
+                }, error => {
+                    console.error("Error fetching ideas:", error);
+                });
+        }
+
+        // 로그인 상태 변경 감지하여 구독 관리
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                subscribeIdeas();
+            } else {
+                if (ideasUnsubscribe) {
+                    ideasUnsubscribe();
+                    ideasUnsubscribe = null;
+                }
+                if (ideasGrid) ideasGrid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 50px; color: #888;">아이디어를 보려면 로그인이 필요합니다.</div>';
+            }
+        });
+    }
+    initIdeasLogic();
+
     initParticles();
     animateParticles();
 });

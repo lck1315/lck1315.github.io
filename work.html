@@ -470,6 +470,7 @@
                 <button class="work-tab" data-tab="schedule"><i class="fa-regular fa-calendar-check"></i> 일정관리</button>
                 <button class="work-tab" data-tab="performance"><i class="fa-solid fa-trophy"></i> 개인성과</button>
                 <button class="work-tab" data-tab="projects"><i class="fa-solid fa-bars-progress"></i> 프로젝트</button>
+                <button class="work-tab" data-tab="ideas"><i class="fa-solid fa-lightbulb"></i> 아이디어</button>
                 <button class="work-tab" data-tab="bookmarks"><i class="fa-solid fa-bookmark"></i> 북마크</button>
                 <button class="work-tab" data-tab="members"><i class="fa-solid fa-users"></i> 구성원</button>
             </nav>
@@ -502,6 +503,7 @@
         <button class="mobile-dropdown-item work-tab" data-tab="schedule"><i class="fa-regular fa-calendar-check"></i> 일정관리</button>
         <button class="mobile-dropdown-item work-tab" data-tab="performance"><i class="fa-solid fa-trophy"></i> 개인성과</button>
         <button class="mobile-dropdown-item work-tab" data-tab="projects"><i class="fa-solid fa-bars-progress"></i> 프로젝트</button>
+        <button class="mobile-dropdown-item work-tab" data-tab="ideas"><i class="fa-solid fa-lightbulb"></i> 아이디어</button>
         <button class="mobile-dropdown-item work-tab" data-tab="bookmarks"><i class="fa-solid fa-bookmark"></i> 북마크</button>
         <button class="mobile-dropdown-item work-tab" data-tab="members"><i class="fa-solid fa-users"></i> 구성원</button>
     </div>
@@ -512,6 +514,23 @@
         <!-- 탭 콘텐츠 영역 -->
         <section style="padding-top: 20px; display: block; min-height: auto;">
             <div class="container work-main-container">
+                <!-- 탭 내용: 아이디어 -->
+                <div id="tab-ideas" class="tab-content">
+                    <div style="max-width: 1200px; margin: 0 auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2 style="font-size: 1.5rem; font-weight: bold; color: var(--text-color); margin: 0;"><i class="fa-solid fa-lightbulb" style="color:#f59e0b; margin-right:8px;"></i> 아이디어 공유 보드</h2>
+                            <button id="btn-add-idea" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-plus"></i> 아이디어 올리기
+                            </button>
+                        </div>
+                        
+                        <!-- 아이디어 그리드 -->
+                        <div id="ideas-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; align-items: start;">
+                            <!-- 동적 렌더링 영역 -->
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 탭 내용: 구성원 -->
                 <div id="tab-members" class="tab-content">
                     <div id="members-content-container" style="display: flex; gap: 20px; height: calc(100vh - 120px); max-width: 1200px; margin: 0 auto;">
@@ -1190,6 +1209,44 @@
                 <button id="btn-submit-notice" class="btn btn-primary w-100" style="margin-top: 0.5rem;">공지 등록</button>
             </div>
         </div>
+    <!-- Idea Write Modal -->
+    <div id="idea-write-modal" class="modal-overlay hidden" style="z-index: 9999;">
+        <div class="modal-content glass-card" style="max-width: 500px; padding: 2rem;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.3rem; font-weight: bold; color: var(--text-color); margin: 0;">💡 새로운 아이디어 공유</h2>
+                <span id="close-idea-write" style="font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</span>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted); font-weight: bold;">제목</label>
+                    <input type="text" id="idea-title" placeholder="번뜩이는 아이디어의 제목을 적어주세요!" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color);">
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted); font-weight: bold;">상세 내용</label>
+                    <textarea id="idea-content" placeholder="어떤 아이디어인가요? 자유롭게 적어주세요." style="width: 100%; height: 120px; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color); resize: none; font-family: inherit; line-height: 1.5;"></textarea>
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted); font-weight: bold;">사진 첨부 (선택)</label>
+                    <input type="file" id="idea-image-input" accept="image/*" style="display: none;">
+                    
+                    <div id="idea-image-preview-container" style="display: none; position: relative; margin-bottom: 10px; border-radius: 8px; overflow: hidden; border: 1px solid var(--card-border);">
+                        <img id="idea-image-preview" src="" style="width: 100%; display: block; max-height: 300px; object-fit: contain; background: #f8f9fa;">
+                        <button id="btn-remove-idea-image" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-times"></i></button>
+                    </div>
+                    
+                    <button id="btn-select-idea-image" class="btn btn-secondary w-100" style="display: flex; align-items: center; justify-content: center; gap: 8px; border-style: dashed; border-color: var(--primary-color); color: var(--primary-color);">
+                        <i class="fa-solid fa-camera"></i> 사진 올리기
+                    </button>
+                </div>
+                
+                <button id="btn-submit-idea" class="btn btn-primary w-100" style="margin-top: 1rem; padding: 0.8rem; font-weight: bold; font-size: 1rem;">아이디어 등록 🚀</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Memo Popover for Gantt Blocks -->
     <div id="ps-memo-modal" class="hidden" style="z-index: 10000; position: fixed; background: #ffffff; border: 1px solid #ced4da; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 8px; padding: 1.5rem; width: 320px;">
         <span id="ps-memo-close" style="position: absolute; right: 15px; top: 10px; font-size: 1.5rem; cursor: pointer; color: #888;">&times;</span>
