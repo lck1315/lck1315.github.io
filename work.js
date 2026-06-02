@@ -2956,6 +2956,51 @@ document.addEventListener('DOMContentLoaded', () => {
         memoModal.classList.add('hidden');
     });
 
+    // 메인 리사이저 (좌/우 패널 크기 조절) 기능 초기화
+    function initMainResizer() {
+        const resizer = document.getElementById('ps-main-resizer');
+        const leftPanel = document.querySelector('.ps-left-panel');
+        if (!resizer || !leftPanel) return;
+
+        let startX, startWidth;
+
+        const mouseMoveHandler = function(e) {
+            const newWidth = Math.max(300, startWidth + (e.clientX - startX));
+            // 오른쪽 패널이 너무 찌그러지지 않도록 최대 너비 제한
+            const containerWidth = leftPanel.parentElement.offsetWidth;
+            if (newWidth > containerWidth - 100) return;
+            
+            leftPanel.style.width = newWidth + 'px';
+        };
+
+        const mouseUpHandler = function() {
+            resizer.classList.remove('resizing');
+            document.body.style.cursor = '';
+            document.removeEventListener('mousemove', mouseMoveHandler);
+            document.removeEventListener('mouseup', mouseUpHandler);
+            
+            localStorage.setItem('psLeftPanelWidth', leftPanel.style.width);
+        };
+
+        resizer.addEventListener('mousedown', function(e) {
+            startX = e.clientX;
+            startWidth = leftPanel.offsetWidth;
+            resizer.classList.add('resizing');
+            document.body.style.cursor = 'col-resize';
+            
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', mouseUpHandler);
+            e.preventDefault();
+        });
+        
+        const savedWidth = localStorage.getItem('psLeftPanelWidth');
+        if (savedWidth) {
+            leftPanel.style.width = savedWidth;
+        }
+    }
+    
+    initMainResizer();
+
     initParticles();
     animateParticles();
 });

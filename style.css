@@ -2647,7 +2647,20 @@ main:has(#tab-projects.active) {
     flex: 1;
     overflow: hidden;
     background: #e0e0e0;
-    gap: 1px; /* The splitter handle itself */
+    gap: 0; /* Changed from 1px since we now use a resizer */
+}
+
+.ps-main-resizer {
+    width: 6px;
+    background: #e0e0e0;
+    cursor: col-resize;
+    flex-shrink: 0;
+    transition: background 0.2s;
+    position: relative;
+    z-index: 10;
+}
+.ps-main-resizer:hover, .ps-main-resizer.resizing {
+    background: #1976d2;
 }
 
 /* 3. Left Panel */
