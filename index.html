@@ -765,36 +765,33 @@
 
     <!-- 달력 일정 관리 모달 -->
     <div id="calendar-modal" class="calendar-modal-overlay">
-        <div class="calendar-modal-content glass-card">
-            <span class="calendar-modal-close">&times;</span>
-            <h3 id="modal-date-title">2026. 05. 24 일정</h3>
+        <div class="calendar-modal-content glass-card" style="width: 90%; max-width: 420px; padding: 2.5rem; position: relative; margin: auto;">
+            <span class="calendar-modal-close" style="position: absolute; right: 20px; top: 15px; font-size: 1.8rem; cursor: pointer; color: var(--text-muted);">&times;</span>
+            <h3 id="modal-date-title" style="font-size: 1.4rem; font-weight: 800; margin-bottom: 1.5rem;"><i class="fa-regular fa-calendar-check"></i> 새 일정 추가</h3>
             
-            <div class="modal-body-split">
-                <!-- 일정 등록 폼 -->
-                <div class="event-add-form">
-                    <h4>새 일정 추가</h4>
-                    <form id="event-form">
-                        <div class="form-group">
-                            <input type="text" id="event-title-input" placeholder="일정 제목 (예: 아빠 생신, 가족 캠핑)" required>
-                        </div>
-                        <div class="form-group">
-                            <select id="event-color-select">
-                                <option value="#6c5ce7">🟣 퍼플 (중요)</option>
-                                <option value="#00cec9">🟢 민트 (가족모임)</option>
-                                <option value="#fd79a8">💗 핑크 (기념일)</option>
-                                <option value="#e17055">🟠 오렌지 (개인일정)</option>
-                            </select>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">일정 추가하기</button>
-                    </form>
+            <!-- 일정 등록 폼 -->
+            <form id="event-form" class="auth-form">
+                <div class="form-group">
+                    <label>할 일 / 일정 제목</label>
+                    <input type="text" id="event-title-input" placeholder="일정 제목 (예: 아빠 생신, 가족 캠핑)" required>
                 </div>
-                
-                <!-- 일정 목록 조회 -->
-                <div class="event-list-section">
-                    <h4>등록된 일정 목록</h4>
-                    <div id="modal-event-list" class="modal-event-list">
-                        <!-- JS로 날짜별 일정 리스트가 삽입됩니다. -->
-                    </div>
+                <div class="form-group">
+                    <label>일정 색상 분류</label>
+                    <select id="event-color-select" style="background: var(--input-bg); color: var(--text-color); padding: 0.8rem; border: 1px solid var(--input-border); border-radius: 8px; width: 100%; font-family: inherit;">
+                        <option value="#6c5ce7">🟣 퍼플 (중요)</option>
+                        <option value="#00cec9">🟢 민트 (가족모임)</option>
+                        <option value="#fd79a8">💗 핑크 (기념일)</option>
+                        <option value="#e17055">🟠 오렌지 (개인일정)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">일정 추가하기</button>
+            </form>
+            
+            <!-- 일정 목록 조회 -->
+            <div style="margin-top: 20px; border-top: 1px solid var(--card-border); padding-top: 15px;">
+                <h4 style="font-size: 1.1rem; font-weight: bold; margin-bottom: 10px; color: var(--text-color);"><i class="fa-solid fa-list"></i> 등록된 일정</h4>
+                <div id="modal-event-list" class="modal-event-list" style="max-height: 150px; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 8px;">
+                    <!-- JS로 날짜별 일정 리스트가 삽입됩니다. -->
                 </div>
             </div>
         </div>
