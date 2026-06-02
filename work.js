@@ -1049,21 +1049,6 @@ document.addEventListener('DOMContentLoaded', () => {
             dateSpan.innerText = d;
             dayCell.appendChild(dateSpan);
             
-            dayCell.onclick = (e) => {
-                if (e.target.closest('.schedule-item')) return; // Ignore if clicked on a schedule
-                if (!currentUser) {
-                    const reqModal = document.getElementById('login-required-modal');
-                    if(reqModal) reqModal.classList.remove('hidden');
-                    return;
-                }
-                const dateInput = document.getElementById('sch-date');
-                if (dateInput) dateInput.value = dateString;
-                const titleInput = document.getElementById('sch-title');
-                if (titleInput) titleInput.value = '';
-                const modal = document.getElementById('modal-schedule');
-                if (modal) modal.classList.remove('hidden');
-            };
-            
             let combinedEvents = [];
             
             // 기존 Firestore 일정 데이터를 combinedEvents 형태로 변환
@@ -1087,6 +1072,37 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 });
             }
+
+            dayCell.onclick = (e) => {
+                if (e.target.closest('.schedule-item')) return; // Ignore if clicked on a schedule
+                if (!currentUser) {
+                    const reqModal = document.getElementById('login-required-modal');
+                    if(reqModal) reqModal.classList.remove('hidden');
+                    return;
+                }
+                const dateInput = document.getElementById('sch-date');
+                if (dateInput) dateInput.value = dateString;
+                const titleInput = document.getElementById('sch-title');
+                if (titleInput) titleInput.value = '';
+                
+                const listEl = document.getElementById('sch-existing-list');
+                if (listEl) {
+                    listEl.innerHTML = '';
+                    if (combinedEvents.length === 0) {
+                        listEl.innerHTML = '<div style="color: #888; font-size: 0.9rem; text-align: center; padding: 10px;">등록된 일정이 없습니다.</div>';
+                    } else {
+                        combinedEvents.forEach(evt => {
+                            const evtDiv = document.createElement('div');
+                            evtDiv.style.cssText = `font-size: 0.9rem; padding: 10px 12px; border-radius: 6px; background: #f8f9fa; color: #333; border-left: 4px solid ${evt.isGoogle ? (evt.color || '#4285F4') : 'var(--primary-color)'}; display: flex; align-items: center; gap: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); margin-bottom: 4px;`;
+                            evtDiv.innerHTML = `${evt.isGoogle ? '<i class="fa-brands fa-google text-blue-500"></i>' : '<i class="fa-solid fa-list-check" style="color:var(--primary-color);"></i>'} <span style="flex: 1; ${evt.completed ? 'text-decoration: line-through; color: #999;' : ''}">${evt.title}</span>`;
+                            listEl.appendChild(evtDiv);
+                        });
+                    }
+                }
+                
+                const modal = document.getElementById('modal-schedule');
+                if (modal) modal.classList.remove('hidden');
+            };
             
             combinedEvents.forEach(evt => {
                 const itemDiv = document.createElement('div');
@@ -3263,6 +3279,132 @@ document.addEventListener('DOMContentLoaded', () => {
     
     initMainResizer();
     if (typeof initMembersLogic === 'function') initMembersLogic();
+
+    // --- 9. Personal Performance Dashboard Logic ---
+    function initPerformanceLogic() {
+        const perfGoalsText = document.getElementById('perf-goals-text');
+        const btnSaveGoals = document.getElementById('btn-save-perf-goals');
+        const perfKptKeep = document.getElementById('perf-kpt-keep');
+        const perfKptProblem = document.getElementById('perf-kpt-problem');
+        const perfKptTry = document.getElementById('perf-kpt-try');
+        const btnSaveKpt = document.getElementById('btn-save-perf-kpt');
+        const btnAddHighlight = document.getElementById('btn-add-perf-highlight');
+        const highlightsList = document.getElementById('perf-highlights-list');
+
+        let unsubscribePerf = null;
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                if (unsubscribePerf) unsubscribePerf();
+                
+                unsubscribePerf = db.collection('workPerformances').doc(user.uid).onSnapshot(doc => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        
+                        if (perfGoalsText && document.activeElement !== perfGoalsText) {
+                            perfGoalsText.value = data.goals || '';
+                        }
+                        
+                        if (perfKptKeep && document.activeElement !== perfKptKeep) perfKptKeep.value = data.kptKeep || '';
+                        if (perfKptProblem && document.activeElement !== perfKptProblem) perfKptProblem.value = data.kptProblem || '';
+                        if (perfKptTry && document.activeElement !== perfKptTry) perfKptTry.value = data.kptTry || '';
+                        
+                        if (highlightsList) {
+                            const highlights = data.highlights || [];
+                            highlightsList.innerHTML = '';
+                            if (highlights.length === 0) {
+                                highlightsList.innerHTML = '<div style="text-align:center; color:#888; font-size: 0.9rem; margin-top: 20px;">등록된 성과가 없습니다.</div>';
+                            } else {
+                                highlights.forEach((hl, idx) => {
+                                    const div = document.createElement('div');
+                                    div.style.cssText = 'background: #fdf6e3; border-left: 3px solid #f59e0b; padding: 10px; border-radius: 6px; font-size: 0.95rem; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;';
+                                    const textSpan = document.createElement('span');
+                                    textSpan.style.flex = '1';
+                                    textSpan.innerText = hl;
+                                    
+                                    const delBtn = document.createElement('button');
+                                    delBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+                                    delBtn.style.cssText = 'background: none; border: none; color: #ccc; cursor: pointer; padding: 0 5px;';
+                                    delBtn.onclick = async () => {
+                                        if(confirm('이 항목을 삭제하시겠습니까?')) {
+                                            const newHl = [...highlights];
+                                            newHl.splice(idx, 1);
+                                            await db.collection('workPerformances').doc(user.uid).update({ highlights: newHl });
+                                        }
+                                    };
+                                    
+                                    div.appendChild(textSpan);
+                                    div.appendChild(delBtn);
+                                    highlightsList.appendChild(div);
+                                });
+                            }
+                        }
+                    } else {
+                        // Document doesn't exist yet, clear inputs
+                        if (perfGoalsText) perfGoalsText.value = '';
+                        if (perfKptKeep) perfKptKeep.value = '';
+                        if (perfKptProblem) perfKptProblem.value = '';
+                        if (perfKptTry) perfKptTry.value = '';
+                        if (highlightsList) highlightsList.innerHTML = '<div style="text-align:center; color:#888; font-size: 0.9rem; margin-top: 20px;">등록된 성과가 없습니다.</div>';
+                    }
+                });
+            } else {
+                if (unsubscribePerf) unsubscribePerf();
+                // Clear on logout
+                if (perfGoalsText) perfGoalsText.value = '';
+                if (perfKptKeep) perfKptKeep.value = '';
+                if (perfKptProblem) perfKptProblem.value = '';
+                if (perfKptTry) perfKptTry.value = '';
+                if (highlightsList) highlightsList.innerHTML = '<div style="text-align:center; color:#888; font-size: 0.9rem; margin-top: 20px;">로그인이 필요합니다.</div>';
+            }
+        });
+
+        btnSaveGoals?.addEventListener('click', async () => {
+            if (!auth.currentUser) return alert('로그인이 필요합니다.');
+            try {
+                await db.collection('workPerformances').doc(auth.currentUser.uid).set({
+                    goals: perfGoalsText.value
+                }, { merge: true });
+                alert('목표가 저장되었습니다.');
+            } catch(e) {
+                alert('저장 실패: ' + e.message);
+            }
+        });
+
+        btnSaveKpt?.addEventListener('click', async () => {
+            if (!auth.currentUser) return alert('로그인이 필요합니다.');
+            try {
+                await db.collection('workPerformances').doc(auth.currentUser.uid).set({
+                    kptKeep: perfKptKeep.value,
+                    kptProblem: perfKptProblem.value,
+                    kptTry: perfKptTry.value
+                }, { merge: true });
+                alert('회고가 저장되었습니다.');
+            } catch(e) {
+                alert('저장 실패: ' + e.message);
+            }
+        });
+
+        btnAddHighlight?.addEventListener('click', async () => {
+            if (!auth.currentUser) return alert('로그인이 필요합니다.');
+            const text = prompt('자랑하고 싶은 주요 성과를 입력해주세요!');
+            if (text && text.trim()) {
+                try {
+                    const docRef = db.collection('workPerformances').doc(auth.currentUser.uid);
+                    const docSnap = await docRef.get();
+                    let highlights = [];
+                    if (docSnap.exists) {
+                        highlights = docSnap.data().highlights || [];
+                    }
+                    highlights.push(text.trim());
+                    await docRef.set({ highlights }, { merge: true });
+                } catch(e) {
+                    alert('추가 실패: ' + e.message);
+                }
+            }
+        });
+    }
+    initPerformanceLogic();
 
     initParticles();
     animateParticles();
