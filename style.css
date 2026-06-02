@@ -2563,6 +2563,10 @@ button.mobile-dropdown-item {
     padding: 0 !important;
 }
 
+main:has(#tab-projects.active) {
+    padding-bottom: 20px !important;
+}
+
 .ps-desktop-app {
     background-color: #ffffff;
     color: #333333;
