@@ -1927,6 +1927,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 ganttContainer.scrollTop = treeBody.scrollTop;
             }
             isSyncingLeft = false;
+            
+            // 가로 스크롤 동기화 (트리 바디 -> 트리 헤더)
+            const treeHeader = document.querySelector('.ps-tree-header');
+            if (treeHeader) {
+                treeHeader.scrollLeft = treeBody.scrollLeft;
+            }
         };
         
         ganttContainer.onscroll = () => {
