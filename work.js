@@ -1091,11 +1091,52 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (combinedEvents.length === 0) {
                         listEl.innerHTML = '<div style="color: #888; font-size: 0.9rem; text-align: center; padding: 10px;">등록된 일정이 없습니다.</div>';
                     } else {
-                        combinedEvents.forEach(evt => {
+                        combinedEvents.forEach((evt, idx) => {
                             const evtDiv = document.createElement('div');
-                            evtDiv.style.cssText = `font-size: 0.9rem; padding: 10px 12px; border-radius: 6px; background: #f8f9fa; color: #333; border-left: 4px solid ${evt.isGoogle ? (evt.color || '#4285F4') : 'var(--primary-color)'}; display: flex; align-items: center; gap: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); margin-bottom: 4px;`;
-                            evtDiv.innerHTML = `${evt.isGoogle ? '<i class="fa-brands fa-google text-blue-500"></i>' : '<i class="fa-solid fa-list-check" style="color:var(--primary-color);"></i>'} <span style="flex: 1; ${evt.completed ? 'text-decoration: line-through; color: #999;' : ''}">${evt.title}</span>`;
+                            evtDiv.className = 'event-item';
+                            
+                            const baseColor = evt.isGoogle ? (evt.color || '#4285F4') : 'var(--primary-color)';
+                            // rgba() workaround for hex colors is tricky without parsing, so we just set border color and use css for background
+                            evtDiv.style.borderLeftColor = baseColor;
+                            evtDiv.style.marginBottom = '4px';
+                            
+                            const isOwner = !evt.isGoogle; // Only firestore events can be deleted here
+                            const delBtnHTML = isOwner 
+                                ? `<button class="event-del-btn" data-index="${idx}"><i class="fa-regular fa-trash-can"></i></button>`
+                                : '';
+                                
+                            const titleHTML = evt.isGoogle 
+                                ? `<i class="fa-brands fa-google" style="margin-right: 5px; color: #4285F4;"></i> <span style="flex: 1; ${evt.completed ? 'text-decoration: line-through; color: #999;' : ''}">${evt.title}</span>` 
+                                : `<i class="fa-solid fa-list-check" style="color:var(--primary-color); margin-right: 5px;"></i> <span style="flex: 1; ${evt.completed ? 'text-decoration: line-through; color: #999;' : ''}">${evt.title}</span>`;
+
+                            evtDiv.innerHTML = `
+                                <span class="event-item-title" style="display:flex; align-items:center;">${titleHTML}</span>
+                                ${delBtnHTML}
+                            `;
+                            
                             listEl.appendChild(evtDiv);
+                        });
+                        
+                        // Add delete event listeners
+                        listEl.querySelectorAll('.event-del-btn').forEach(btn => {
+                            btn.addEventListener('click', async (e) => {
+                                e.stopPropagation();
+                                const index = parseInt(btn.getAttribute('data-index'));
+                                const targetEvent = combinedEvents[index];
+                                if (targetEvent && !targetEvent.isGoogle) {
+                                    if(confirm('이 일정을 삭제하시겠습니까?')) {
+                                        try {
+                                            await db.collection('workSchedules').doc(targetEvent.id).delete();
+                                            // The onSnapshot will refresh the grid, but we should close the modal or re-render the list
+                                            const modal = document.getElementById('modal-schedule');
+                                            if (modal) modal.classList.add('hidden');
+                                        } catch (err) {
+                                            console.error("Error deleting schedule: ", err);
+                                            alert("삭제 실패");
+                                        }
+                                    }
+                                }
+                            });
                         });
                     }
                 }

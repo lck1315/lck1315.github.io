@@ -1003,6 +1003,7 @@ body.light-theme .calendar-day {
 .modal-event-list {
     max-height: 220px;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -1023,7 +1024,6 @@ body.light-theme .event-item {
     background: rgba(108, 92, 231, 0.04);
 }
 .event-item:hover {
-    transform: translateX(3px);
     background: rgba(255, 255, 255, 0.08);
 }
 body.light-theme .event-item:hover {
