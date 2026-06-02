@@ -2810,9 +2810,27 @@ main:has(#tab-projects.active) {
 .ps-gantt-container {
     flex: 1;
     overflow-x: auto;
-    overflow-y: auto; /* 우측에만 스크롤바 표시 */
+    overflow-y: auto;
     position: relative;
     background: #ffffff;
+    /* 가로 스크롤바가 세로 공간을 빼앗지 않도록 overlay 방식 적용 */
+    overflow: auto overlay;
+    scrollbar-gutter: stable;
+}
+/* 간트 컨테이너 가로 스크롤바를 overlay로 표시 (Chrome/Safari) */
+.ps-gantt-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.ps-gantt-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+.ps-gantt-container::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.25);
+    border-radius: 4px;
+}
+.ps-gantt-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(0,0,0,0.4);
 }
 
 .ps-gantt-header {

@@ -2022,6 +2022,19 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- 3. Synchronize Scrolling ---
         // 스크롤 위치 복원 (렌더링 후)
         if (ganttContainer) {
+            // 가로 스크롤바 높이 차이 보정:
+            // 간트 컨테이너에는 가로 스크롤바가 있어 세로 표시 영역이 줄어듦
+            // 왼쪽 트리바디에는 스크롤바가 숨겨져 있어 세로 표시 영역이 더 넓음
+            // 이 차이를 treeBody에 음의 마진 또는 패딩으로 보정
+            const ganttScrollbarH = ganttContainer.offsetHeight - ganttContainer.clientHeight;
+            const treeScrollbarH = treeBody.offsetHeight - treeBody.clientHeight;
+            const scrollbarDiff = ganttScrollbarH - treeScrollbarH;
+            if (scrollbarDiff > 0) {
+                // 트리바디 하단에 간트 가로 스크롤바와 동일한 높이의 여백 추가
+                treeBody.style.marginBottom = `-${scrollbarDiff}px`;
+                treeBody.style.paddingBottom = `${scrollbarDiff}px`;
+            }
+
             ganttContainer.scrollTop = savedScrollTop;
             ganttContainer.scrollLeft = savedScrollLeft;
             treeBody.scrollTop = savedScrollTop;
