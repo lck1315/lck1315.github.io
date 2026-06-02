@@ -2573,7 +2573,7 @@ main:has(#tab-projects.active) {
     font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 120px); /* 내부 스크롤을 위해 고정 높이 지정 */
+    height: calc(100vh - 95px); /* 내부 스크롤을 위해 고정 높이 지정 */
     min-height: 400px;
     border: 1px solid #ced4da;
     border-radius: 4px;

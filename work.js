@@ -471,6 +471,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 targetContent.style.display = 'block';
             }
             
+            // 프로젝트 탭일 경우 브라우저 스크롤 제거 및 전체 화면 사용
+            if (currentTab === 'projects') {
+                document.body.style.overflow = 'hidden';
+                document.documentElement.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = '';
+                document.documentElement.style.overflow = '';
+            }
+            
             const btnOpenModal = document.getElementById('btn-open-modal');
             if (btnOpenModal) {
                 if (currentTab === 'main' || currentTab === 'members' || currentTab === 'projects') {
@@ -1782,7 +1791,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="ps-col-0">${globalIndex}</div>
                 <div class="ps-col-1" style="padding-left: ${10 + level * 20}px;">
                     ${hasChildren ? `<span style="cursor:pointer; width:15px; display:inline-block; font-weight:bold; color:#555;" onclick="event.stopPropagation(); window.psUpdateField('${task.id}', 'expanded', ${!isExpanded})">${isExpanded ? '▼' : '▶'}</span>` : '<span style="width:15px; display:inline-block;"></span>'}
-                    <span style="margin-right:5px; color:#666; font-size:11px; display:inline-block; min-width:35px; white-space:nowrap;">${prefix}</span>
+                    <span style="margin-right:5px; color:#666; font-size:11px; display:inline-block; min-width:45px; flex-shrink:0; white-space:nowrap;">${prefix}</span>
                     <input class="ps-tree-input" value="${task.name || ''}" onchange="window.psUpdateField('${task.id}', 'name', this.value)" ${disabledAttr}>
                 </div>
                 <div class="ps-col-2">
