@@ -2446,7 +2446,7 @@ document.addEventListener('DOMContentLoaded', () => {
             slide.style.width = '100%';
             slide.style.height = '100%';
             slide.style.flexShrink = '0';
-            slide.innerHTML = `<img src="${imgUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:16px; display:block;">`;
+            slide.innerHTML = `<img src="${imgUrl}" style="width:100%; height:100%; object-fit:cover; display:block;">`;
             workHeroSliderTrack.appendChild(slide);
 
             if (workHeroSliderDots) {
