@@ -482,7 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const btnOpenModal = document.getElementById('btn-open-modal');
             if (btnOpenModal) {
-                if (currentTab === 'main' || currentTab === 'members' || currentTab === 'projects') {
+                if (currentTab === 'main' || currentTab === 'members' || currentTab === 'projects' || currentTab === 'performance' || currentTab === 'ideas') {
                     btnOpenModal.style.display = 'none';
                 } else {
                     btnOpenModal.style.display = 'flex';
@@ -1195,61 +1195,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ====================================================
-    // 개인성과 (Performance)
+    // 개인성과 (Performance) - 신규 팀원 평가 매트릭스로 개편됨 (하단 initPerformanceLogic 참고)
     // ====================================================
-    const performanceContainer = document.getElementById('performance-content-container');
-    let performancesData = [];
-
-    db.collection('workPerformances').orderBy('date', 'desc').onSnapshot((snapshot) => {
-        performancesData = [];
-        snapshot.forEach(doc => performancesData.push({ id: doc.id, ...doc.data() }));
-        renderPerformances();
-    });
-
-    function renderPerformances() {
-        performanceContainer.innerHTML = '';
-        if (performancesData.length === 0) {
-            performanceContainer.innerHTML = '<div style="text-align:center; padding: 50px; color: var(--text-muted);"><i class="fa-solid fa-trophy"></i> 등록된 성과 기록이 없습니다.</div>';
-            return;
-        }
-
-        const grid = document.createElement('div');
-        grid.className = 'work-grid';
-
-        performancesData.forEach(item => {
-            const deleteBtn = currentUser ? `<button class="work-card-delete item-delete-btn" onclick="event.preventDefault(); window.deleteItem('workPerformances', '${item.id}')"><i class="fa-solid fa-trash"></i></button>` : '';
-            
-            const card = document.createElement('div');
-            card.className = 'work-card glass-card';
-            card.style.alignItems = 'flex-start'; // 텍스트가 많을 수 있으니 위로 정렬
-
-            card.innerHTML = `
-                <div class="work-icon-wrap" style="background: linear-gradient(135deg, #ffa502, #ff7f50);"><i class="fa-solid fa-medal"></i></div>
-                <div class="work-info">
-                    <h4>${item.title}</h4>
-                    <p style="color: var(--primary-color); font-weight: 600; margin-bottom: 5px;">${item.date}</p>
-                    <p style="white-space: normal; overflow: visible;">${item.description}</p>
-                </div>
-                ${deleteBtn}
-            `;
-            grid.appendChild(card);
-        });
-        performanceContainer.appendChild(grid);
-    }
-
-    document.getElementById('form-performance').addEventListener('submit', (e) => {
-        e.preventDefault();
-        db.collection('workPerformances').add({
-            title: document.getElementById('perf-title').value.trim(),
-            date: document.getElementById('perf-date').value,
-            description: document.getElementById('perf-desc').value.trim(),
-            createdBy: currentUser.uid,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        }).then(() => {
-            e.target.reset();
-            document.getElementById('modal-performance').classList.add('hidden');
-        });
-    });
 
     // ====================================================
     // 구성원 소개 (Members)
