@@ -1348,6 +1348,9 @@ document.addEventListener('DOMContentLoaded', () => {
         snapshot.forEach(doc => psData.push({ id: doc.id, ...doc.data() }));
         updateSearchDropdown();
         renderPsScheduler();
+        if (typeof window.renderPerformanceDashboard === 'function') {
+            window.renderPerformanceDashboard();
+        }
     });
 
     function updateSearchDropdown() {
@@ -1842,11 +1845,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     block.style.width = `${Math.max(0, durationDays) * psDayWidth}px`;
                     block.style.top = `${(globalIndex - 1) * 30 + 5}px`;
                     block.style.background = task.color || '#fffacd';
-                    if (task.memo) {
-                        block.innerHTML = `${task.name} <i class="fa-solid fa-note-sticky" style="margin-left:5px; font-size:11px; opacity:0.8;"></i>`;
-                        block.title = task.memo; // Hover to see memo
-                    } else {
-                        block.innerText = task.name;
+                    
+                    const hasMemo = !!task.memo;
+                    block.innerHTML = `
+                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${task.name}</span>
+                        <i class="fa-solid fa-note-sticky ps-memo-trigger" style="margin-left:5px; font-size:11px; cursor:pointer; opacity: ${hasMemo ? '1' : '0.3'};"></i>
+                    `;
+                    if (hasMemo) {
+                        block.title = task.memo;
+                    }
+                    
+                    const memoTrigger = block.querySelector('.ps-memo-trigger');
+                    if (memoTrigger) {
+                        memoTrigger.onclick = (e) => {
+                            e.stopPropagation();
+                            psSelectedId = task.id;
+                            if (window.openMemoModal) {
+                                window.openMemoModal(task, e.clientX, e.clientY);
+                            }
+                            renderPsScheduler();
+                        };
                     }
 
                     block.onclick = (e) => {
@@ -2955,7 +2973,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const task = psData.find(p => p.id === psSelectedId);
         if (task && window.openMemoModal) {
-            window.openMemoModal(task, e.clientX, e.clientY);
+            // 버튼 클릭 시에는 화면 중앙에 모달이 뜨도록 undefined 전달
+            window.openMemoModal(task, undefined, undefined);
         }
     });
 
@@ -2969,6 +2988,235 @@ document.addEventListener('DOMContentLoaded', () => {
         window.psUpdateField(currentMemoTask.id, 'memo', newMemo);
         memoModal.classList.add('hidden');
     });
+
+    // --- 7. Performance Dashboard ---
+    window.renderPerformanceDashboard = function() {
+        if (currentTab !== 'performance') return;
+        
+        let uName = '';
+        if (typeof currentUser !== 'undefined' && currentUser && currentUser.displayName) {
+            uName = currentUser.displayName;
+        } else if (typeof auth !== 'undefined' && auth.currentUser) {
+            uName = auth.currentUser.displayName || '';
+        }
+
+        const myTasks = psData.filter(t => t.assignee && t.assignee.includes(uName));
+        const total = myTasks.length;
+        const completed = myTasks.filter(t => t.status === '완료').length;
+        const inProgress = myTasks.filter(t => t.status === '진행중').length;
+        const pending = myTasks.filter(t => !t.status || t.status === '대기중').length;
+        
+        const progressRate = total === 0 ? 0 : Math.round((completed / total) * 100);
+
+        const elTotal = document.getElementById('perf-total-tasks');
+        if(elTotal) {
+            elTotal.innerText = total;
+            document.getElementById('perf-completed-tasks').innerText = completed;
+            document.getElementById('perf-inprogress-tasks').innerText = inProgress;
+            document.getElementById('perf-progress-rate').innerText = `${progressRate}%`;
+
+            const chartContainer = document.getElementById('perf-chart-container');
+            if (chartContainer) {
+                chartContainer.innerHTML = `
+                    <div style="margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 5px;"><span>완료</span><span style="font-weight:bold;">${completed}건</span></div>
+                        <div style="width: 100%; height: 10px; background: #eee; border-radius: 5px; overflow: hidden;">
+                            <div style="width: ${total === 0 ? 0 : (completed/total)*100}%; height: 100%; background: #10b981; transition: width 0.5s ease-out;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 5px;"><span>진행중</span><span style="font-weight:bold;">${inProgress}건</span></div>
+                        <div style="width: 100%; height: 10px; background: #eee; border-radius: 5px; overflow: hidden;">
+                            <div style="width: ${total === 0 ? 0 : (inProgress/total)*100}%; height: 100%; background: #3b82f6; transition: width 0.5s ease-out;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 5px;"><span>대기중</span><span style="font-weight:bold;">${pending}건</span></div>
+                        <div style="width: 100%; height: 10px; background: #eee; border-radius: 5px; overflow: hidden;">
+                            <div style="width: ${total === 0 ? 0 : (pending/total)*100}%; height: 100%; background: #6b7280; transition: width 0.5s ease-out;"></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const recentContainer = document.getElementById('perf-recent-completed');
+            if (recentContainer) {
+                const recent = myTasks.filter(t => t.status === '완료').slice(0, 5); 
+                if (recent.length === 0) {
+                    recentContainer.innerHTML = '<div style="text-align:center; padding: 20px; color: #888;">최근 완료된 업무가 없습니다.</div>';
+                } else {
+                    recentContainer.innerHTML = recent.map(t => `
+                        <div style="padding: 15px; border-left: 4px solid #10b981; background: #f8f9fa; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="font-weight: bold; color: #333; font-size: 1.05rem;">${t.name}</div>
+                            <div style="font-size: 0.85rem; color: #666; margin-top: 6px;"><i class="fa-regular fa-calendar-check"></i> 종료일: ${t.endDate || '미상'}</div>
+                        </div>
+                    `).join('');
+                }
+            }
+        }
+    };
+
+    // --- 8. Members Chat Logic ---
+    let currentSelectedMemberId = null;
+    let unsubscribeMemberChat = null;
+
+    function initMembersLogic() {
+        const addMemberModal = document.getElementById('add-member-modal');
+        const btnAddMember = document.getElementById('btn-add-member');
+        const btnCancelMember = document.getElementById('btn-cancel-member');
+        const btnSaveMember = document.getElementById('btn-save-member');
+
+        btnAddMember?.addEventListener('click', () => addMemberModal?.classList.remove('hidden'));
+        btnCancelMember?.addEventListener('click', () => {
+            addMemberModal?.classList.add('hidden');
+            document.getElementById('add-member-name').value = '';
+            document.getElementById('add-member-role').value = '';
+        });
+
+        btnSaveMember?.addEventListener('click', async () => {
+            const name = document.getElementById('add-member-name').value.trim();
+            const role = document.getElementById('add-member-role').value.trim();
+            if(!name) return alert('이름을 입력해주세요.');
+            
+            try {
+                await db.collection('workMembers').add({
+                    name: name,
+                    role: role,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                addMemberModal?.classList.add('hidden');
+                document.getElementById('add-member-name').value = '';
+                document.getElementById('add-member-role').value = '';
+            } catch(e) {
+                console.error(e);
+                alert('멤버 추가 실패: 권한이 없거나 네트워크 오류입니다.');
+            }
+        });
+
+        // Load Members
+        db.collection('workMembers').orderBy('createdAt', 'asc').onSnapshot(snapshot => {
+            const listEl = document.getElementById('member-list');
+            if(!listEl) return;
+            listEl.innerHTML = '';
+            if(snapshot.empty) {
+                listEl.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">등록된 구성원이 없습니다.</div>';
+                return;
+            }
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const div = document.createElement('div');
+                div.className = `member-list-item`;
+                div.style.cssText = `padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s; background: ${currentSelectedMemberId === doc.id ? '#e3f2fd' : 'transparent'};`;
+                div.innerHTML = `
+                    <div style="width: 32px; height: 32px; border-radius: 50%; background: #ccc; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;"><i class="fa-solid fa-user"></i></div>
+                    <div>
+                        <div style="font-weight: bold; color: #333; font-size: 0.95rem;">${data.name}</div>
+                        <div style="font-size: 0.8rem; color: #888;">${data.role || '팀원'}</div>
+                    </div>
+                `;
+                
+                div.onmouseover = () => { if(currentSelectedMemberId !== doc.id) div.style.background = '#f1f3f5'; };
+                div.onmouseout = () => { if(currentSelectedMemberId !== doc.id) div.style.background = 'transparent'; };
+                
+                div.onclick = () => selectMember(doc.id, data.name, data.role, div);
+                listEl.appendChild(div);
+            });
+        });
+
+        const btnSend = document.getElementById('btn-send-member-chat');
+        const inputChat = document.getElementById('member-chat-input');
+        
+        const sendMessage = async () => {
+            if(!currentSelectedMemberId) return;
+            const text = inputChat.value.trim();
+            if(!text) return;
+            
+            let uName = '익명';
+            if (typeof currentUser !== 'undefined' && currentUser && currentUser.displayName) {
+                uName = currentUser.displayName;
+            } else if (typeof auth !== 'undefined' && auth.currentUser) {
+                uName = auth.currentUser.displayName || '익명';
+            }
+
+            try {
+                inputChat.value = ''; // 긍정적 UI 응답
+                await db.collection('workMemberChats').add({
+                    memberId: currentSelectedMemberId,
+                    text: text,
+                    senderName: uName,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch(e) {
+                console.error(e);
+                alert('메시지 전송 실패');
+            }
+        };
+
+        btnSend?.addEventListener('click', sendMessage);
+        inputChat?.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') sendMessage();
+        });
+    }
+
+    function selectMember(id, name, role, element) {
+        currentSelectedMemberId = id;
+        document.getElementById('member-chat-empty').style.display = 'none';
+        document.getElementById('member-chat-area').style.display = 'flex';
+        document.getElementById('chat-member-name').innerText = name;
+        document.getElementById('chat-member-role').innerText = role || '팀원';
+        
+        // Refresh list to highlight selected
+        const items = document.querySelectorAll('.member-list-item');
+        items.forEach(item => {
+            item.style.background = 'transparent';
+        });
+        if(element) element.style.background = '#e3f2fd';
+        
+        if (unsubscribeMemberChat) unsubscribeMemberChat();
+        
+        const messagesEl = document.getElementById('member-chat-messages');
+        messagesEl.innerHTML = '<div style="text-align:center; color:#888;">메시지 로딩중...</div>';
+        
+        unsubscribeMemberChat = db.collection('workMemberChats')
+            .where('memberId', '==', id)
+            .orderBy('createdAt', 'asc')
+            .onSnapshot(snapshot => {
+                messagesEl.innerHTML = '';
+                if(snapshot.empty) {
+                    messagesEl.innerHTML = '<div style="text-align:center; padding: 20px; color:#aaa;">아직 남겨진 메시지가 없습니다. 첫 메시지를 남겨보세요!</div>';
+                    return;
+                }
+                
+                let uName = '';
+                if (typeof currentUser !== 'undefined' && currentUser && currentUser.displayName) {
+                    uName = currentUser.displayName;
+                } else if (typeof auth !== 'undefined' && auth.currentUser) {
+                    uName = auth.currentUser.displayName || '';
+                }
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const isMe = data.senderName === uName;
+                    const div = document.createElement('div');
+                    div.style.cssText = `display: flex; flex-direction: column; max-width: 80%; ${isMe ? 'align-self: flex-end; align-items: flex-end;' : 'align-self: flex-start; align-items: flex-start;'}`;
+                    
+                    const timeStr = data.createdAt ? data.createdAt.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+                    
+                    div.innerHTML = `
+                        <div style="font-size: 0.8rem; color: #888; margin-bottom: 3px; margin-left: 5px; margin-right: 5px;">${data.senderName}</div>
+                        <div style="display: flex; align-items: flex-end; gap: 5px; ${isMe ? 'flex-direction: row-reverse;' : ''}">
+                            <div style="background: ${isMe ? '#1976d2' : '#fff'}; color: ${isMe ? '#fff' : '#333'}; padding: 10px 15px; border-radius: ${isMe ? '15px 15px 0 15px' : '15px 15px 15px 0'}; border: ${isMe ? 'none' : '1px solid #e0e0e0'}; box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-size: 0.95rem; line-height: 1.4; word-break: break-all;">
+                                ${data.text}
+                            </div>
+                            <div style="font-size: 0.7rem; color: #aaa; margin-bottom: 2px;">${timeStr}</div>
+                        </div>
+                    `;
+                    messagesEl.appendChild(div);
+                });
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            });
+    }
 
     // 메인 리사이저 (좌/우 패널 크기 조절) 기능 초기화
     function initMainResizer() {
@@ -3014,6 +3262,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     initMainResizer();
+    if (typeof initMembersLogic === 'function') initMembersLogic();
 
     initParticles();
     animateParticles();
