@@ -1894,20 +1894,30 @@ document.addEventListener('DOMContentLoaded', () => {
             renderRow(root, 0, `${idx + 1}`);
         });
 
-        // 오른쪽 갠트 차트 배경 높이를 왼쪽 트리 아이템 총 높이와 정확히 일치시킴
-        ganttBody.style.height = `${globalIndex * 30}px`;
+        // 오른쪽 갠트 차트 배경 기본 높이 계산 (여백 보정 전)
+        const baseContentHeight = globalIndex * 30;
 
-        // 가로 스크롤바 존재 여부에 따라 왼쪽 트리의 하단 여백을 동적으로 조절하여 세로 스크롤 싱크 완벽하게 맞춤
+        // 가로 스크롤바 존재 여부에 따라 왼쪽 트리의 하단 여백과 오른쪽 갠트 차트 높이를 동적으로 조절하여 세로 스크롤 싱크 완벽하게 맞춤
         requestAnimationFrame(() => {
             const ganttContainer = document.getElementById('ps-gantt-container');
-            if (ganttContainer) {
-                const hScrollbarHeight = ganttContainer.offsetHeight - ganttContainer.clientHeight;
-                const treeBody = document.getElementById('ps-tree-body');
-                if (treeBody) {
-                    // 가로 스크롤바가 있으면 그 높이만큼 왼쪽 패널 하단에 여백을 주어 스크롤 높이를 똑같이 맞춤
-                    // 또한, 원래 있던 하단 여백 20px도 양쪽에 공평하게 추가
-                    treeBody.style.paddingBottom = `${(hScrollbarHeight > 0 ? hScrollbarHeight : 0) + 20}px`;
-                    ganttBody.style.height = `${globalIndex * 30 + 20}px`; 
+            const treeBody = document.getElementById('ps-tree-body');
+            if (ganttContainer && treeBody) {
+                const leftClientH = treeBody.clientHeight;
+                const rightClientH = ganttContainer.clientHeight;
+                const baseExtraHeight = 20; // 양쪽 스크롤 바닥에 공통으로 추가할 여유 공간
+                
+                if (leftClientH > rightClientH) {
+                    // 오른쪽 패널에 가로 스크롤바가 있거나 더 많은 영역을 차지할 경우
+                    treeBody.style.paddingBottom = `${baseExtraHeight + (leftClientH - rightClientH)}px`;
+                    ganttBody.style.height = `${baseContentHeight + baseExtraHeight}px`;
+                } else if (rightClientH > leftClientH) {
+                    // 왼쪽 패널에 가로 스크롤바가 있거나 더 많은 영역을 차지할 경우
+                    treeBody.style.paddingBottom = `${baseExtraHeight}px`;
+                    ganttBody.style.height = `${baseContentHeight + baseExtraHeight + (rightClientH - leftClientH)}px`;
+                } else {
+                    // 양쪽 조건이 동일한 경우 (둘 다 스크롤바가 있거나 둘 다 없음)
+                    treeBody.style.paddingBottom = `${baseExtraHeight}px`;
+                    ganttBody.style.height = `${baseContentHeight + baseExtraHeight}px`;
                 }
             }
         });

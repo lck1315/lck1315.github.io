@@ -2728,7 +2728,6 @@ main:has(#tab-projects.active) {
     flex: 1;
     overflow-y: hidden; /* 왼쪽 스크롤바 숨김 (우측에만 표시) */
     overflow-x: auto;
-    padding-bottom: 20px;
 }
 
 .ps-tree-row {
