@@ -2950,6 +2950,15 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i in window.psColWidths) {
             cssStr += `.ps-col-${i} { width: ${window.psColWidths[i]}px !important; flex: none !important; }\n`;
         }
+
+        // 전체 컬럼 폭의 합을 계산하여 트리 헤더와 로우의 최소 너비로 지정 (스크롤 영역 보정)
+        const defaultWidths = {0: 90, 1: 205, 2: 100, 3: 100, 4: 90, 5: 90};
+        let totalWidth = 0;
+        for (let i = 0; i <= 5; i++) {
+            totalWidth += window.psColWidths[i] || defaultWidths[i];
+        }
+        cssStr += `.ps-tree-header, .ps-tree-row { min-width: ${totalWidth}px !important; }\n`;
+        
         styleEl.innerHTML = cssStr;
     }
     
