@@ -2121,7 +2121,11 @@ body.light-theme .guest-sticker {
 @media (max-width: 768px) {
     #hero {
         min-height: auto !important;
-        padding: 110px 0 20px 0 !important;
+        padding: 0 !important;
+    }
+    
+    #hero .hero-text-content {
+        padding: 110px 0 40px 0 !important;
     }
 
     .hero-container {
