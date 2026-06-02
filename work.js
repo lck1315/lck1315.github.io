@@ -1793,10 +1793,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             tr.innerHTML = `
                 <div class="ps-col-0">${globalIndex}</div>
-                <div class="ps-col-1" style="padding-left: ${10 + level * 20}px;">
+                <div class="ps-col-1" style="padding-left: ${10 + level * 20}px; display: flex; align-items: center; padding-right: 5px;">
                     ${hasChildren ? `<span style="cursor:pointer; width:15px; display:inline-block; font-weight:bold; color:#555;" onclick="event.stopPropagation(); window.psUpdateField('${task.id}', 'expanded', ${!isExpanded})">${isExpanded ? '▼' : '▶'}</span>` : '<span style="width:15px; display:inline-block;"></span>'}
                     <span style="margin-right:5px; color:#666; font-size:11px; display:inline-block; min-width:45px; flex-shrink:0; white-space:nowrap;">${prefix}</span>
-                    <input class="ps-tree-input" value="${task.name || ''}" onchange="window.psUpdateField('${task.id}', 'name', this.value)" ${disabledAttr}>
+                    <input class="ps-tree-input" value="${task.name || ''}" onchange="window.psUpdateField('${task.id}', 'name', this.value)" ${disabledAttr} style="flex: 1;">
+                    <i class="fa-solid fa-note-sticky" onclick="event.stopPropagation(); psSelectedId='${task.id}'; window.openMemoModal(${JSON.stringify(task).replace(/"/g, '&quot;')}, event.clientX, event.clientY);" style="margin-left:5px; cursor:pointer; font-size:13px; color: ${task.memo ? '#f59e0b' : '#ccc'};" title="메모 열기"></i>
                 </div>
                 <div class="ps-col-2">
                     <input class="ps-tree-input" value="${task.assignee || ''}" onchange="window.psUpdateField('${task.id}', 'assignee', this.value)" ${disabledAttr}>
@@ -1844,7 +1845,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     block.dataset.taskId = task.id;
                     block.style.left = `${Math.max(0, daysFromStart) * psDayWidth}px`;
                     block.style.width = `${Math.max(0, durationDays) * psDayWidth}px`;
-                    block.style.top = `${(globalIndex - 1) * 30 + 5}px`;
+                    block.style.top = `${(globalIndex - 1) * 31 + 5}px`;
                     block.style.background = task.color || '#fffacd';
                     
                     const hasMemo = !!task.memo;
