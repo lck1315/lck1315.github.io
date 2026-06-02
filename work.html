@@ -767,20 +767,7 @@
                             이동</button>
                     </div>
 
-                    <!-- Add Member Modal -->
-    <div id="add-member-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 20000; display: flex; align-items: center; justify-content: center;">
-        <div style="background: #ffffff; padding: 25px; border-radius: 12px; width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-            <h3 style="margin-top: 0; font-weight: bold; margin-bottom: 20px; color: #333;">새 구성원 추가</h3>
-            <input type="text" id="add-member-name" placeholder="이름 (예: 홍길동)" style="width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; outline: none;">
-            <input type="text" id="add-member-role" placeholder="역할 (예: 개발, 기획)" style="width: 100%; padding: 12px; margin-bottom: 25px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; outline: none;">
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button id="btn-cancel-member" style="padding: 10px 20px; border: 1px solid #ccc; border-radius: 6px; background: #fff; cursor: pointer; color: #555; font-weight: bold;">취소</button>
-                <button id="btn-save-member" style="padding: 10px 20px; border: none; border-radius: 6px; background: var(--primary-color); color: #fff; cursor: pointer; font-weight: bold;">추가하기</button>
-            </div>
-        </div>
-    </div>
 
-    <!-- Firebase App (the core Firebase SDK) -->
                     <div class="ps-splitter">
 
                         <!-- 3. Left Panel -->
@@ -1056,6 +1043,21 @@
             </div>
         </div>
     </div>
+
+    <!-- Add Member Modal -->
+    <div id="add-member-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 20000; display: flex; align-items: center; justify-content: center;">
+        <div style="background: #ffffff; padding: 25px; border-radius: 12px; width: 350px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+            <h3 style="margin-top: 0; font-weight: bold; margin-bottom: 20px; color: #333;">새 구성원 추가</h3>
+            <input type="text" id="add-member-name" placeholder="이름 (예: 홍길동)" style="width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; outline: none;">
+            <input type="text" id="add-member-role" placeholder="역할 (예: 개발, 기획)" style="width: 100%; padding: 12px; margin-bottom: 25px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; outline: none;">
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button id="btn-cancel-member" style="padding: 10px 20px; border: 1px solid #ccc; border-radius: 6px; background: #fff; cursor: pointer; color: #555; font-weight: bold;">취소</button>
+                <button id="btn-save-member" style="padding: 10px 20px; border: none; border-radius: 6px; background: var(--primary-color); color: #fff; cursor: pointer; font-weight: bold;">추가하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase App (the core Firebase SDK) -->
 
     <!-- 구성원 추가 모달 -->
     <div id="modal-members" class="auth-modal-overlay hidden"

@@ -1200,63 +1200,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const membersContainer = document.getElementById('members-content-container');
     let membersData = [];
 
-    db.collection('workMembers').orderBy('createdAt', 'asc').onSnapshot((snapshot) => {
-        membersData = [];
-        snapshot.forEach(doc => membersData.push({ id: doc.id, ...doc.data() }));
-        if (currentUser && currentUserDoc && currentUserDoc.isApproved) {
-            if (window.renderWorkMembers) window.renderWorkMembers();
-        }
-    });
-
-    window.renderWorkMembers = function() {
-        if (!membersContainer) return;
-        membersContainer.innerHTML = '';
-        if (membersData.length === 0) {
-            membersContainer.innerHTML = '<div style="text-align:center; padding: 50px; color: var(--text-muted); grid-column: 1 / -1;"><i class="fa-solid fa-users"></i> 등록된 구성원이 없습니다.</div>';
-            return;
-        }
-
-        membersData.forEach(item => {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'member-card-wrapper';
-            
-            const deleteBtnHtml = (currentUser && currentUserDoc && currentUserDoc.isMaster) 
-                ? `<div class="member-edit-btn" onclick="event.stopPropagation(); window.deleteItem('workMembers', '${item.id}')" style="background:#ff4757;" title="구성원 삭제"><i class="fa-solid fa-trash"></i></div>` 
-                : '';
-
-            const iconHtml = item.photoBase64 
-                ? `<img src="${item.photoBase64}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`
-                : `<i class="fa-solid fa-user-tie"></i>`;
-
-            wrapper.innerHTML = `
-                <div class="member-card">
-                    <div class="card-front glass-card">
-                        ${deleteBtnHtml}
-                        <div class="member-icon bg-blue" style="overflow:hidden; padding:0;">
-                            ${iconHtml}
-                        </div>
-                        <h3 class="member-name">${item.name}</h3>
-                        <p class="member-role">${item.role}</p>
-                        <span class="card-flip-hint">클릭해서 더 알아보기 <i class="fa-solid fa-rotate"></i></span>
-                    </div>
-                    <div class="card-back glass-card">
-                        <h3>${item.name.split(' ')[0]}의 프로필</h3>
-                        <ul class="member-details">
-                            <li><i class="fa-solid fa-heart text-pink"></i> 취미: ${item.hobby || '-'}</li>
-                            <li><i class="fa-solid fa-comment-dots text-blue"></i> 한마디: "${item.comment || '-'}"</li>
-                            <li><i class="fa-solid fa-gift text-purple"></i> 좋아하는 것: ${item.like || '-'}</li>
-                        </ul>
-                    </div>
-                </div>
-            `;
-
-            wrapper.addEventListener('click', () => {
-                wrapper.classList.toggle('flipped');
-            });
-
-            membersContainer.appendChild(wrapper);
-        });
-    };
+    // 기존 카드형 멤버 렌더링 로직(renderWorkMembers)은 구성원 채팅 UI(member-list)로 대체되어 삭제됨.
 
     document.getElementById('form-members')?.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -3220,23 +3164,54 @@ document.addEventListener('DOMContentLoaded', () => {
                     uName = auth.currentUser.displayName || '';
                 }
 
+                let lastDateStr = '';
+                
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     const isMe = data.senderName === uName;
+                    const dateObj = data.createdAt ? data.createdAt.toDate() : new Date();
+                    
+                    const dateStr = dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+                    const timeStr = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    
+                    if (dateStr !== lastDateStr) {
+                        const dateDiv = document.createElement('div');
+                        dateDiv.style.cssText = 'text-align: center; margin: 15px 0; width: 100%;';
+                        dateDiv.innerHTML = `<span style="background: rgba(0,0,0,0.1); color: #666; padding: 4px 12px; border-radius: 12px; font-size: 0.75rem;">${dateStr}</span>`;
+                        messagesEl.appendChild(dateDiv);
+                        lastDateStr = dateStr;
+                    }
+                    
                     const div = document.createElement('div');
                     div.style.cssText = `display: flex; flex-direction: column; max-width: 80%; ${isMe ? 'align-self: flex-end; align-items: flex-end;' : 'align-self: flex-start; align-items: flex-start;'}`;
                     
-                    const timeStr = data.createdAt ? data.createdAt.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+                    const safeText = (data.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+                    const deleteBtnHtml = isMe ? `<button class="chat-del-btn" style="background:none; border:none; color:#ccc; font-size:0.75rem; cursor:pointer; padding: 2px; margin-bottom: 2px;" title="메시지 삭제"><i class="fa-solid fa-trash-can"></i></button>` : '';
                     
                     div.innerHTML = `
-                        <div style="font-size: 0.8rem; color: #888; margin-bottom: 3px; margin-left: 5px; margin-right: 5px;">${data.senderName}</div>
-                        <div style="display: flex; align-items: flex-end; gap: 5px; ${isMe ? 'flex-direction: row-reverse;' : ''}">
-                            <div style="background: ${isMe ? '#1976d2' : '#fff'}; color: ${isMe ? '#fff' : '#333'}; padding: 10px 15px; border-radius: ${isMe ? '15px 15px 0 15px' : '15px 15px 15px 0'}; border: ${isMe ? 'none' : '1px solid #e0e0e0'}; box-shadow: 0 1px 2px rgba(0,0,0,0.05); font-size: 0.95rem; line-height: 1.4; word-break: break-all;">
-                                ${data.text}
+                        ${!isMe ? `<div style="font-size: 0.8rem; color: #888; margin-bottom: 4px; margin-left: 5px;">${data.senderName}</div>` : ''}
+                        <div style="display: flex; align-items: flex-end; gap: 6px; ${isMe ? 'flex-direction: row-reverse;' : ''}">
+                            <div style="background: ${isMe ? 'var(--primary-color, #6b46c1)' : '#ffffff'}; color: ${isMe ? '#ffffff' : '#333333'}; padding: 10px 16px; border-radius: ${isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px'}; border: ${isMe ? 'none' : '1px solid #e2e8f0'}; box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-size: 0.95rem; line-height: 1.5; word-break: break-all;">
+                                ${safeText}
                             </div>
-                            <div style="font-size: 0.7rem; color: #aaa; margin-bottom: 2px;">${timeStr}</div>
+                            <div style="display: flex; flex-direction: column; align-items: ${isMe ? 'flex-end' : 'flex-start'};">
+                                ${deleteBtnHtml}
+                                <div style="font-size: 0.7rem; color: #a0aec0;">${timeStr}</div>
+                            </div>
                         </div>
                     `;
+                    
+                    if (isMe) {
+                        const delBtn = div.querySelector('.chat-del-btn');
+                        if (delBtn) {
+                            delBtn.addEventListener('click', () => {
+                                if (confirm('이 메시지를 삭제하시겠습니까?')) {
+                                    db.collection('workMemberChats').doc(doc.id).delete().catch(err => console.error('Delete failed', err));
+                                }
+                            });
+                        }
+                    }
+                    
                     messagesEl.appendChild(div);
                 });
                 messagesEl.scrollTop = messagesEl.scrollHeight;
