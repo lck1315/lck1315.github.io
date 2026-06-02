@@ -2968,10 +2968,7 @@ main:has(#tab-projects.active) {
         min-height: auto !important;
     }
     
-    /* Main body padding */
-    main {
-        padding-top: 120px !important; /* Make room for the expanded header */
-    }
+
 }
 
 /* 가족 홈페이지 캘린더 영역 가로 1.5배(1350px)로 확장 */

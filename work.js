@@ -3107,18 +3107,25 @@ document.addEventListener('DOMContentLoaded', () => {
             if(!text) return;
             
             let uName = '익명';
+            let uRole = '팀원';
             if (typeof currentUser !== 'undefined' && currentUser && currentUser.displayName) {
                 uName = currentUser.displayName;
+                if (currentUserInfo && currentUserInfo.role) uRole = currentUserInfo.role;
             } else if (typeof auth !== 'undefined' && auth.currentUser) {
                 uName = auth.currentUser.displayName || '익명';
+                if (currentUserInfo && currentUserInfo.role) uRole = currentUserInfo.role;
             }
+            
+            const chatMode = document.getElementById('chat-mode-select')?.value || 'public';
 
             try {
                 inputChat.value = ''; // 긍정적 UI 응답
                 await db.collection('workMemberChats').add({
                     memberId: currentSelectedMemberId,
+                    chatType: chatMode,
                     text: text,
                     senderName: uName,
+                    senderRole: uRole,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
             } catch(e) {
@@ -3152,75 +3159,123 @@ document.addEventListener('DOMContentLoaded', () => {
         const messagesEl = document.getElementById('member-chat-messages');
         messagesEl.innerHTML = '<div style="text-align:center; color:#888;">메시지 로딩중...</div>';
         
-        unsubscribeMemberChat = db.collection('workMemberChats')
-            .where('memberId', '==', id)
-            .orderBy('createdAt', 'asc')
-            .onSnapshot(snapshot => {
-                messagesEl.innerHTML = '';
-                if(snapshot.empty) {
-                    messagesEl.innerHTML = '<div style="text-align:center; padding: 20px; color:#aaa;">아직 남겨진 메시지가 없습니다. 첫 메시지를 남겨보세요!</div>';
-                    return;
-                }
-                
-                let uName = '';
-                if (typeof currentUser !== 'undefined' && currentUser && currentUser.displayName) {
-                    uName = currentUser.displayName;
-                } else if (typeof auth !== 'undefined' && auth.currentUser) {
-                    uName = auth.currentUser.displayName || '';
-                }
+        function loadChatMessages() {
+            if (unsubscribeMemberChat) unsubscribeMemberChat();
+            const chatMode = document.getElementById('chat-mode-select')?.value || 'public';
+            
+            let query = db.collection('workMemberChats')
+                .where('memberId', '==', id);
+            
+            // 기존 데이터 호환성 및 모드 필터링
+            if (chatMode === 'private') {
+                query = query.where('chatType', '==', 'private');
+            } else {
+                // public 모드일 때는 chatType이 'public'이거나 아예 없는(기존) 데이터
+                // Firestore where('chatType', 'in', ['public', null]) 와 같은 복잡한 쿼리 대신
+                // 클라이언트에서 필터링하거나 orderBy 이후 필터링합니다.
+                // 여기서는 where 조건 없이 가져온 후 클라이언트 단에서 private가 아닌 것을 표시합니다.
+            }
 
-                let lastDateStr = '';
-                
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const isMe = data.senderName === uName;
-                    const dateObj = data.createdAt ? data.createdAt.toDate() : new Date();
+            unsubscribeMemberChat = query.orderBy('createdAt', 'asc')
+                .onSnapshot(snapshot => {
+                    messagesEl.innerHTML = '';
                     
-                    const dateStr = dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
-                    const timeStr = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    
-                    if (dateStr !== lastDateStr) {
-                        const dateDiv = document.createElement('div');
-                        dateDiv.style.cssText = 'text-align: center; margin: 15px 0; width: 100%;';
-                        dateDiv.innerHTML = `<span style="background: rgba(0,0,0,0.1); color: #666; padding: 4px 12px; border-radius: 12px; font-size: 0.75rem;">${dateStr}</span>`;
-                        messagesEl.appendChild(dateDiv);
-                        lastDateStr = dateStr;
+                    let uName = '';
+                    let uRole = '';
+                    if (typeof currentUser !== 'undefined' && currentUser && currentUser.displayName) {
+                        uName = currentUser.displayName;
+                        if (currentUserInfo) uRole = currentUserInfo.role;
+                    } else if (typeof auth !== 'undefined' && auth.currentUser) {
+                        uName = auth.currentUser.displayName || '';
+                        if (currentUserInfo) uRole = currentUserInfo.role;
                     }
                     
-                    const div = document.createElement('div');
-                    div.style.cssText = `display: flex; flex-direction: column; max-width: 80%; ${isMe ? 'align-self: flex-end; align-items: flex-end;' : 'align-self: flex-start; align-items: flex-start;'}`;
-                    
-                    const safeText = (data.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-                    const deleteBtnHtml = isMe ? `<button class="chat-del-btn" style="background:none; border:none; color:#ccc; font-size:0.75rem; cursor:pointer; padding: 2px; margin-bottom: 2px;" title="메시지 삭제"><i class="fa-solid fa-trash-can"></i></button>` : '';
-                    
-                    div.innerHTML = `
-                        ${!isMe ? `<div style="font-size: 0.8rem; color: #888; margin-bottom: 4px; margin-left: 5px;">${data.senderName}</div>` : ''}
-                        <div style="display: flex; align-items: flex-end; gap: 6px; ${isMe ? 'flex-direction: row-reverse;' : ''}">
-                            <div style="background: ${isMe ? 'var(--primary-color, #6b46c1)' : '#ffffff'}; color: ${isMe ? '#ffffff' : '#333333'}; padding: 10px 16px; border-radius: ${isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px'}; border: ${isMe ? 'none' : '1px solid #e2e8f0'}; box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-size: 0.95rem; line-height: 1.5; word-break: break-all;">
-                                ${safeText}
-                            </div>
-                            <div style="display: flex; flex-direction: column; align-items: ${isMe ? 'flex-end' : 'flex-start'};">
-                                ${deleteBtnHtml}
-                                <div style="font-size: 0.7rem; color: #a0aec0;">${timeStr}</div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    if (isMe) {
-                        const delBtn = div.querySelector('.chat-del-btn');
-                        if (delBtn) {
-                            delBtn.addEventListener('click', () => {
-                                if (confirm('이 메시지를 삭제하시겠습니까?')) {
-                                    db.collection('workMemberChats').doc(doc.id).delete().catch(err => console.error('Delete failed', err));
-                                }
-                            });
+                    let validDocs = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const type = data.chatType || 'public';
+                        
+                        if (chatMode === 'public' && type === 'private') return; // public 탭에서는 private 숨김
+                        if (chatMode === 'private') {
+                            // private 탭에서는 (마스터)와 (해당 구성원)만 볼 수 있도록 클라이언트 필터링 추가
+                            // 마스터는 role이 '아빠 👨' 인 경우. 구성원 본인은 이름이 memberName과 같은 경우.
+                            const isMaster = uRole === '아빠 👨';
+                            const isMemberSelf = uName === name;
+                            if (!isMaster && !isMemberSelf) return; // 권한 없음 (화면에서 숨김)
                         }
+                        
+                        validDocs.push({id: doc.id, data: data});
+                    });
+
+                    if(validDocs.length === 0) {
+                        messagesEl.innerHTML = '<div style="text-align:center; padding: 20px; color:#aaa;">아직 남겨진 메시지가 없습니다. 첫 메시지를 남겨보세요!</div>';
+                        return;
                     }
+
+                    let lastDateStr = '';
                     
-                    messagesEl.appendChild(div);
+                    validDocs.forEach(item => {
+                        const doc = item;
+                        const data = item.data;
+                        const isMe = data.senderName === uName;
+                        const dateObj = data.createdAt ? data.createdAt.toDate() : new Date();
+                        
+                        const dateStr = dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+                        const timeStr = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        
+                        if (dateStr !== lastDateStr) {
+                            const dateDiv = document.createElement('div');
+                            dateDiv.style.cssText = 'text-align: center; margin: 15px 0; width: 100%;';
+                            dateDiv.innerHTML = `<span style="background: rgba(0,0,0,0.1); color: #666; padding: 4px 12px; border-radius: 12px; font-size: 0.75rem;">${dateStr}</span>`;
+                            messagesEl.appendChild(dateDiv);
+                            lastDateStr = dateStr;
+                        }
+                        
+                        const div = document.createElement('div');
+                        div.style.cssText = `display: flex; flex-direction: column; max-width: 80%; ${isMe ? 'align-self: flex-end; align-items: flex-end;' : 'align-self: flex-start; align-items: flex-start;'}`;
+                        
+                        const safeText = (data.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+                        const deleteBtnHtml = isMe ? `<button class="chat-del-btn" style="background:none; border:none; color:#ccc; font-size:0.75rem; cursor:pointer; padding: 2px; margin-bottom: 2px;" title="메시지 삭제"><i class="fa-solid fa-trash-can"></i></button>` : '';
+                        
+                        div.innerHTML = `
+                            ${!isMe ? `<div style="font-size: 0.8rem; color: #888; margin-bottom: 4px; margin-left: 5px;">${data.senderName}</div>` : ''}
+                            <div style="display: flex; align-items: flex-end; gap: 6px; ${isMe ? 'flex-direction: row-reverse;' : ''}">
+                                <div style="background: ${isMe ? 'var(--primary-color, #6b46c1)' : '#ffffff'}; color: ${isMe ? '#ffffff' : '#333333'}; padding: 10px 16px; border-radius: ${isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px'}; border: ${isMe ? 'none' : '1px solid #e2e8f0'}; box-shadow: 0 1px 3px rgba(0,0,0,0.08); font-size: 0.95rem; line-height: 1.5; word-break: break-all;">
+                                    ${safeText}
+                                </div>
+                                <div style="display: flex; flex-direction: column; align-items: ${isMe ? 'flex-end' : 'flex-start'};">
+                                    ${deleteBtnHtml}
+                                    <div style="font-size: 0.7rem; color: #a0aec0;">${timeStr}</div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        if (isMe) {
+                            const delBtn = div.querySelector('.chat-del-btn');
+                            if (delBtn) {
+                                delBtn.addEventListener('click', () => {
+                                    if (confirm('이 메시지를 삭제하시겠습니까?')) {
+                                        db.collection('workMemberChats').doc(doc.id).delete().catch(err => console.error('Delete failed', err));
+                                    }
+                                });
+                            }
+                        }
+                        
+                        messagesEl.appendChild(div);
+                    });
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
                 });
-                messagesEl.scrollTop = messagesEl.scrollHeight;
-            });
+        }
+
+        loadChatMessages();
+        
+        const modeSelect = document.getElementById('chat-mode-select');
+        if (modeSelect) {
+            // Remove previous listener if exists by cloning
+            const newModeSelect = modeSelect.cloneNode(true);
+            modeSelect.parentNode.replaceChild(newModeSelect, modeSelect);
+            newModeSelect.addEventListener('change', loadChatMessages);
+        }
     }
 
     // 메인 리사이저 (좌/우 패널 크기 조절) 기능 초기화
@@ -3347,7 +3402,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // 셀 입력 시 포커스 방해 금지 및 데이터 업데이트
             document.querySelectorAll('.matrix-cell-input').forEach(input => {
                 input.addEventListener('focus', () => isEditing = true);
-                input.addEventListener('blur', () => isEditing = false);
+                input.addEventListener('blur', () => {
+                    isEditing = false;
+                    saveMatrixToDB(); // 자동 저장 기능
+                });
                 input.addEventListener('input', (e) => {
                     const key = e.target.dataset.key;
                     matrixData.cells[key] = e.target.value;

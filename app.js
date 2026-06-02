@@ -196,13 +196,25 @@ document.addEventListener('DOMContentLoaded', () => {
         auth.createUserWithEmailAndPassword(email, password)
             .then((userCredential) => {
                 const user = userCredential.user;
-                return db.collection('users').doc(user.uid).set({
+                const batch = db.batch();
+                
+                const userRef = db.collection('users').doc(user.uid);
+                batch.set(userRef, {
                     nickname: nickname,
                     role: role,
                     email: email,
                     isApproved: false,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
+                
+                const memberRef = db.collection('workMembers').doc(user.uid);
+                batch.set(memberRef, {
+                    name: nickname,
+                    role: role,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                return batch.commit();
             })
             .then(() => {
                 signupForm.reset();
