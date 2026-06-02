@@ -86,9 +86,128 @@ document.addEventListener('DOMContentLoaded', () => {
     // 모달들 (로그인 안 된 경우 보여주던 기존 모달들)
     const loginRequiredModal = document.getElementById('login-required-modal');
 
-    btnWorkLogin.addEventListener('click', () => {
-        window.location.href = 'index.html?login=true';
+    // --- Work 전용 독립 인증 모달 로직 ---
+    const workAuthContainer = document.getElementById('work-auth-container');
+    const workAuthCloseBtn = document.getElementById('work-auth-close-btn');
+    const workAuthWelcome = document.getElementById('work-auth-welcome');
+    const workAuthLoginScreen = document.getElementById('work-auth-login-screen');
+    const workAuthSignupScreen = document.getElementById('work-auth-signup-screen');
+    const workAuthErrorMsg = document.getElementById('work-auth-error-msg');
+    const btnWorkGoLogin = document.getElementById('work-btn-go-login');
+    const btnWorkGoSignup = document.getElementById('work-btn-go-signup');
+    const linkWorkToSignup = document.getElementById('work-link-to-signup');
+    const linkWorkToLogin = document.getElementById('work-link-to-login');
+    const workAuthBackBtns = document.querySelectorAll('.work-auth-back-btn');
+
+    function openWorkAuth() {
+        if(workAuthContainer) {
+            workAuthContainer.classList.remove('hidden');
+            showWorkAuthScreen('welcome');
+            workAuthErrorMsg.classList.add('hidden');
+        }
+    }
+    
+    function closeWorkAuth() {
+        if(workAuthContainer) workAuthContainer.classList.add('hidden');
+    }
+    
+    function showWorkAuthScreen(screen) {
+        if(!workAuthWelcome) return;
+        workAuthWelcome.classList.add('hidden');
+        workAuthLoginScreen.classList.add('hidden');
+        workAuthSignupScreen.classList.add('hidden');
+        workAuthErrorMsg.classList.add('hidden');
+        
+        if (screen === 'welcome') workAuthWelcome.classList.remove('hidden');
+        else if (screen === 'login') workAuthLoginScreen.classList.remove('hidden');
+        else if (screen === 'signup') workAuthSignupScreen.classList.remove('hidden');
+    }
+
+    if(btnWorkLogin) btnWorkLogin.addEventListener('click', openWorkAuth);
+    if(workAuthCloseBtn) workAuthCloseBtn.addEventListener('click', closeWorkAuth);
+    if(btnWorkGoLogin) btnWorkGoLogin.addEventListener('click', () => showWorkAuthScreen('login'));
+    if(btnWorkGoSignup) btnWorkGoSignup.addEventListener('click', () => showWorkAuthScreen('signup'));
+    if(linkWorkToSignup) linkWorkToSignup.addEventListener('click', (e) => { e.preventDefault(); showWorkAuthScreen('signup'); });
+    if(linkWorkToLogin) linkWorkToLogin.addEventListener('click', (e) => { e.preventDefault(); showWorkAuthScreen('login'); });
+    
+    workAuthBackBtns.forEach(btn => {
+        btn.addEventListener('click', () => showWorkAuthScreen('welcome'));
     });
+
+    function showWorkAuthError(msg) {
+        if(workAuthErrorMsg) {
+            workAuthErrorMsg.innerText = msg;
+            workAuthErrorMsg.classList.remove('hidden');
+        } else {
+            alert(msg);
+        }
+    }
+
+    // 로그인 처리
+    const workLoginForm = document.getElementById('work-login-form');
+    if (workLoginForm) {
+        workLoginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('work-login-email').value;
+            const password = document.getElementById('work-login-password').value;
+            
+            auth.signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    closeWorkAuth();
+                })
+                .catch(err => {
+                    console.error("Work 로그인 에러:", err);
+                    if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+                        showWorkAuthError("이메일 또는 비밀번호가 일치하지 않습니다.");
+                    } else {
+                        showWorkAuthError("로그인 실패: " + err.message);
+                    }
+                });
+        });
+    }
+
+    // 회원가입 처리
+    const workSignupForm = document.getElementById('work-signup-form');
+    if (workSignupForm) {
+        workSignupForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('work-signup-email').value;
+            const password = document.getElementById('work-signup-password').value;
+            const nickname = document.getElementById('work-signup-nickname').value;
+            const dept = document.getElementById('work-signup-dept').value;
+            
+            auth.createUserWithEmailAndPassword(email, password)
+                .then(async (userCredential) => {
+                    const user = userCredential.user;
+                    await user.updateProfile({ displayName: nickname });
+                    
+                    // workUsers 컬렉션에 커스텀 데이터(직책 포함) 강제 기록 (onSnapshot 덮어쓰기 방지)
+                    await db.collection('workUsers').doc(user.uid).set({
+                        uid: user.uid,
+                        email: user.email,
+                        nickname: nickname,
+                        dept: dept,
+                        photoURL: null,
+                        isApproved: false,
+                        isMaster: false,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    closeWorkAuth();
+                    alert("회원가입 완료! 마스터의 가입 승인을 기다려주세요.");
+                })
+                .catch(err => {
+                    console.error("Work 회원가입 에러:", err);
+                    if (err.code === 'auth/email-already-in-use') {
+                        showWorkAuthError("이미 사용중인 이메일입니다.");
+                    } else if (err.code === 'auth/weak-password') {
+                        showWorkAuthError("비밀번호는 6자리 이상이어야 합니다.");
+                    } else {
+                        showWorkAuthError("회원가입 실패: " + err.message);
+                    }
+                });
+        });
+    }
 
     const btnMasterLogout = document.getElementById('btn-master-logout');
     
@@ -1657,6 +1776,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(dayOfWeek === 0) gridLine.classList.add('weekend-sun');
                 if(dayOfWeek === 6) gridLine.classList.add('weekend-sat');
                 if(isToday) gridLine.classList.add('today');
+                
+                // --- 날짜 클릭 연장 기능 ---
+                gridLine.style.cursor = 'pointer';
+                const currentClickedDateStr = `${dayDate.getFullYear()}-${String(dayDate.getMonth()+1).padStart(2,'0')}-${String(dayDate.getDate()).padStart(2,'0')}`;
+                
+                gridLine.onclick = (e) => {
+                    if (!psSelectedId) return;
+                    const task = window.psFindTaskById ? window.psFindTaskById(psSelectedId) : null;
+                    if (!task) return;
+                    
+                    if (!task.startDate || !task.endDate) {
+                        window.psUpdateField(psSelectedId, 'startDate', currentClickedDateStr);
+                        window.psUpdateField(psSelectedId, 'endDate', currentClickedDateStr);
+                        return;
+                    }
+                    
+                    const clickedMs = dayDate.getTime();
+                    const startMs = new Date(task.startDate).getTime();
+                    const endMs = new Date(task.endDate).getTime();
+                    
+                    if (clickedMs < startMs) {
+                        window.psUpdateField(psSelectedId, 'startDate', currentClickedDateStr);
+                    } else if (clickedMs > endMs) {
+                        window.psUpdateField(psSelectedId, 'endDate', currentClickedDateStr);
+                    } else {
+                        // 중간 날짜 클릭 시 동작 안 함 (또는 원하는 로직 추가)
+                    }
+                };
+
                 bgGrid.appendChild(gridLine);
                 
                 // Weeks calculation (roughly matching PyQt ISO week, simplified)
@@ -1689,6 +1837,11 @@ document.addEventListener('DOMContentLoaded', () => {
         ganttBody.style.width = `${totalDays * psDayWidth}px`;
 
         // --- 2. Tree Body & Gantt Blocks ---
+        // 스크롤 위치 저장 (innerHTML 초기화 시 scrollTop이 0으로 리셋되는 것 방지)
+        const ganttContainer = document.getElementById('ps-gantt-container');
+        const savedScrollTop = ganttContainer ? ganttContainer.scrollTop : 0;
+        const savedScrollLeft = ganttContainer ? ganttContainer.scrollLeft : 0;
+
         treeBody.innerHTML = '';
         bgHlines.innerHTML = '';
         ganttBlocks.innerHTML = '';
@@ -1728,6 +1881,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Tree Row
             const tr = document.createElement('div');
             tr.className = `ps-tree-row ${isSelected ? 'selected' : ''}`;
+            tr.style.cssText = 'height: 30px !important; min-height: 30px !important; max-height: 30px !important; display: flex; box-sizing: border-box; overflow: hidden;';
             tr.dataset.taskId = task.id;
             tr.onclick = (e) => { 
                 if (psSelectedId === task.id) return;
@@ -1768,7 +1922,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Background Horizontal Line
             const hline = document.createElement('div');
             hline.className = 'ps-gantt-hline';
-            hline.style.width = `${totalDays * psDayWidth}px`;
+            hline.style.cssText = `width: ${totalDays * psDayWidth}px; height: 30px !important; min-height: 30px !important; max-height: 30px !important; box-sizing: border-box;`;
             bgHlines.appendChild(hline);
             
             // Gantt Block (based on display range)
@@ -1792,7 +1946,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     block.dataset.taskId = task.id;
                     block.style.left = `${Math.max(0, daysFromStart) * psDayWidth}px`;
                     block.style.width = `${Math.max(0, durationDays) * psDayWidth}px`;
-                    block.style.top = `${(globalIndex - 1) * 31 + 5}px`;
+                    block.style.top = `${(globalIndex - 1) * 30 + 5}px`;
                     block.style.background = task.color || '#fffacd';
                     
                     const hasMemo = !!task.memo;
@@ -1843,73 +1997,73 @@ document.addEventListener('DOMContentLoaded', () => {
             renderRow(root, 0, `${idx + 1}`);
         });
 
-        // 오른쪽 갠트 차트 배경 기본 높이 계산 (여백 보정 전)
-        const baseContentHeight = globalIndex * 30;
+        // 양쪽 하단 빈 공간(스크롤바 영역 등)을 자연스럽게 채우기 위해 더미 빈 줄 추가
+        for (let i = 0; i < 3; i++) {
+            const hline = document.createElement('div');
+            hline.className = 'ps-gantt-hline';
+            bgHlines.appendChild(hline);
+            
+            const tr = document.createElement('div');
+            tr.className = 'ps-tree-row';
+            tr.style.cssText = 'height: 30px !important; min-height: 30px !important; max-height: 30px !important; box-sizing: border-box; cursor: default; display: flex;';
+            tr.innerHTML = `<div class="ps-col-0"></div><div class="ps-col-1"></div><div class="ps-col-2"></div><div class="ps-col-3"></div><div class="ps-col-4"></div>`;
+            treeBody.appendChild(tr);
+        }
 
-        // 가로 스크롤바 존재 여부에 따라 왼쪽 트리의 하단 여백과 오른쪽 갠트 차트 높이를 동적으로 조절하여 세로 스크롤 싱크 완벽하게 맞춤
-        requestAnimationFrame(() => {
-            const ganttContainer = document.getElementById('ps-gantt-container');
-            const treeBody = document.getElementById('ps-tree-body');
-            if (ganttContainer && treeBody) {
-                const leftClientH = treeBody.clientHeight;
-                const rightClientH = ganttContainer.clientHeight;
-                const baseExtraHeight = 20; // 양쪽 스크롤 바닥에 공통으로 추가할 여유 공간
-                
-                if (leftClientH > rightClientH) {
-                    // 오른쪽 패널에 가로 스크롤바가 있거나 더 많은 영역을 차지할 경우
-                    treeBody.style.paddingBottom = `${baseExtraHeight + (leftClientH - rightClientH)}px`;
-                    ganttBody.style.height = `${baseContentHeight + baseExtraHeight}px`;
-                } else if (rightClientH > leftClientH) {
-                    // 왼쪽 패널에 가로 스크롤바가 있거나 더 많은 영역을 차지할 경우
-                    treeBody.style.paddingBottom = `${baseExtraHeight}px`;
-                    ganttBody.style.height = `${baseContentHeight + baseExtraHeight + (rightClientH - leftClientH)}px`;
-                } else {
-                    // 양쪽 조건이 동일한 경우 (둘 다 스크롤바가 있거나 둘 다 없음)
-                    treeBody.style.paddingBottom = `${baseExtraHeight}px`;
-                    ganttBody.style.height = `${baseContentHeight + baseExtraHeight}px`;
-                }
-            }
-        });
+        // 높이 강제 설정 (더미 줄 포함한 전체 높이 적용)
+        const baseContentHeight = (globalIndex + 3) * 30;
+        ganttBody.style.height = `${baseContentHeight}px`;
+        treeBody.style.paddingBottom = '0'; // 기존 여백 계산 로직 제거
 
         if(psData.length === 0) {
             treeBody.innerHTML = '<div style="text-align:center; padding: 20px; color: #888;">등록된 일정이 없습니다.</div>';
         }
 
         // --- 3. Synchronize Scrolling ---
-        const ganttContainer = document.getElementById('ps-gantt-container');
-        let isSyncingLeft = false;
-        let isSyncingRight = false;
-        
-        treeBody.onscroll = () => {
-            if(!isSyncingLeft) {
-                isSyncingRight = true;
-                ganttContainer.scrollTop = treeBody.scrollTop;
-            }
-            isSyncingLeft = false;
-            
-            // 가로 스크롤 동기화 (트리 바디 -> 트리 헤더)
-            const treeHeader = document.querySelector('.ps-tree-header');
-            if (treeHeader) {
-                treeHeader.scrollLeft = treeBody.scrollLeft;
-            }
-        };
-        
-        ganttContainer.onscroll = () => {
-            if(!isSyncingRight) {
-                isSyncingLeft = true;
-                treeBody.scrollTop = ganttContainer.scrollTop;
-            }
-            isSyncingRight = false;
-        };
+        // 스크롤 위치 복원 (렌더링 후)
+        if (ganttContainer) {
+            ganttContainer.scrollTop = savedScrollTop;
+            ganttContainer.scrollLeft = savedScrollLeft;
+            treeBody.scrollTop = savedScrollTop;
+        }
 
-        // 왼쪽 트리 스크롤바가 숨겨져 있으므로 마우스 휠 이벤트로 우측 스크롤 조작
-        treeBody.addEventListener('wheel', (e) => {
-            if (!e.ctrlKey && !e.metaKey) {
-                e.preventDefault();
-                ganttContainer.scrollTop += e.deltaY;
-                treeBody.scrollLeft += e.deltaX;
+        // 스크롤 동기화 핸들러 (onscroll = 매번 덮어쓰므로 누적 안됨)
+        if (ganttContainer) {
+            let _syncLock = false;
+
+            treeBody.onscroll = () => {
+                if (_syncLock) return;
+                _syncLock = true;
+                ganttContainer.scrollTop = treeBody.scrollTop;
+                // 가로 스크롤 동기화 (트리 바디 -> 트리 헤더)
+                const treeHeader = document.querySelector('.ps-tree-header');
+                if (treeHeader) {
+                    treeHeader.scrollLeft = treeBody.scrollLeft;
+                }
+                requestAnimationFrame(() => { _syncLock = false; });
+            };
+
+            ganttContainer.onscroll = () => {
+                if (_syncLock) return;
+                _syncLock = true;
+                treeBody.scrollTop = ganttContainer.scrollTop;
+                requestAnimationFrame(() => { _syncLock = false; });
+            };
+
+            // 왼쪽 트리 wheel 이벤트 (누적 방지: 기존 리스너 제거 후 재등록)
+            if (treeBody._psWheelHandler) {
+                treeBody.removeEventListener('wheel', treeBody._psWheelHandler);
             }
-        });
+            treeBody._psWheelHandler = (e) => {
+                if (!e.ctrlKey && !e.metaKey) {
+                    e.preventDefault();
+                    ganttContainer.scrollTop += e.deltaY;
+                    treeBody.scrollTop = ganttContainer.scrollTop; // 즉시 동기화
+                    treeBody.scrollLeft += e.deltaX;
+                }
+            };
+            treeBody.addEventListener('wheel', treeBody._psWheelHandler, { passive: false });
+        }
     }
 
     // --- 4. Drag to Draw, Move, Resize Block ---
@@ -2090,9 +2244,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mousemove', (e) => {
         if (isPanning) {
             const container = document.getElementById('ps-gantt-container');
+            const treeBody = document.getElementById('ps-tree-body');
             if (container) {
                 container.scrollLeft = panScrollLeft - (e.clientX - panStartX);
                 container.scrollTop = panScrollTop - (e.clientY - panStartY);
+                if (treeBody) treeBody.scrollTop = container.scrollTop; // 좌측 동기화
                 container.style.cursor = 'grabbing';
             }
             return;
@@ -2126,9 +2282,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (isPanning) {
                     const container = document.getElementById('ps-gantt-container');
+                    const treeBody = document.getElementById('ps-tree-body');
                     if (container) {
                         container.scrollLeft = panScrollLeft - deltaX;
                         container.scrollTop = panScrollTop - deltaY;
+                        if (treeBody) treeBody.scrollTop = container.scrollTop; // 좌측 동기화
                         container.style.cursor = 'grabbing';
                     }
                 }
@@ -2179,12 +2337,14 @@ document.addEventListener('DOMContentLoaded', () => {
             isPanning = false;
             panPending = false;
             const container = document.getElementById('ps-gantt-container');
+            const treeBody = document.getElementById('ps-tree-body');
             if (container) {
                 container.style.cursor = '';
                 const dx = e.clientX - panStartX;
                 const dy = e.clientY - panStartY;
                 container.scrollLeft = panScrollLeft - dx;
                 container.scrollTop = panScrollTop - dy;
+                if (treeBody) treeBody.scrollTop = container.scrollTop; // 좌측 동기화
             }
             panStartX = null;
             panStartY = null;
@@ -3033,42 +3193,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 8. Members Chat Logic ---
     let currentSelectedMemberId = null;
     let unsubscribeMemberChat = null;
+    let currentChatMode = 'public';
 
     function initMembersLogic() {
-        const addMemberModal = document.getElementById('add-member-modal');
-        const btnAddMember = document.getElementById('btn-add-member');
-        const btnCancelMember = document.getElementById('btn-cancel-member');
-        const btnSaveMember = document.getElementById('btn-save-member');
 
-        btnAddMember?.addEventListener('click', () => addMemberModal?.classList.remove('hidden'));
-        btnCancelMember?.addEventListener('click', () => {
-            addMemberModal?.classList.add('hidden');
-            document.getElementById('add-member-name').value = '';
-            document.getElementById('add-member-role').value = '';
-        });
-
-        btnSaveMember?.addEventListener('click', async () => {
-            const name = document.getElementById('add-member-name').value.trim();
-            const role = document.getElementById('add-member-role').value.trim();
-            if(!name) return alert('이름을 입력해주세요.');
-            
-            try {
-                await db.collection('workMembers').add({
-                    name: name,
-                    role: role,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                addMemberModal?.classList.add('hidden');
-                document.getElementById('add-member-name').value = '';
-                document.getElementById('add-member-role').value = '';
-            } catch(e) {
-                console.error(e);
-                alert('멤버 추가 실패: 권한이 없거나 네트워크 오류입니다.');
-            }
-        });
-
-        // Load Members
-        db.collection('workMembers').orderBy('createdAt', 'asc').onSnapshot(snapshot => {
+        // Load Members from workUsers
+        db.collection('workUsers').where('isApproved', '==', true).onSnapshot(snapshot => {
             const listEl = document.getElementById('member-list');
             if(!listEl) return;
             listEl.innerHTML = '';
@@ -3077,23 +3207,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             
+            const usersList = [];
             snapshot.forEach(doc => {
-                const data = doc.data();
+                usersList.push({ id: doc.id, data: doc.data() });
+            });
+            
+            usersList.sort((a, b) => {
+                const ta = a.data.createdAt ? a.data.createdAt.toMillis() : 0;
+                const tb = b.data.createdAt ? b.data.createdAt.toMillis() : 0;
+                return ta - tb;
+            });
+            
+            usersList.forEach(item => {
+                const docId = item.id;
+                const data = item.data;
                 const div = document.createElement('div');
                 div.className = `member-list-item`;
-                div.style.cssText = `padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s; background: ${currentSelectedMemberId === doc.id ? '#e3f2fd' : 'transparent'};`;
+                div.style.cssText = `padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s; background: ${currentSelectedMemberId === docId ? '#e3f2fd' : 'transparent'};`;
                 div.innerHTML = `
                     <div style="width: 32px; height: 32px; border-radius: 50%; background: #ccc; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;"><i class="fa-solid fa-user"></i></div>
                     <div>
-                        <div style="font-weight: bold; color: #333; font-size: 0.95rem;">${data.name}</div>
-                        <div style="font-size: 0.8rem; color: #888;">${data.role || '팀원'}</div>
+                        <div style="font-weight: bold; color: #333; font-size: 0.95rem;">${data.nickname || '팀원'}</div>
+                        <div style="font-size: 0.8rem; color: #888;">${data.dept || '팀원'}</div>
                     </div>
                 `;
                 
-                div.onmouseover = () => { if(currentSelectedMemberId !== doc.id) div.style.background = '#f1f3f5'; };
-                div.onmouseout = () => { if(currentSelectedMemberId !== doc.id) div.style.background = 'transparent'; };
+                div.onmouseover = () => { if(currentSelectedMemberId !== docId) div.style.background = '#f1f3f5'; };
+                div.onmouseout = () => { if(currentSelectedMemberId !== docId) div.style.background = 'transparent'; };
                 
-                div.onclick = () => selectMember(doc.id, data.name, data.role, div);
+                div.onclick = () => selectMember(docId, data.nickname || '팀원', data.dept || '팀원', div);
                 listEl.appendChild(div);
             });
         });
@@ -3108,15 +3250,14 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let uName = '익명';
             let uRole = '팀원';
-            if (typeof currentUser !== 'undefined' && currentUser && currentUser.displayName) {
-                uName = currentUser.displayName;
-                if (currentUserInfo && currentUserInfo.role) uRole = currentUserInfo.role;
+            if (currentUserDoc && currentUserDoc.nickname) {
+                uName = currentUserDoc.nickname;
+                uRole = currentUserDoc.dept || '팀원';
             } else if (typeof auth !== 'undefined' && auth.currentUser) {
                 uName = auth.currentUser.displayName || '익명';
-                if (currentUserInfo && currentUserInfo.role) uRole = currentUserInfo.role;
+                if (currentUserDoc) uRole = currentUserDoc.dept || '팀원';
             }
-            
-            const chatMode = document.getElementById('chat-mode-select')?.value || 'public';
+            const chatMode = currentChatMode;
 
             try {
                 inputChat.value = ''; // 긍정적 UI 응답
@@ -3137,6 +3278,25 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSend?.addEventListener('click', sendMessage);
         inputChat?.addEventListener('keypress', (e) => {
             if(e.key === 'Enter') sendMessage();
+        });
+
+        const chatTabs = document.querySelectorAll('.chat-tab-btn');
+        chatTabs.forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                chatTabs.forEach(t => {
+                    t.style.background = 'transparent';
+                    t.style.boxShadow = 'none';
+                    t.style.color = '#666';
+                });
+                const target = e.currentTarget;
+                target.style.background = '#fff';
+                target.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                target.style.color = 'var(--primary-color)';
+                currentChatMode = target.dataset.mode;
+                if (typeof window.reloadChatMessages === 'function') {
+                    window.reloadChatMessages();
+                }
+            });
         });
     }
 
@@ -3161,7 +3321,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         function loadChatMessages() {
             if (unsubscribeMemberChat) unsubscribeMemberChat();
-            const chatMode = document.getElementById('chat-mode-select')?.value || 'public';
+            const chatMode = currentChatMode;
             
             let query = db.collection('workMemberChats')
                 .where('memberId', '==', id);
@@ -3173,7 +3333,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 // public 모드일 때는 chatType이 'public'이거나 아예 없는(기존) 데이터
                 // Firestore where('chatType', 'in', ['public', null]) 와 같은 복잡한 쿼리 대신
                 // 클라이언트에서 필터링하거나 orderBy 이후 필터링합니다.
-                // 여기서는 where 조건 없이 가져온 후 클라이언트 단에서 private가 아닌 것을 표시합니다.
             }
 
             unsubscribeMemberChat = query.orderBy('createdAt', 'asc')
@@ -3182,12 +3341,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     let uName = '';
                     let uRole = '';
-                    if (typeof currentUser !== 'undefined' && currentUser && currentUser.displayName) {
-                        uName = currentUser.displayName;
-                        if (currentUserInfo) uRole = currentUserInfo.role;
+                    if (currentUserDoc && currentUserDoc.nickname) {
+                        uName = currentUserDoc.nickname;
+                        uRole = currentUserDoc.dept || '팀원';
                     } else if (typeof auth !== 'undefined' && auth.currentUser) {
                         uName = auth.currentUser.displayName || '';
-                        if (currentUserInfo) uRole = currentUserInfo.role;
+                        if (currentUserDoc) uRole = currentUserDoc.dept || '팀원';
                     }
                     
                     let validDocs = [];
@@ -3198,8 +3357,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (chatMode === 'public' && type === 'private') return; // public 탭에서는 private 숨김
                         if (chatMode === 'private') {
                             // private 탭에서는 (마스터)와 (해당 구성원)만 볼 수 있도록 클라이언트 필터링 추가
-                            // 마스터는 role이 '아빠 👨' 인 경우. 구성원 본인은 이름이 memberName과 같은 경우.
-                            const isMaster = uRole === '아빠 👨';
+                            const isMaster = currentUserDoc && currentUserDoc.isMaster === true;
                             const isMemberSelf = uName === name;
                             if (!isMaster && !isMemberSelf) return; // 권한 없음 (화면에서 숨김)
                         }
@@ -3359,13 +3517,62 @@ document.addEventListener('DOMContentLoaded', () => {
             tbody.innerHTML = '';
             matrixData.rows.forEach((rowName, rIdx) => {
                 const tr = document.createElement('tr');
+                tr.draggable = true;
+                tr.dataset.rIdx = rIdx;
+                
+                tr.addEventListener('dragstart', function(e) {
+                    if (isEditing) { e.preventDefault(); return; }
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', this.dataset.rIdx);
+                    this.style.opacity = '0.4';
+                });
+                tr.addEventListener('dragover', function(e) {
+                    if (e.preventDefault) { e.preventDefault(); }
+                    e.dataTransfer.dropEffect = 'move';
+                    return false;
+                });
+                tr.addEventListener('dragenter', function(e) {
+                    this.style.borderTop = '2px dashed var(--primary-color)';
+                });
+                tr.addEventListener('dragleave', function(e) {
+                    this.style.borderTop = '';
+                });
+                tr.addEventListener('drop', function(e) {
+                    if (e.stopPropagation) { e.stopPropagation(); }
+                    this.style.borderTop = '';
+                    const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+                    const toIdx = parseInt(this.dataset.rIdx);
+                    if (fromIdx !== toIdx && !isNaN(fromIdx) && !isNaN(toIdx)) {
+                        const oldOrder = matrixData.rows.map((_, i) => i);
+                        const movedItem = oldOrder.splice(fromIdx, 1)[0];
+                        oldOrder.splice(toIdx, 0, movedItem);
+                        
+                        const movedRowName = matrixData.rows.splice(fromIdx, 1)[0];
+                        matrixData.rows.splice(toIdx, 0, movedRowName);
+                        
+                        const newCells = {};
+                        for (let r = 0; r < oldOrder.length; r++) {
+                            const oldR = oldOrder[r];
+                            for (let c = 0; c < matrixData.cols.length; c++) {
+                                newCells[`${r}_${c}`] = matrixData.cells[`${oldR}_${c}`] || '';
+                            }
+                        }
+                        matrixData.cells = newCells;
+                        renderMatrix();
+                        saveMatrixToDB();
+                    }
+                    return false;
+                });
+                tr.addEventListener('dragend', function(e) {
+                    this.style.opacity = '1';
+                });
                 
                 // 첫 번째 열 (항목 이름)
                 const th = document.createElement('td');
-                th.style.cssText = 'border: 1px solid #dee2e6; padding: 12px; background: #fff; font-weight: bold; position: sticky; left: 0; z-index: 1;';
+                th.style.cssText = 'border: 1px solid #dee2e6; padding: 12px; background: #fff; font-weight: bold; position: sticky; left: 0; z-index: 1; cursor: grab;';
                 th.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>${rowName}</span>
+                        <span style="display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-grip-vertical" style="color: #ccc;"></i> ${rowName}</span>
                         <button class="btn-del-row" data-idx="${rIdx}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 2px 5px;"><i class="fa-solid fa-times"></i></button>
                     </div>
                 `;
@@ -3645,7 +3852,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     content: content,
                     image: currentImageBase64,
                     authorId: auth.currentUser.uid,
-                    authorName: currentUser?.name || auth.currentUser.displayName || '익명',
+                    authorName: (currentUserDoc && currentUserDoc.nickname) ? currentUserDoc.nickname : (auth.currentUser.displayName || '익명'),
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 

@@ -2733,18 +2733,27 @@ main:has(#tab-projects.active) {
 
 .ps-tree-body {
     flex: 1;
-    overflow-y: hidden; /* 왼쪽 스크롤바 숨김 (우측에만 표시) */
+    overflow-y: auto; /* auto로 해야 scrollTop 동기화가 동작함 */
     overflow-x: auto;
+    scrollbar-width: none; /* Firefox: 스크롤바 숨김 */
+    -ms-overflow-style: none; /* IE/Edge: 스크롤바 숨김 */
+}
+.ps-tree-body::-webkit-scrollbar {
+    display: none; /* Chrome/Safari: 스크롤바 숨김 */
 }
 
 .ps-tree-row {
     display: flex;
     height: 30px;
+    min-height: 30px;
+    max-height: 30px;
+    box-sizing: border-box;
     border-bottom: 1px solid #d0d0d0;
     align-items: center;
     font-size: 13px;
     cursor: pointer;
     min-width: 675px;
+    overflow: hidden;
 }
 .ps-tree-row.selected {
     background-color: #a0a0a0;
@@ -2877,6 +2886,9 @@ main:has(#tab-projects.active) {
 }
 .ps-gantt-hline {
     height: 30px;
+    min-height: 30px;
+    max-height: 30px;
+    box-sizing: border-box;
     border-bottom: 1px solid #d0d0d0;
 }
 
