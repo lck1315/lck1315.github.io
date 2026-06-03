@@ -13,7 +13,7 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <link rel="stylesheet" href="style.css?v=9">
+    <link rel="stylesheet" href="style.css?v=10">
     <style>
         /* 기존 북마크 스타일 */
         .work-grid {
@@ -472,6 +472,8 @@
                 <button class="work-tab" data-tab="projects"><i class="fa-solid fa-bars-progress"></i> 프로젝트</button>
                 <button class="work-tab" data-tab="ideas"><i class="fa-solid fa-lightbulb"></i> 아이디어</button>
                 <button class="work-tab" data-tab="members"><i class="fa-solid fa-users"></i> 구성원</button>
+                <button class="work-tab" data-tab="info"><i class="fa-solid fa-newspaper"></i> 정보마당</button>
+                <button class="work-tab" data-tab="notice"><i class="fa-solid fa-bullhorn"></i> 알림마당</button>
                 <button class="work-tab" data-tab="bookmarks"><i class="fa-solid fa-bookmark"></i> 북마크</button>
             </nav>
             <div class="header-actions" style="display: flex; gap: 10px; align-items: center;">
@@ -505,6 +507,8 @@
         <button class="mobile-dropdown-item work-tab" data-tab="projects"><i class="fa-solid fa-bars-progress"></i> 프로젝트</button>
         <button class="mobile-dropdown-item work-tab" data-tab="ideas"><i class="fa-solid fa-lightbulb"></i> 아이디어</button>
         <button class="mobile-dropdown-item work-tab" data-tab="members"><i class="fa-solid fa-users"></i> 구성원</button>
+        <button class="mobile-dropdown-item work-tab" data-tab="info"><i class="fa-solid fa-newspaper"></i> 정보마당</button>
+        <button class="mobile-dropdown-item work-tab" data-tab="notice"><i class="fa-solid fa-bullhorn"></i> 알림마당</button>
         <button class="mobile-dropdown-item work-tab" data-tab="bookmarks"><i class="fa-solid fa-bookmark"></i> 북마크</button>
     </div>
 
@@ -639,6 +643,40 @@
                         <div id="member-chat-empty" style="flex: 2; background: #fff; border: 1px solid var(--card-border); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #888; flex-direction: column;">
                             <i class="fa-solid fa-comments" style="font-size: 3rem; margin-bottom: 10px; opacity: 0.3;"></i>
                             <div style="font-size: 1.1rem;">대화할 구성원을 선택해주세요.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 탭 내용: 정보마당 -->
+                <div id="tab-info" class="tab-content">
+                    <div style="max-width: 1200px; margin: 0 auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2 style="font-size: 1.5rem; font-weight: bold; color: var(--text-color); margin: 0;"><i class="fa-solid fa-newspaper" style="color:#4a69bd; margin-right:8px;"></i> 정보마당</h2>
+                            <button id="btn-add-info" class="btn btn-primary" style="font-size: 0.9rem; padding: 0.5rem 1rem; border-radius: 8px;">
+                                <i class="fa-solid fa-plus"></i> 정보 올리기
+                            </button>
+                        </div>
+                        
+                        <!-- 정보마당 그리드 -->
+                        <div id="info-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; align-items: start;">
+                            <!-- 동적 렌더링 영역 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 탭 내용: 알림마당 -->
+                <div id="tab-notice" class="tab-content">
+                    <div style="max-width: 1200px; margin: 0 auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2 style="font-size: 1.5rem; font-weight: bold; color: var(--text-color); margin: 0;"><i class="fa-solid fa-bullhorn" style="color:#e55039; margin-right:8px;"></i> 알림마당</h2>
+                            <button id="btn-add-notice" class="btn btn-primary" style="font-size: 0.9rem; padding: 0.5rem 1rem; border-radius: 8px;">
+                                <i class="fa-solid fa-plus"></i> 알림 올리기
+                            </button>
+                        </div>
+                        
+                        <!-- 알림마당 그리드 -->
+                        <div id="notice-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; align-items: start;">
+                            <!-- 동적 렌더링 영역 -->
                         </div>
                     </div>
                 </div>
@@ -1211,7 +1249,7 @@
             </div>
         </div>
     <!-- Idea Write Modal -->
-    <div id="idea-write-modal" class="modal-overlay hidden" style="z-index: 9999;">
+    <div id="idea-write-modal" class="auth-modal-overlay hidden" style="z-index: 9999;">
         <div class="modal-content glass-card" style="max-width: 500px; padding: 2rem;">
             <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                 <h2 style="font-size: 1.3rem; font-weight: bold; color: var(--text-color); margin: 0;">💡 새로운 아이디어 공유</h2>
@@ -1248,6 +1286,70 @@
         </div>
     </div>
 
+    <!-- Info Write Modal -->
+    <div id="info-write-modal" class="auth-modal-overlay hidden" style="z-index: 9999;">
+        <div class="modal-content glass-card" style="max-width: 500px; padding: 2rem;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.3rem; font-weight: bold; color: var(--text-color); margin: 0;">📰 정보마당 글쓰기</h2>
+                <span id="close-info-write" style="font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted); font-weight: bold;">제목</label>
+                    <input type="text" id="info-title" placeholder="정보의 제목을 적어주세요!" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color);">
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted); font-weight: bold;">상세 내용</label>
+                    <textarea id="info-content" placeholder="유용한 정보를 자유롭게 공유해보세요." style="width: 100%; height: 120px; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color); resize: none; font-family: inherit; line-height: 1.5;"></textarea>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted); font-weight: bold;">사진 첨부 (선택)</label>
+                    <input type="file" id="info-image-input" accept="image/*" style="display: none;">
+                    <div id="info-image-preview-container" style="display: none; position: relative; margin-bottom: 10px; border-radius: 8px; overflow: hidden; border: 1px solid var(--card-border);">
+                        <img id="info-image-preview" src="" style="width: 100%; display: block; max-height: 300px; object-fit: contain; background: #f8f9fa;">
+                        <button id="btn-remove-info-image" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-times"></i></button>
+                    </div>
+                    <button id="btn-select-info-image" class="btn btn-secondary w-100" style="display: flex; align-items: center; justify-content: center; gap: 8px; border-style: dashed; border-color: var(--primary-color); color: var(--primary-color);">
+                        <i class="fa-solid fa-camera"></i> 사진 올리기
+                    </button>
+                </div>
+                <button id="btn-submit-info" class="btn btn-primary w-100" style="margin-top: 1rem; padding: 0.8rem; font-weight: bold; font-size: 1rem;">등록하기 🚀</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notice Write Modal -->
+    <div id="notice-write-modal" class="auth-modal-overlay hidden" style="z-index: 9999;">
+        <div class="modal-content glass-card" style="max-width: 500px; padding: 2rem;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.3rem; font-weight: bold; color: var(--text-color); margin: 0;">📢 알림마당 글쓰기</h2>
+                <span id="close-notice-write" style="font-size: 1.5rem; cursor: pointer; color: var(--text-muted);">&times;</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted); font-weight: bold;">제목</label>
+                    <input type="text" id="notice-title" placeholder="알림의 제목을 적어주세요!" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color);">
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted); font-weight: bold;">상세 내용</label>
+                    <textarea id="notice-content" placeholder="공지/알림 사항을 자유롭게 알려보세요." style="width: 100%; height: 120px; padding: 0.8rem; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color); resize: none; font-family: inherit; line-height: 1.5;"></textarea>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-muted); font-weight: bold;">사진 첨부 (선택)</label>
+                    <input type="file" id="notice-image-input" accept="image/*" style="display: none;">
+                    <div id="notice-image-preview-container" style="display: none; position: relative; margin-bottom: 10px; border-radius: 8px; overflow: hidden; border: 1px solid var(--card-border);">
+                        <img id="notice-image-preview" src="" style="width: 100%; display: block; max-height: 300px; object-fit: contain; background: #f8f9fa;">
+                        <button id="btn-remove-notice-image" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-times"></i></button>
+                    </div>
+                    <button id="btn-select-notice-image" class="btn btn-secondary w-100" style="display: flex; align-items: center; justify-content: center; gap: 8px; border-style: dashed; border-color: var(--primary-color); color: var(--primary-color);">
+                        <i class="fa-solid fa-camera"></i> 사진 올리기
+                    </button>
+                </div>
+                <button id="btn-submit-notice-new" class="btn btn-primary w-100" style="margin-top: 1rem; padding: 0.8rem; font-weight: bold; font-size: 1rem;">등록하기 🚀</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Memo Popover for Gantt Blocks -->
     <div id="ps-memo-modal" class="hidden" style="z-index: 10000; position: fixed; background: #ffffff; border: 1px solid #ced4da; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 8px; padding: 1.5rem; width: 320px;">
         <span id="ps-memo-close" style="position: absolute; right: 15px; top: 10px; font-size: 1.5rem; cursor: pointer; color: #888;">&times;</span>
@@ -1264,7 +1366,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <!-- Work JavaScript -->
-    <script src="work.js?v=1.0.72"></script>
+    <script src="work.js?v=1.0.73"> </script>
 </body>
 
 </html>

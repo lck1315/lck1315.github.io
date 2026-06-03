@@ -601,7 +601,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const btnOpenModal = document.getElementById('btn-open-modal');
             if (btnOpenModal) {
-                if (currentTab === 'main' || currentTab === 'members' || currentTab === 'projects' || currentTab === 'performance' || currentTab === 'ideas') {
+                if (currentTab === 'main' || currentTab === 'members' || currentTab === 'projects' || currentTab === 'performance' || currentTab === 'ideas' || currentTab === 'info' || currentTab === 'notice') {
                     btnOpenModal.style.display = 'none';
                 } else {
                     btnOpenModal.style.display = 'flex';
@@ -3978,6 +3978,450 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     initIdeasLogic();
+
+    // --- 11. Info Board Logic ---
+    function initInfoLogic() {
+        const btnAddInfo = document.getElementById('btn-add-info');
+        const infoModal = document.getElementById('info-write-modal');
+        const closeInfoModal = document.getElementById('close-info-write');
+        const btnSubmitInfo = document.getElementById('btn-submit-info');
+        const infoTitle = document.getElementById('info-title');
+        const infoContent = document.getElementById('info-content');
+        
+        const imageInput = document.getElementById('info-image-input');
+        const btnSelectImage = document.getElementById('btn-select-info-image');
+        const imagePreviewContainer = document.getElementById('info-image-preview-container');
+        const imagePreview = document.getElementById('info-image-preview');
+        const btnRemoveImage = document.getElementById('btn-remove-info-image');
+        
+        const infoGrid = document.getElementById('info-grid');
+        
+        let currentImageBase64 = null;
+        let infoUnsubscribe = null;
+
+        btnAddInfo?.addEventListener('click', () => {
+            infoModal?.classList.remove('hidden');
+        });
+        
+        closeInfoModal?.addEventListener('click', () => {
+            infoModal?.classList.add('hidden');
+            resetInfoForm();
+        });
+
+        function resetInfoForm() {
+            if (infoTitle) infoTitle.value = '';
+            if (infoContent) infoContent.value = '';
+            if (imageInput) imageInput.value = '';
+            currentImageBase64 = null;
+            if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
+            if (imagePreview) imagePreview.src = '';
+            if (btnSelectImage) btnSelectImage.style.display = 'flex';
+        }
+
+        btnSelectImage?.addEventListener('click', () => {
+            imageInput?.click();
+        });
+        
+        btnRemoveImage?.addEventListener('click', () => {
+            if (imageInput) imageInput.value = '';
+            currentImageBase64 = null;
+            if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
+            if (imagePreview) imagePreview.src = '';
+            if (btnSelectImage) btnSelectImage.style.display = 'flex';
+        });
+
+        imageInput?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                alert('이미지 파일만 첨부할 수 있습니다.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const MAX_SIZE = 800;
+
+                    if (width > height) {
+                        if (width > MAX_SIZE) {
+                            height *= MAX_SIZE / width;
+                            width = MAX_SIZE;
+                        }
+                    } else {
+                        if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height;
+                            height = MAX_SIZE;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    currentImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    
+                    if (imagePreview) imagePreview.src = currentImageBase64;
+                    if (imagePreviewContainer) imagePreviewContainer.style.display = 'block';
+                    if (btnSelectImage) btnSelectImage.style.display = 'none';
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        btnSubmitInfo?.addEventListener('click', async () => {
+            const title = infoTitle?.value.trim();
+            const content = infoContent?.value.trim();
+            
+            if (!title) return alert('정보 제목을 입력해주세요!');
+            
+            btnSubmitInfo.disabled = true;
+            btnSubmitInfo.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 등록 중...';
+            
+            const authorId = auth.currentUser ? auth.currentUser.uid : 'anonymous';
+            const authorName = auth.currentUser 
+                ? ((currentUserDoc && currentUserDoc.nickname) ? currentUserDoc.nickname : (auth.currentUser.displayName || '익명'))
+                : '익명';
+            
+            try {
+                await db.collection('workInfo').add({
+                    title: title,
+                    content: content,
+                    image: currentImageBase64,
+                    authorId: authorId,
+                    authorName: authorName,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                infoModal?.classList.add('hidden');
+                resetInfoForm();
+            } catch (error) {
+                console.error('Info upload error:', error);
+                alert('정보 등록 실패: ' + error.message);
+            } finally {
+                btnSubmitInfo.disabled = false;
+                btnSubmitInfo.innerHTML = '등록하기 🚀';
+            }
+        });
+
+        function subscribeInfo() {
+            if (infoUnsubscribe) infoUnsubscribe();
+            
+            infoUnsubscribe = db.collection('workInfo')
+                .onSnapshot(snapshot => {
+                    if (!infoGrid) return;
+                    infoGrid.innerHTML = '';
+                    
+                    if (snapshot.empty) {
+                        infoGrid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 50px; color: #888;">아직 등록된 정보가 없습니다. 첫 정보를 올려보세요!</div>';
+                        return;
+                    }
+                    
+                    let validDocs = [];
+                    snapshot.forEach(doc => {
+                        validDocs.push({ id: doc.id, data: doc.data() });
+                    });
+                    
+                    validDocs.sort((a, b) => {
+                        const t1 = a.data.createdAt ? (a.data.createdAt.seconds || 0) : Date.now()/1000;
+                        const t2 = b.data.createdAt ? (b.data.createdAt.seconds || 0) : Date.now()/1000;
+                        return t2 - t1;
+                    });
+                    
+                    validDocs.forEach(item => {
+                        const data = item.data;
+                        const docId = item.id;
+                        const card = document.createElement('div');
+                        card.style.cssText = 'background: #fff; border: 1px solid var(--card-border); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s ease, box-shadow 0.2s ease;';
+                        card.onmouseover = () => { card.style.transform = 'translateY(-5px)'; card.style.boxShadow = '0 8px 15px rgba(0,0,0,0.1)'; };
+                        card.onmouseout = () => { card.style.transform = 'none'; card.style.boxShadow = '0 4px 6px rgba(0,0,0,0.05)'; };
+                        
+                        let imgHtml = '';
+                        if (data.image) {
+                            imgHtml = `<img src="${data.image}" style="width: 100%; height: 200px; object-fit: cover; border-bottom: 1px solid #eee;">`;
+                        } else {
+                            imgHtml = `<div style="width: 100%; height: 120px; background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #eee;"><i class="fa-solid fa-newspaper" style="font-size: 3rem; color: #e2e8f0;"></i></div>`;
+                        }
+                        
+                        const date = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleDateString('ko-KR') : '방금 전';
+                        
+                        let deleteBtnHtml = '';
+                        if (auth.currentUser && (auth.currentUser.uid === data.authorId || (currentUserDoc && currentUserDoc.isMaster === true))) {
+                            deleteBtnHtml = `<button class="btn-delete-info" data-id="${docId}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 5px;" title="삭제"><i class="fa-solid fa-trash-can"></i></button>`;
+                        }
+                        
+                        card.innerHTML = `
+                            ${imgHtml}
+                            <div style="padding: 15px;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: bold; color: var(--text-color); line-height: 1.3;">${data.title}</h3>
+                                    ${deleteBtnHtml}
+                                </div>
+                                ${data.content ? `<p style="margin: 0 0 15px 0; font-size: 0.9rem; color: #555; white-space: pre-wrap; word-break: break-all; max-height: 80px; overflow-y: auto;">${data.content}</p>` : ''}
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f0f0f0; padding-top: 10px;">
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <div style="width: 24px; height: 24px; border-radius: 50%; background: #4a69bd; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold;">
+                                            ${(data.authorName || '?').charAt(0)}
+                                        </div>
+                                        <span style="font-size: 0.8rem; color: #666; font-weight: 500;">${data.authorName}</span>
+                                    </div>
+                                    <span style="font-size: 0.75rem; color: #999;">${date}</span>
+                                </div>
+                            </div>
+                        `;
+                        infoGrid.appendChild(card);
+                    });
+                    
+                    document.querySelectorAll('.btn-delete-info').forEach(btn => {
+                        btn.addEventListener('click', async (e) => {
+                            e.stopPropagation();
+                            if (confirm('이 정보를 삭제하시겠습니까?')) {
+                                try {
+                                    await db.collection('workInfo').doc(btn.dataset.id).delete();
+                                } catch (err) {
+                                    alert('삭제 실패: ' + err.message);
+                                }
+                            }
+                        });
+                    });
+                }, error => {
+                    console.error("Error fetching info:", error);
+                });
+        }
+
+        auth.onAuthStateChanged(user => {
+            subscribeInfo();
+        });
+    }
+    initInfoLogic();
+
+    // --- 12. Notices Board Logic ---
+    function initNoticesLogic() {
+        const btnAddNotice = document.getElementById('btn-add-notice');
+        const noticeModal = document.getElementById('notice-write-modal');
+        const closeNoticeModal = document.getElementById('close-notice-write');
+        const btnSubmitNotice = document.getElementById('btn-submit-notice-new');
+        const noticeTitle = document.getElementById('notice-title');
+        const noticeContent = document.getElementById('notice-content');
+        
+        const imageInput = document.getElementById('notice-image-input');
+        const btnSelectImage = document.getElementById('btn-select-notice-image');
+        const imagePreviewContainer = document.getElementById('notice-image-preview-container');
+        const imagePreview = document.getElementById('notice-image-preview');
+        const btnRemoveImage = document.getElementById('btn-remove-notice-image');
+        
+        const noticeGrid = document.getElementById('notice-grid');
+        
+        let currentImageBase64 = null;
+        let noticeUnsubscribe = null;
+
+        btnAddNotice?.addEventListener('click', () => {
+            noticeModal?.classList.remove('hidden');
+        });
+        
+        closeNoticeModal?.addEventListener('click', () => {
+            noticeModal?.classList.add('hidden');
+            resetNoticeForm();
+        });
+
+        function resetNoticeForm() {
+            if (noticeTitle) noticeTitle.value = '';
+            if (noticeContent) noticeContent.value = '';
+            if (imageInput) imageInput.value = '';
+            currentImageBase64 = null;
+            if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
+            if (imagePreview) imagePreview.src = '';
+            if (btnSelectImage) btnSelectImage.style.display = 'flex';
+        }
+
+        btnSelectImage?.addEventListener('click', () => {
+            imageInput?.click();
+        });
+        
+        btnRemoveImage?.addEventListener('click', () => {
+            if (imageInput) imageInput.value = '';
+            currentImageBase64 = null;
+            if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
+            if (imagePreview) imagePreview.src = '';
+            if (btnSelectImage) btnSelectImage.style.display = 'flex';
+        });
+
+        imageInput?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                alert('이미지 파일만 첨부할 수 있습니다.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const MAX_SIZE = 800;
+
+                    if (width > height) {
+                        if (width > MAX_SIZE) {
+                            height *= MAX_SIZE / width;
+                            width = MAX_SIZE;
+                        }
+                    } else {
+                        if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height;
+                            height = MAX_SIZE;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    currentImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    
+                    if (imagePreview) imagePreview.src = currentImageBase64;
+                    if (imagePreviewContainer) imagePreviewContainer.style.display = 'block';
+                    if (btnSelectImage) btnSelectImage.style.display = 'none';
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        btnSubmitNotice?.addEventListener('click', async () => {
+            const title = noticeTitle?.value.trim();
+            const content = noticeContent?.value.trim();
+            
+            if (!title) return alert('알림 제목을 입력해주세요!');
+            
+            btnSubmitNotice.disabled = true;
+            btnSubmitNotice.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 등록 중...';
+            
+            const authorId = auth.currentUser ? auth.currentUser.uid : 'anonymous';
+            const authorName = auth.currentUser 
+                ? ((currentUserDoc && currentUserDoc.nickname) ? currentUserDoc.nickname : (auth.currentUser.displayName || '익명'))
+                : '익명';
+            
+            try {
+                await db.collection('workNotices').add({
+                    title: title,
+                    content: content,
+                    image: currentImageBase64,
+                    authorId: authorId,
+                    authorName: authorName,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                noticeModal?.classList.add('hidden');
+                resetNoticeForm();
+            } catch (error) {
+                console.error('Notice upload error:', error);
+                alert('알림 등록 실패: ' + error.message);
+            } finally {
+                btnSubmitNotice.disabled = false;
+                btnSubmitNotice.innerHTML = '등록하기 🚀';
+            }
+        });
+
+        function subscribeNotices() {
+            if (noticeUnsubscribe) noticeUnsubscribe();
+            
+            noticeUnsubscribe = db.collection('workNotices')
+                .onSnapshot(snapshot => {
+                    if (!noticeGrid) return;
+                    noticeGrid.innerHTML = '';
+                    
+                    if (snapshot.empty) {
+                        noticeGrid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 50px; color: #888;">아직 등록된 알림이 없습니다. 첫 알림을 올려보세요!</div>';
+                        return;
+                    }
+                    
+                    let validDocs = [];
+                    snapshot.forEach(doc => {
+                        validDocs.push({ id: doc.id, data: doc.data() });
+                    });
+                    
+                    validDocs.sort((a, b) => {
+                        const t1 = a.data.createdAt ? (a.data.createdAt.seconds || 0) : Date.now()/1000;
+                        const t2 = b.data.createdAt ? (b.data.createdAt.seconds || 0) : Date.now()/1000;
+                        return t2 - t1;
+                    });
+                    
+                    validDocs.forEach(item => {
+                        const data = item.data;
+                        const docId = item.id;
+                        const card = document.createElement('div');
+                        card.style.cssText = 'background: #fff; border: 1px solid var(--card-border); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s ease, box-shadow 0.2s ease;';
+                        card.onmouseover = () => { card.style.transform = 'translateY(-5px)'; card.style.boxShadow = '0 8px 15px rgba(0,0,0,0.1)'; };
+                        card.onmouseout = () => { card.style.transform = 'none'; card.style.boxShadow = '0 4px 6px rgba(0,0,0,0.05)'; };
+                        
+                        let imgHtml = '';
+                        if (data.image) {
+                            imgHtml = `<img src="${data.image}" style="width: 100%; height: 200px; object-fit: cover; border-bottom: 1px solid #eee;">`;
+                        } else {
+                            imgHtml = `<div style="width: 100%; height: 120px; background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #eee;"><i class="fa-solid fa-bullhorn" style="font-size: 3rem; color: #e2e8f0;"></i></div>`;
+                        }
+                        
+                        const date = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleDateString('ko-KR') : '방금 전';
+                        
+                        let deleteBtnHtml = '';
+                        if (auth.currentUser && (auth.currentUser.uid === data.authorId || (currentUserDoc && currentUserDoc.isMaster === true))) {
+                            deleteBtnHtml = `<button class="btn-delete-notice" data-id="${docId}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 5px;" title="삭제"><i class="fa-solid fa-trash-can"></i></button>`;
+                        }
+                        
+                        card.innerHTML = `
+                            ${imgHtml}
+                            <div style="padding: 15px;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: bold; color: var(--text-color); line-height: 1.3;">${data.title}</h3>
+                                    ${deleteBtnHtml}
+                                </div>
+                                ${data.content ? `<p style="margin: 0 0 15px 0; font-size: 0.9rem; color: #555; white-space: pre-wrap; word-break: break-all; max-height: 80px; overflow-y: auto;">${data.content}</p>` : ''}
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f0f0f0; padding-top: 10px;">
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <div style="width: 24px; height: 24px; border-radius: 50%; background: #e55039; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold;">
+                                            ${(data.authorName || '?').charAt(0)}
+                                        </div>
+                                        <span style="font-size: 0.8rem; color: #666; font-weight: 500;">${data.authorName}</span>
+                                    </div>
+                                    <span style="font-size: 0.75rem; color: #999;">${date}</span>
+                                </div>
+                            </div>
+                        `;
+                        noticeGrid.appendChild(card);
+                    });
+                    
+                    document.querySelectorAll('.btn-delete-notice').forEach(btn => {
+                        btn.addEventListener('click', async (e) => {
+                            e.stopPropagation();
+                            if (confirm('이 알림을 삭제하시겠습니까?')) {
+                                try {
+                                    await db.collection('workNotices').doc(btn.dataset.id).delete();
+                                } catch (err) {
+                                    alert('삭제 실패: ' + err.message);
+                                }
+                            }
+                        });
+                    });
+                }, error => {
+                    console.error("Error fetching notices:", error);
+                });
+        }
+
+        auth.onAuthStateChanged(user => {
+            subscribeNotices();
+        });
+    }
+    initNoticesLogic();
 
     initParticles();
     animateParticles();
