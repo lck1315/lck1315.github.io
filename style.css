@@ -2708,7 +2708,7 @@ main:has(#tab-projects.active) {
     display: flex;
     align-items: flex-end;
     overflow-x: hidden;
-    min-width: 675px;
+    width: 100%;
 }
 
 .ps-tree-header > div {
@@ -2721,6 +2721,7 @@ main:has(#tab-projects.active) {
     font-size: 14px;
     font-weight: bold;
     color: #333;
+    flex-shrink: 0;
 }
 
 /* Column widths mimicking PyQt defaults */
@@ -2735,11 +2736,22 @@ main:has(#tab-projects.active) {
     flex: 1;
     overflow-y: auto; /* auto로 해야 scrollTop 동기화가 동작함 */
     overflow-x: auto;
-    scrollbar-width: none; /* Firefox: 스크롤바 숨김 */
-    -ms-overflow-style: none; /* IE/Edge: 스크롤바 숨김 */
+    scrollbar-width: auto;
 }
 .ps-tree-body::-webkit-scrollbar {
-    display: none; /* Chrome/Safari: 스크롤바 숨김 */
+    display: block;
+    height: 8px; /* 가로 스크롤바 높이 */
+    width: 0px;  /* 세로 스크롤바 숨김 */
+}
+.ps-tree-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+.ps-tree-body::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+.ps-tree-body::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }
 
 .ps-tree-row {
@@ -2767,6 +2779,7 @@ main:has(#tab-projects.active) {
     align-items: center;
     overflow: hidden;
     padding: 0 5px;
+    flex-shrink: 0;
 }
 
 .ps-tree-input {
