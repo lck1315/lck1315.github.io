@@ -613,6 +613,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // ----------------------------------------------------
     // 모달 관리
     // ----------------------------------------------------
+    window.closeAllWriteModals = function() {
+        const modals = [
+            'main-notice-write-modal',
+            'idea-write-modal',
+            'info-write-modal',
+            'notice-write-modal'
+        ];
+        modals.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('hidden');
+        });
+    };
+
     const btnOpenModal = document.getElementById('btn-open-modal');
     
     btnOpenModal.addEventListener('click', () => {
@@ -750,7 +763,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 공지사항 (Notices)
     // ====================================================
     const noticeContainer = document.getElementById('notice-list-container');
-    const noticeWriteModal = document.getElementById('notice-write-modal');
+    const noticeWriteModal = document.getElementById('main-notice-write-modal');
     const noticeWriteClose = document.getElementById('notice-write-close');
     const btnSubmitNotice = document.getElementById('btn-submit-notice');
     
@@ -758,6 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.closest('#btn-write-notice')) {
             document.getElementById('notice-write-title').value = '';
             document.getElementById('notice-write-content').value = '';
+            if (typeof closeAllWriteModals === 'function') closeAllWriteModals();
             noticeWriteModal.classList.remove('hidden');
         }
     });
@@ -3215,8 +3229,31 @@ document.addEventListener('DOMContentLoaded', () => {
             const listEl = document.getElementById('member-list');
             if(!listEl) return;
             listEl.innerHTML = '';
+            
+            // 1. 전체 광장 채팅방 아이템 상단 고정 추가
+            const hallDiv = document.createElement('div');
+            hallDiv.className = `member-list-item`;
+            const isHallSelected = currentSelectedMemberId === 'public_hall' || !currentSelectedMemberId;
+            if (isHallSelected) {
+                currentSelectedMemberId = 'public_hall';
+            }
+            hallDiv.style.cssText = `padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s; background: ${isHallSelected ? '#e3f2fd' : 'transparent'}; font-weight: bold;`;
+            hallDiv.innerHTML = `
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary-color, #6b46c1); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;"><i class="fa-solid fa-comments"></i></div>
+                <div>
+                    <div style="color: #333; font-size: 0.95rem;">💬 전체 광장 채팅방</div>
+                    <div style="font-size: 0.8rem; color: #888; font-weight: normal;">모든 멤버 수다방</div>
+                </div>
+            `;
+            hallDiv.onmouseover = () => { if(currentSelectedMemberId !== 'public_hall') hallDiv.style.background = '#f1f3f5'; };
+            hallDiv.onmouseout = () => { if(currentSelectedMemberId !== 'public_hall') hallDiv.style.background = 'transparent'; };
+            hallDiv.onclick = () => selectMember('public_hall', '전체 광장 채팅방', '모든 멤버 수다방', hallDiv);
+            listEl.appendChild(hallDiv);
+
             if(snapshot.empty) {
-                listEl.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">등록된 구성원이 없습니다.</div>';
+                if (currentSelectedMemberId === 'public_hall') {
+                    selectMember('public_hall', '전체 광장 채팅방', '모든 멤버 수다방', hallDiv);
+                }
                 return;
             }
             
@@ -3258,6 +3295,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 div.onclick = () => selectMember(docId, nickname, dept, div);
                 listEl.appendChild(div);
             });
+
+            // 초기 자동 진입
+            if (currentSelectedMemberId === 'public_hall') {
+                selectMember('public_hall', '전체 광장 채팅방', '모든 멤버 수다방', hallDiv);
+            } else {
+                const foundItem = usersList.find(u => u.id === currentSelectedMemberId);
+                if (foundItem) {
+                    selectMember(foundItem.id, foundItem.data.nickname || '이름 없음', foundItem.data.dept || '', null);
+                }
+            }
         });
 
         const btnSend = document.getElementById('btn-send-member-chat');
@@ -3277,13 +3324,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 uName = auth.currentUser.displayName || '익명';
                 if (currentUserDoc) uRole = currentUserDoc.dept || '팀원';
             }
-            const chatMode = currentChatMode;
+
+            const isHall = currentSelectedMemberId === 'public_hall';
+            const chatType = isHall ? 'public' : 'private';
 
             try {
                 inputChat.value = ''; // 긍정적 UI 응답
                 await db.collection('workMemberChats').add({
                     memberId: currentSelectedMemberId,
-                    chatType: chatMode,
+                    chatType: chatType,
                     text: text,
                     senderName: uName,
                     senderRole: uRole,
@@ -3299,40 +3348,77 @@ document.addEventListener('DOMContentLoaded', () => {
         inputChat?.addEventListener('keypress', (e) => {
             if(e.key === 'Enter') sendMessage();
         });
-
-        const chatTabs = document.querySelectorAll('.chat-tab-btn');
-        chatTabs.forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                chatTabs.forEach(t => {
-                    t.style.background = 'transparent';
-                    t.style.boxShadow = 'none';
-                    t.style.color = '#666';
-                });
-                const target = e.currentTarget;
-                target.style.background = '#fff';
-                target.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-                target.style.color = 'var(--primary-color)';
-                currentChatMode = target.dataset.mode;
-                if (typeof window.reloadChatMessages === 'function') {
-                    window.reloadChatMessages();
-                }
-            });
-        });
     }
 
     function selectMember(id, name, role, element) {
+        // 1:1 대화방 진입 시 로그인 체크 및 본인 체크
+        if (id !== 'public_hall') {
+            if (!auth.currentUser || !currentUserDoc) {
+                alert('1:1 비밀 대화는 로그인이 필요합니다. 로그인 화면으로 이동합니다.');
+                if (typeof openWorkAuth === 'function') openWorkAuth();
+                // 1:1 방으로 진입하지 않고 전체 광장 채팅방으로 강제 복귀
+                setTimeout(() => {
+                    const hallDiv = document.querySelector('.member-list-item');
+                    selectMember('public_hall', '전체 광장 채팅방', '모든 멤버 수다방', hallDiv);
+                }, 0);
+                return;
+            }
+            if (auth.currentUser && auth.currentUser.uid === id) {
+                alert('나 자신과의 1:1 대화는 지원하지 않습니다. 다른 구성원을 선택해 주세요.');
+                setTimeout(() => {
+                    const hallDiv = document.querySelector('.member-list-item');
+                    selectMember('public_hall', '전체 광장 채팅방', '모든 멤버 수다방', hallDiv);
+                }, 0);
+                return;
+            }
+        }
+
         currentSelectedMemberId = id;
         document.getElementById('member-chat-empty').style.display = 'none';
         document.getElementById('member-chat-area').style.display = 'flex';
-        document.getElementById('chat-member-name').innerText = name;
-        document.getElementById('chat-member-role').innerText = role || '';
+        
+        const avatarEl = document.getElementById('chat-member-avatar');
+        const inputChat = document.getElementById('member-chat-input');
+        const btnSend = document.getElementById('btn-send-member-chat');
+
+        // 전체 광장이냐 1:1 대화냐에 따라 UI 정보 변경
+        if (id === 'public_hall') {
+            document.getElementById('chat-member-name').innerText = "💬 전체 광장 채팅방";
+            document.getElementById('chat-member-role').innerText = "모든 구성원 수다방";
+            if (avatarEl) avatarEl.innerHTML = '<i class="fa-solid fa-comments" style="color: var(--primary-color);"></i>';
+            if (inputChat) {
+                inputChat.disabled = false;
+                inputChat.placeholder = "전체 광장에 메시지를 입력하세요...";
+            }
+            if (btnSend) btnSend.disabled = false;
+        } else {
+            document.getElementById('chat-member-name').innerText = `🔒 ${name} 님과의 1:1 비밀 대화`;
+            document.getElementById('chat-member-role').innerText = `${role || ''} • 1:1 비밀 대화`;
+            if (avatarEl) avatarEl.innerHTML = '<i class="fa-solid fa-lock" style="color: #ff9f43;"></i>';
+            if (inputChat) {
+                inputChat.disabled = false;
+                inputChat.placeholder = `${name} 님에게 비밀 메시지 전송...`;
+            }
+            if (btnSend) btnSend.disabled = false;
+        }
         
         // Refresh list to highlight selected
         const items = document.querySelectorAll('.member-list-item');
         items.forEach(item => {
             item.style.background = 'transparent';
         });
-        if(element) element.style.background = '#e3f2fd';
+        if(element) {
+            element.style.background = '#e3f2fd';
+        } else {
+            const listItems = document.querySelectorAll('.member-list-item');
+            listItems.forEach(li => {
+                if (id === 'public_hall' && li.innerText.includes('전체 광장 채팅방')) {
+                    li.style.background = '#e3f2fd';
+                } else if (li.innerText.includes(name)) {
+                    li.style.background = '#e3f2fd';
+                }
+            });
+        }
         
         if (unsubscribeMemberChat) unsubscribeMemberChat();
         
@@ -3341,17 +3427,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         function loadChatMessages() {
             if (unsubscribeMemberChat) unsubscribeMemberChat();
-            const chatMode = currentChatMode;
             
             let query = db.collection('workMemberChats')
                 .where('memberId', '==', id);
-            
-            // 기존 데이터 호환성 및 모드 필터링
-            if (chatMode === 'private') {
-                query = query.where('chatType', '==', 'private');
-            }
 
-            // orderBy를 쿼리에서 떼어 복합 색인(Index) 누락 문제를 방지
             unsubscribeMemberChat = query.onSnapshot(snapshot => {
                     messagesEl.innerHTML = '';
                     
@@ -3370,18 +3449,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         const data = doc.data();
                         const type = data.chatType || 'public';
                         
-                        if (chatMode === 'public' && type === 'private') return; // public 탭에서는 private 숨김
-                        if (chatMode === 'private') {
-                            // private 탭에서는 (마스터)와 (해당 구성원)만 볼 수 있도록 클라이언트 필터링 추가
+                        if (id === 'public_hall') {
+                            if (type !== 'public') return;
+                        } else {
+                            if (type !== 'private') return;
+                            
+                            const isMeSender = data.senderName === uName;
+                            const isMeReceiver = uName === name;
                             const isMaster = currentUserDoc && currentUserDoc.isMaster === true;
-                            const isMemberSelf = uName === name;
-                            if (!isMaster && !isMemberSelf) return; // 권한 없음 (화면에서 숨김)
+                            
+                            if (!isMeSender && !isMeReceiver && !isMaster) return; 
                         }
                         
                         validDocs.push({id: doc.id, data: data});
                     });
 
-                    // 클라이언트 단에서 날짜 정렬 처리 (안전하고 확실함)
                     validDocs.sort((a, b) => {
                         const t1 = a.data.createdAt ? (a.data.createdAt.seconds || 0) : Date.now()/1000;
                         const t2 = b.data.createdAt ? (b.data.createdAt.seconds || 0) : Date.now()/1000;
@@ -3449,17 +3531,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         loadChatMessages();
-        
-        const modeSelect = document.getElementById('chat-mode-select');
-        if (modeSelect) {
-            // Remove previous listener if exists by cloning
-            const newModeSelect = modeSelect.cloneNode(true);
-            modeSelect.parentNode.replaceChild(newModeSelect, modeSelect);
-            newModeSelect.addEventListener('change', (e) => {
-                currentChatMode = e.target.value;
-                loadChatMessages();
-            });
-        }
     }
 
     // 메인 리사이저 (좌/우 패널 크기 조절) 기능 초기화
@@ -3779,6 +3850,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 모달 열기/닫기
         btnAddIdea?.addEventListener('click', () => {
+            if (!currentUser) {
+                loginRequiredModal.classList.remove('hidden');
+                return;
+            }
+            if (typeof closeAllWriteModals === 'function') closeAllWriteModals();
             ideaModal?.classList.remove('hidden');
         });
         
@@ -4000,6 +4076,11 @@ document.addEventListener('DOMContentLoaded', () => {
         let infoUnsubscribe = null;
 
         btnAddInfo?.addEventListener('click', () => {
+            if (!currentUser) {
+                loginRequiredModal.classList.remove('hidden');
+                return;
+            }
+            if (typeof closeAllWriteModals === 'function') closeAllWriteModals();
             infoModal?.classList.remove('hidden');
         });
         
@@ -4222,6 +4303,11 @@ document.addEventListener('DOMContentLoaded', () => {
         let noticeUnsubscribe = null;
 
         btnAddNotice?.addEventListener('click', () => {
+            if (!currentUser) {
+                loginRequiredModal.classList.remove('hidden');
+                return;
+            }
+            if (typeof closeAllWriteModals === 'function') closeAllWriteModals();
             noticeModal?.classList.remove('hidden');
         });
         

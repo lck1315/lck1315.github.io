@@ -2735,7 +2735,7 @@ main:has(#tab-projects.active) {
 .ps-tree-body {
     flex: 1;
     overflow-y: auto; /* auto로 해야 scrollTop 동기화가 동작함 */
-    overflow-x: auto;
+    overflow-x: scroll;
     scrollbar-width: auto;
 }
 .ps-tree-body::-webkit-scrollbar {
