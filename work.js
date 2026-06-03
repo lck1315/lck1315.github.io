@@ -3234,21 +3234,28 @@ document.addEventListener('DOMContentLoaded', () => {
             usersList.forEach(item => {
                 const docId = item.id;
                 const data = item.data;
+                const isMaster = data.isMaster === true;
+                const nickname = data.nickname || '이름 없음';
+                const dept = data.dept || '';
+                
+                // 마스터는 이름 옆에 👑 표시
+                const nameDisplay = isMaster ? `${nickname} 👑` : nickname;
+                
                 const div = document.createElement('div');
                 div.className = `member-list-item`;
                 div.style.cssText = `padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s; background: ${currentSelectedMemberId === docId ? '#e3f2fd' : 'transparent'};`;
                 div.innerHTML = `
                     <div style="width: 32px; height: 32px; border-radius: 50%; background: #ccc; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;"><i class="fa-solid fa-user"></i></div>
                     <div>
-                        <div style="font-weight: bold; color: #333; font-size: 0.95rem;">${data.nickname || '팀원'}</div>
-                        <div style="font-size: 0.8rem; color: #888;">${data.dept || '팀원'}</div>
+                        <div style="font-weight: bold; color: #333; font-size: 0.95rem;">${nameDisplay}</div>
+                        ${dept ? `<div style="font-size: 0.8rem; color: #888;">${dept}</div>` : ''}
                     </div>
                 `;
                 
                 div.onmouseover = () => { if(currentSelectedMemberId !== docId) div.style.background = '#f1f3f5'; };
                 div.onmouseout = () => { if(currentSelectedMemberId !== docId) div.style.background = 'transparent'; };
                 
-                div.onclick = () => selectMember(docId, data.nickname || '팀원', data.dept || '팀원', div);
+                div.onclick = () => selectMember(docId, nickname, dept, div);
                 listEl.appendChild(div);
             });
         });
@@ -3318,7 +3325,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('member-chat-empty').style.display = 'none';
         document.getElementById('member-chat-area').style.display = 'flex';
         document.getElementById('chat-member-name').innerText = name;
-        document.getElementById('chat-member-role').innerText = role || '팀원';
+        document.getElementById('chat-member-role').innerText = role || '';
         
         // Refresh list to highlight selected
         const items = document.querySelectorAll('.member-list-item');
@@ -3772,11 +3779,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 모달 열기/닫기
         btnAddIdea?.addEventListener('click', () => {
-            ideaModal.classList.remove('hidden');
+            ideaModal?.classList.remove('hidden');
         });
         
         closeIdeaModal?.addEventListener('click', () => {
-            ideaModal.classList.add('hidden');
+            ideaModal?.classList.add('hidden');
             resetIdeaForm();
         });
 
