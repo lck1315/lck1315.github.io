@@ -3342,14 +3342,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // 기존 데이터 호환성 및 모드 필터링
             if (chatMode === 'private') {
                 query = query.where('chatType', '==', 'private');
-            } else {
-                // public 모드일 때는 chatType이 'public'이거나 아예 없는(기존) 데이터
-                // Firestore where('chatType', 'in', ['public', null]) 와 같은 복잡한 쿼리 대신
-                // 클라이언트에서 필터링하거나 orderBy 이후 필터링합니다.
             }
 
-            unsubscribeMemberChat = query.orderBy('createdAt', 'asc')
-                .onSnapshot(snapshot => {
+            // orderBy를 쿼리에서 떼어 복합 색인(Index) 누락 문제를 방지
+            unsubscribeMemberChat = query.onSnapshot(snapshot => {
                     messagesEl.innerHTML = '';
                     
                     let uName = '';
@@ -3376,6 +3372,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         
                         validDocs.push({id: doc.id, data: data});
+                    });
+
+                    // 클라이언트 단에서 날짜 정렬 처리 (안전하고 확실함)
+                    validDocs.sort((a, b) => {
+                        const t1 = a.data.createdAt ? (a.data.createdAt.seconds || 0) : Date.now()/1000;
+                        const t2 = b.data.createdAt ? (b.data.createdAt.seconds || 0) : Date.now()/1000;
+                        return t1 - t2;
                     });
 
                     if(validDocs.length === 0) {
@@ -3445,7 +3448,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Remove previous listener if exists by cloning
             const newModeSelect = modeSelect.cloneNode(true);
             modeSelect.parentNode.replaceChild(newModeSelect, modeSelect);
-            newModeSelect.addEventListener('change', loadChatMessages);
+            newModeSelect.addEventListener('change', (e) => {
+                currentChatMode = e.target.value;
+                loadChatMessages();
+            });
         }
     }
 
@@ -3766,7 +3772,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 모달 열기/닫기
         btnAddIdea?.addEventListener('click', () => {
-            if (!auth.currentUser) return alert('아이디어를 등록하려면 로그인이 필요합니다.');
             ideaModal.classList.remove('hidden');
         });
         
@@ -3850,7 +3855,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 아이디어 등록
         btnSubmitIdea?.addEventListener('click', async () => {
-            if (!auth.currentUser) return alert('로그인이 필요합니다.');
             const title = ideaTitle?.value.trim();
             const content = ideaContent?.value.trim();
             
@@ -3859,13 +3863,18 @@ document.addEventListener('DOMContentLoaded', () => {
             btnSubmitIdea.disabled = true;
             btnSubmitIdea.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 등록 중...';
             
+            const authorId = auth.currentUser ? auth.currentUser.uid : 'anonymous';
+            const authorName = auth.currentUser 
+                ? ((currentUserDoc && currentUserDoc.nickname) ? currentUserDoc.nickname : (auth.currentUser.displayName || '익명'))
+                : '익명';
+            
             try {
                 await db.collection('workIdeas').add({
                     title: title,
                     content: content,
                     image: currentImageBase64,
-                    authorId: auth.currentUser.uid,
-                    authorName: (currentUserDoc && currentUserDoc.nickname) ? currentUserDoc.nickname : (auth.currentUser.displayName || '익명'),
+                    authorId: authorId,
+                    authorName: authorName,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
@@ -3958,15 +3967,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 로그인 상태 변경 감지하여 구독 관리
         auth.onAuthStateChanged(user => {
-            if (user) {
-                subscribeIdeas();
-            } else {
-                if (ideasUnsubscribe) {
-                    ideasUnsubscribe();
-                    ideasUnsubscribe = null;
-                }
-                if (ideasGrid) ideasGrid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 50px; color: #888;">아이디어를 보려면 로그인이 필요합니다.</div>';
-            }
+            subscribeIdeas();
         });
     }
     initIdeasLogic();
