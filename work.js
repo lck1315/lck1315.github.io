@@ -240,6 +240,38 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function showTabLockOverlay(tabId) {
+        const tabEl = document.getElementById(tabId);
+        if (!tabEl) return;
+        
+        if (tabEl.querySelector('.tab-lock-overlay')) return;
+        
+        const overlay = document.createElement('div');
+        overlay.className = 'tab-lock-overlay';
+        overlay.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; min-height: 500px; background: #f8f9fa; z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 50px; border-radius: 12px; border: 1px solid #e2e8f0; box-sizing: border-box;';
+        overlay.innerHTML = `
+            <div style="color: #2d3436;">
+                <i class="fa-solid fa-lock" style="font-size: 3rem; margin-bottom: 20px; color: #ff4757;"></i>
+                <h3 style="font-size: 1.8rem; font-weight: 700; margin-bottom: 10px; color: #2d3436;">접근 권한이 없습니다</h3>
+                <p style="color: #636e72; font-size: 1rem; margin: 0;">내용을 보려면 로그인 및 마스터의 승인이 필요합니다.</p>
+            </div>
+        `;
+        
+        if (window.getComputedStyle(tabEl).position === 'static') {
+            tabEl.style.position = 'relative';
+        }
+        tabEl.appendChild(overlay);
+    }
+    
+    function hideTabLockOverlay(tabId) {
+        const tabEl = document.getElementById(tabId);
+        if (!tabEl) return;
+        const overlay = tabEl.querySelector('.tab-lock-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
+    }
+
     function renderRestrictedContent() {
         const psApp = document.querySelector('.ps-desktop-app');
         const psLock = document.getElementById('ps-auth-lock');
@@ -251,8 +283,9 @@ document.addEventListener('DOMContentLoaded', () => {
             showAuthRequiredMessage('schedule-content-container');
             showAuthRequiredMessage('performance-content-container');
             showAuthRequiredMessage('members-content-container');
-            showAuthRequiredMessage('ideas-grid');
-            showAuthRequiredMessage('info-grid');
+            
+            showTabLockOverlay('tab-ideas');
+            showTabLockOverlay('tab-info');
             
             if (btnAddIdea) btnAddIdea.style.display = 'none';
             if (btnAddInfo) btnAddInfo.style.display = 'none';
@@ -280,14 +313,8 @@ document.addEventListener('DOMContentLoaded', () => {
             psLock.innerHTML = '';
         }
 
-        const ideasGrid = document.getElementById('ideas-grid');
-        const infoGrid = document.getElementById('info-grid');
-        if (ideasGrid && ideasGrid.innerHTML.includes('접근 권한이 없습니다')) {
-            ideasGrid.innerHTML = '';
-        }
-        if (infoGrid && infoGrid.innerHTML.includes('접근 권한이 없습니다')) {
-            infoGrid.innerHTML = '';
-        }
+        hideTabLockOverlay('tab-ideas');
+        hideTabLockOverlay('tab-info');
 
         if (btnAddIdea) btnAddIdea.style.display = '';
         if (btnAddInfo) btnAddInfo.style.display = '';
