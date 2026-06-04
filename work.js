@@ -601,7 +601,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const btnOpenModal = document.getElementById('btn-open-modal');
             if (btnOpenModal) {
-                if (currentTab === 'main' || currentTab === 'members' || currentTab === 'projects' || currentTab === 'performance' || currentTab === 'ideas' || currentTab === 'info' || currentTab === 'notice' || currentTab === 'schedule') {
+                if (currentTab === 'main' || currentTab === 'members' || currentTab === 'projects' || currentTab === 'performance' || currentTab === 'ideas' || currentTab === 'info' || currentTab === 'notice' || currentTab === 'schedule' || currentTab === 'bookmarks') {
                     btnOpenModal.style.display = 'none';
                 } else {
                     btnOpenModal.style.display = 'flex';
