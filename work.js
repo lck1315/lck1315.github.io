@@ -3548,7 +3548,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const yyyy = d.getFullYear();
                 const mm = String(d.getMonth() + 1).padStart(2, '0');
                 const dd = String(d.getDate()).padStart(2, '0');
-                const dStr = \`\${yyyy}-\${mm}-\${dd}\`;
+                const dStr = `${yyyy}-${mm}-${dd}`;
                 
                 const day = d.getDay();
                 let bg = '#fff';
@@ -3564,9 +3564,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (isFill) {
                     bg = item.color || '#fde047';
-                    tr += \`<td style="background:\${bg}; border-top:1px solid #ccc; border-bottom:1px solid #ccc; border-left:none; border-right:none;"></td>\`;
+                    tr += `<td style="background:${bg}; border-top:1px solid #ccc; border-bottom:1px solid #ccc; border-left:none; border-right:none;"></td>`;
                 } else {
-                    tr += \`<td style="background:\${bg};"></td>\`;
+                    tr += `<td style="background:${bg};"></td>`;
                 }
             });
             
@@ -3574,12 +3574,12 @@ document.addEventListener('DOMContentLoaded', () => {
             html += tr;
         });
         
-        html += \`
+        html += `
             </tbody>
         </table>
         </body>
         </html>
-        \`;
+        `;
 
         const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
         const url = URL.createObjectURL(blob);
