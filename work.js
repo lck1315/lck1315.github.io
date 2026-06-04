@@ -1388,6 +1388,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 구글 캘린더 개별 표시 필터 렌더링
     function renderGoogleCalendarFilters() {
+        const settingsBtn = document.getElementById('work-calendar-settings-btn');
+        if (settingsBtn) {
+            settingsBtn.style.display = (currentUserDoc && currentUserDoc.isMaster === true) ? 'inline-block' : 'none';
+        }
+
         const filterContainer = document.getElementById('work-gcal-filter-container');
         if (!filterContainer) return;
 
@@ -1441,10 +1446,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     // 로컬 슬롯 체크박스 UI도 즉시 반영
                     fillGcalSlots();
 
-                    // Firestore에 실시간 저장
-                    if (currentUser && currentUser.uid) {
-                        db.collection('users').doc(currentUser.uid).set({
-                            workCalendarUrls: googleCalendarUrls
+                    // Firestore에 실시간 저장 (마스터만)
+                    if (currentUserDoc && currentUserDoc.isMaster === true) {
+                        db.collection('workSiteSettings').doc('calendarSettings').set({
+                            urls: googleCalendarUrls
                         }, { merge: true }).catch(err => {
                             console.error("Firestore 필터 동기화 실패:", err);
                         });
@@ -1506,9 +1511,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         }
+        if (!currentUserDoc || currentUserDoc.isMaster !== true) {
+            alert("관리자만 캘린더 설정을 변경할 수 있습니다.");
+            return;
+        }
         
-        db.collection('users').doc(currentUser.uid).set({
-            workCalendarUrls: newList
+        db.collection('workSiteSettings').doc('calendarSettings').set({
+            urls: newList
         }, { merge: true }).then(() => {
             alert("구글 캘린더 설정이 저장되었습니다.");
             document.getElementById('work-calendar-settings-modal')?.classList.add('hidden');
@@ -4186,6 +4195,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function renderMatrix() {
             if (!theadTr || !tbody) return;
+            const isMaster = currentUserDoc && currentUserDoc.isMaster === true;
+
+            if (btnAddRow) btnAddRow.style.display = isMaster ? 'inline-block' : 'none';
+            if (btnAddCol) btnAddCol.style.display = isMaster ? 'inline-block' : 'none';
+            if (btnSave) btnSave.style.display = isMaster ? 'inline-block' : 'none';
             
             // 헤더 렌더링
             theadTr.innerHTML = '<th style="border: 1px solid var(--card-border); padding: 12px; text-align: left; position: sticky; top: 0; left: 0; background: var(--bg-color); z-index: 2; min-width: 200px; font-weight: bold; color: var(--text-color);">평가 항목</th>';
@@ -4195,7 +4209,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 th.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span>${colName}</span>
-                        <button class="btn-del-col" data-idx="${cIdx}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 2px 5px;"><i class="fa-solid fa-times"></i></button>
+                        ${isMaster ? `<button class="btn-del-col" data-idx="${cIdx}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 2px 5px;"><i class="fa-solid fa-times"></i></button>` : ''}
                     </div>
                 `;
                 theadTr.appendChild(th);
@@ -4205,7 +4219,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tbody.innerHTML = '';
             matrixData.rows.forEach((rowName, rIdx) => {
                 const tr = document.createElement('tr');
-                tr.draggable = true;
+                tr.draggable = isMaster;
                 tr.dataset.rIdx = rIdx;
                 
                 tr.addEventListener('dragstart', function(e) {
@@ -4257,11 +4271,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // 첫 번째 열 (항목 이름)
                 const th = document.createElement('td');
-                th.style.cssText = 'border: 1px solid var(--card-border); padding: 12px; background: var(--card-bg); color: var(--text-color); font-weight: bold; position: sticky; left: 0; z-index: 1; cursor: grab;';
+                th.style.cssText = `border: 1px solid var(--card-border); padding: 12px; background: var(--card-bg); color: var(--text-color); font-weight: bold; position: sticky; left: 0; z-index: 1; ${isMaster ? 'cursor: grab;' : ''}`;
                 th.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-grip-vertical" style="color: var(--text-muted); opacity: 0.5;"></i> ${rowName}</span>
-                        <button class="btn-del-row" data-idx="${rIdx}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 2px 5px;"><i class="fa-solid fa-times"></i></button>
+                        <span style="display: flex; align-items: center; gap: 8px;">${isMaster ? '<i class="fa-solid fa-grip-vertical" style="color: var(--text-muted); opacity: 0.5;"></i>' : ''} ${rowName}</span>
+                        ${isMaster ? `<button class="btn-del-row" data-idx="${rIdx}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 2px 5px;"><i class="fa-solid fa-times"></i></button>` : ''}
                     </div>
                 `;
                 tr.appendChild(th);
@@ -4274,7 +4288,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const cellKey = `${rIdx}_${cIdx}`;
                     const val = matrixData.cells[cellKey] || '';
                     
-                    td.innerHTML = `<textarea class="matrix-cell-input" data-key="${cellKey}" style="width: 100%; height: 60px; border: none; padding: 10px; resize: vertical; outline: none; background: transparent; color: var(--text-color); font-family: inherit; font-size: 0.9rem;">${val}</textarea>`;
+                    td.innerHTML = `<textarea class="matrix-cell-input" data-key="${cellKey}" style="width: 100%; height: 60px; border: none; padding: 10px; resize: vertical; outline: none; background: transparent; color: var(--text-color); font-family: inherit; font-size: 0.9rem;" ${isMaster ? '' : 'readonly'}>${val}</textarea>`;
                     tr.appendChild(td);
                 });
                 
@@ -4612,8 +4626,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         let editBtnHtml = '';
                         let deleteBtnHtml = '';
-                        if (auth.currentUser && auth.currentUser.uid === data.authorId) {
-                            editBtnHtml = `<button class="btn-edit-idea" data-id="${doc.id}" style="background: none; border: none; color: var(--primary-color); cursor: pointer; padding: 5px;" title="수정"><i class="fa-solid fa-pen"></i></button>`;
+                        if (auth.currentUser && (auth.currentUser.uid === data.authorId || (currentUserDoc && currentUserDoc.isMaster === true))) {
+                            if (auth.currentUser.uid === data.authorId) {
+                                editBtnHtml = `<button class="btn-edit-idea" data-id="${doc.id}" style="background: none; border: none; color: var(--primary-color); cursor: pointer; padding: 5px;" title="수정"><i class="fa-solid fa-pen"></i></button>`;
+                            }
                             deleteBtnHtml = `<button class="btn-delete-idea" data-id="${doc.id}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 5px;" title="삭제"><i class="fa-solid fa-trash-can"></i></button>`;
                         }
                         
@@ -4902,7 +4918,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         let editBtnHtml = '';
                         let deleteBtnHtml = '';
                         if (auth.currentUser && (auth.currentUser.uid === data.authorId || (currentUserDoc && currentUserDoc.isMaster === true))) {
-                            editBtnHtml = `<button class="btn-edit-info" data-id="${docId}" style="background: none; border: none; color: #4a69bd; cursor: pointer; padding: 5px;" title="수정"><i class="fa-solid fa-pen"></i></button>`;
+                            if (auth.currentUser.uid === data.authorId) {
+                                editBtnHtml = `<button class="btn-edit-info" data-id="${docId}" style="background: none; border: none; color: #4a69bd; cursor: pointer; padding: 5px;" title="수정"><i class="fa-solid fa-pen"></i></button>`;
+                            }
                             deleteBtnHtml = `<button class="btn-delete-info" data-id="${docId}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 5px;" title="삭제"><i class="fa-solid fa-trash-can"></i></button>`;
                         }
                         
@@ -5183,7 +5201,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         let editBtnHtml = '';
                         let deleteBtnHtml = '';
                         if (auth.currentUser && (auth.currentUser.uid === data.authorId || (currentUserDoc && currentUserDoc.isMaster === true))) {
-                            editBtnHtml = `<button class="btn-edit-notice" data-id="${docId}" style="background: none; border: none; color: #e55039; cursor: pointer; padding: 5px;" title="수정"><i class="fa-solid fa-pen"></i></button>`;
+                            if (auth.currentUser.uid === data.authorId) {
+                                editBtnHtml = `<button class="btn-edit-notice" data-id="${docId}" style="background: none; border: none; color: #e55039; cursor: pointer; padding: 5px;" title="수정"><i class="fa-solid fa-pen"></i></button>`;
+                            }
                             deleteBtnHtml = `<button class="btn-delete-notice" data-id="${docId}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 5px;" title="삭제"><i class="fa-solid fa-trash-can"></i></button>`;
                         }
                         
