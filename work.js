@@ -3416,7 +3416,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const psExcelAllBtn = document.getElementById('ps-btn-excel-all');
     const psExcelSelectedBtn = document.getElementById('ps-btn-excel-selected');
 
-    function exportToCsv(data, filename) {
+    function exportToExcelWithStyle(data, filename) {
         if (!data || data.length === 0) {
             alert('출력할 데이터가 없습니다.');
             return;
@@ -3436,49 +3436,143 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        const dateColumns = [];
+        const dateObjects = [];
         if (minDate && maxDate) {
             let curr = new Date(minDate);
             const end = new Date(maxDate);
             while (curr <= end) {
-                const yyyy = curr.getFullYear();
-                const mm = String(curr.getMonth() + 1).padStart(2, '0');
-                const dd = String(curr.getDate()).padStart(2, '0');
-                dateColumns.push(`${yyyy}-${mm}-${dd}`);
+                dateObjects.push(new Date(curr));
                 curr.setDate(curr.getDate() + 1);
             }
         }
         
-        const headers = ['ID', 'Parent ID', 'Project/Task Name', 'Assignee', 'Status', 'Start Date', 'End Date', 'Order', 'Color', ...dateColumns];
-        let csvContent = '\uFEFF' + headers.join(',') + '\n';
+        let monthGroups = [];
+        let weekGroups = [];
+        let dayCells = '';
+        let weekdayCells = '';
+        const weekdaysKR = ['일', '월', '화', '수', '목', '금', '토'];
         
-        data.forEach(item => {
-            const row = [
-                item.id || '',
-                item.parentId || '',
-                `"${(item.name || '').replace(/"/g, '""')}"`,
-                `"${(item.assignee || '').replace(/"/g, '""')}"`,
-                item.status || '',
-                item.startDate || '',
-                item.endDate || '',
-                item.order || '',
-                item.color || ''
-            ];
+        if (dateObjects.length > 0) {
+            let currentMonth = dateObjects[0].getMonth();
+            let monthColspan = 0;
+            let currentWeek = 1;
+            let weekColspan = 0;
             
-            dateColumns.forEach(dateStr => {
-                if (item.startDate && item.endDate && dateStr >= item.startDate && dateStr <= item.endDate) {
-                    row.push('■');
-                } else if (item.startDate && !item.endDate && dateStr === item.startDate) {
-                    row.push('■');
+            for (let i = 0; i < dateObjects.length; i++) {
+                const d = dateObjects[i];
+                const day = d.getDay();
+                const m = d.getMonth();
+                
+                if (m === currentMonth) {
+                    monthColspan++;
                 } else {
-                    row.push('');
+                    monthGroups.push({ text: (currentMonth + 1) + '월', colspan: monthColspan });
+                    currentMonth = m;
+                    monthColspan = 1;
+                    currentWeek = 1;
+                }
+                
+                if (weekColspan > 0 && day === 1) { // Monday starts new week
+                    weekGroups.push({ text: currentWeek + '주차', colspan: weekColspan });
+                    currentWeek++;
+                    weekColspan = 1;
+                } else {
+                    weekColspan++;
+                }
+                
+                if (i === dateObjects.length - 1) {
+                    monthGroups.push({ text: (currentMonth + 1) + '월', colspan: monthColspan });
+                    weekGroups.push({ text: currentWeek + '주차', colspan: weekColspan });
+                }
+                
+                let color = '#333';
+                let bg = '#fff';
+                if (day === 0) { color = 'red'; bg = '#fff0f0'; }
+                if (day === 6) { color = 'blue'; bg = '#f0f4ff'; }
+                
+                dayCells += `<th style="background:#f8f9fa; border:1px solid #ddd; min-width:25px;">${d.getDate()}</th>`;
+                weekdayCells += `<th style="color:${color}; background:${bg}; border:1px solid #ddd; font-weight:normal;">${weekdaysKR[day]}</th>`;
+            }
+        }
+        
+        let html = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+        <meta charset="utf-8">
+        <style>
+            table { border-collapse: collapse; font-family: 'Malgun Gothic', sans-serif; font-size: 9pt; }
+            th, td { border: 1px solid #d1d5db; text-align: center; vertical-align: middle; white-space: nowrap; height: 25px; }
+            .header-cell { background: #f1f5f9; font-weight: bold; }
+        </style>
+        </head>
+        <body>
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="4" class="header-cell" style="width: 40px;">No.</th>
+                    <th rowspan="4" class="header-cell" style="width: 250px;">Project / Task</th>
+                    <th rowspan="4" class="header-cell" style="width: 80px;">Assignee</th>
+                    <th rowspan="4" class="header-cell" style="width: 80px;">Status</th>
+                    <th rowspan="4" class="header-cell" style="width: 90px;">Start</th>
+                    <th rowspan="4" class="header-cell" style="width: 90px;">End</th>
+                    ${weekGroups.map(wg => `<th colspan="${wg.colspan}" class="header-cell">${wg.text}</th>`).join('')}
+                </tr>
+                <tr>
+                    ${monthGroups.map(mg => `<th colspan="${mg.colspan}" class="header-cell">${mg.text}</th>`).join('')}
+                </tr>
+                <tr>${dayCells}</tr>
+                <tr>${weekdayCells}</tr>
+            </thead>
+            <tbody>
+        `;
+        
+        data.forEach((item, idx) => {
+            let tr = '<tr>';
+            tr += `<td>${idx + 1}</td>`;
+            tr += `<td style="text-align:left; padding-left:5px;">${(item.name || '').replace(/</g, '&lt;')}</td>`;
+            tr += `<td>${item.assignee || ''}</td>`;
+            tr += `<td style="color:${item.status === '진행중' ? '#3b82f6' : (item.status === '완료' ? '#10b981' : '#6b7280')}">${item.status || ''}</td>`;
+            tr += `<td>${item.startDate || ''}</td>`;
+            tr += `<td>${item.endDate || ''}</td>`;
+            
+            dateObjects.forEach(d => {
+                const yyyy = d.getFullYear();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                const dStr = \`\${yyyy}-\${mm}-\${dd}\`;
+                
+                const day = d.getDay();
+                let bg = '#fff';
+                if (day === 0) bg = '#fff0f0';
+                if (day === 6) bg = '#f0f4ff';
+                
+                let isFill = false;
+                if (item.startDate && item.endDate && dStr >= item.startDate && dStr <= item.endDate) {
+                    isFill = true;
+                } else if (item.startDate && !item.endDate && dStr === item.startDate) {
+                    isFill = true;
+                }
+                
+                if (isFill) {
+                    bg = item.color || '#fde047';
+                    tr += \`<td style="background:\${bg}; border-top:1px solid #ccc; border-bottom:1px solid #ccc; border-left:none; border-right:none;"></td>\`;
+                } else {
+                    tr += \`<td style="background:\${bg};"></td>\`;
                 }
             });
             
-            csvContent += row.join(',') + '\n';
+            tr += '</tr>';
+            html += tr;
         });
+        
+        html += \`
+            </tbody>
+        </table>
+        </body>
+        </html>
+        \`;
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
