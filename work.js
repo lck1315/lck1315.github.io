@@ -309,16 +309,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const btnAddIdea = document.getElementById('btn-add-idea');
         const btnAddInfo = document.getElementById('btn-add-info');
 
+        const allTabs = ['tab-main', 'tab-schedule', 'tab-performance', 'tab-members', 'tab-ideas', 'tab-info', 'tab-notice', 'tab-bookmarks', 'tab-projects'];
+
+        // 항상 먼저 모든 오버레이를 제거
+        allTabs.forEach(tabId => hideTabLockOverlay(tabId));
+
         if (!currentUser || !currentUserDoc || !currentUserDoc.isApproved) {
-            showTabLockOverlay('tab-main');
-            showTabLockOverlay('tab-schedule');
-            showTabLockOverlay('tab-performance');
-            showTabLockOverlay('tab-members');
-            showTabLockOverlay('tab-ideas');
-            showTabLockOverlay('tab-info');
-            showTabLockOverlay('tab-notice');
-            showTabLockOverlay('tab-bookmarks');
-            showTabLockOverlay('tab-projects');
+            // 비로그인 또는 미승인 → 오버레이 다시 추가
+            allTabs.forEach(tabId => showTabLockOverlay(tabId));
             
             if (btnAddIdea) btnAddIdea.style.display = 'none';
             if (btnAddInfo) btnAddInfo.style.display = 'none';
@@ -331,22 +329,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 로그인 및 승인됨 -> 정상 렌더링 복구
+        // 로그인 및 승인됨 → 정상 렌더링 복구
         if (psApp) psApp.style.display = ''; // 원래 display로 복귀
         if (psLock) {
             psLock.classList.add('hidden');
             psLock.innerHTML = '';
         }
-
-        hideTabLockOverlay('tab-main');
-        hideTabLockOverlay('tab-schedule');
-        hideTabLockOverlay('tab-performance');
-        hideTabLockOverlay('tab-members');
-        hideTabLockOverlay('tab-ideas');
-        hideTabLockOverlay('tab-info');
-        hideTabLockOverlay('tab-notice');
-        hideTabLockOverlay('tab-bookmarks');
-        hideTabLockOverlay('tab-projects');
 
         if (btnAddIdea) btnAddIdea.style.display = '';
         if (btnAddInfo) btnAddInfo.style.display = '';
