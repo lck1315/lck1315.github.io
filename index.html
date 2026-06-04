@@ -1182,9 +1182,10 @@
                     return;
                 }
                 container.innerHTML = '';
-                data.words.forEach(item => {
+                data.words.forEach((item, idx) => {
                     const div = document.createElement('div');
-                    div.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0.8rem; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px;";
+                    div.className = 'word-card glass-card';
+                    div.style.animationDelay = `${idx * 0.05}s`;
                     div.innerHTML = `
                         <span style="font-size: 0.9rem; font-weight: 600;">${item.word}</span>
                         <div style="display: flex; gap: 4px;">

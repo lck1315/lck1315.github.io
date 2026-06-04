@@ -3601,10 +3601,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!theadTr || !tbody) return;
             
             // 헤더 렌더링
-            theadTr.innerHTML = '<th style="border: 1px solid #dee2e6; padding: 12px; text-align: left; position: sticky; top: 0; left: 0; background: #f8f9fa; z-index: 2; min-width: 200px; font-weight: bold; color: #495057;">평가 항목</th>';
+            theadTr.innerHTML = '<th style="border: 1px solid var(--card-border); padding: 12px; text-align: left; position: sticky; top: 0; left: 0; background: var(--bg-color); z-index: 2; min-width: 200px; font-weight: bold; color: var(--text-color);">평가 항목</th>';
             matrixData.cols.forEach((colName, cIdx) => {
                 const th = document.createElement('th');
-                th.style.cssText = 'border: 1px solid #dee2e6; padding: 12px; text-align: center; background: #f8f9fa; font-weight: bold; color: #495057; min-width: 150px; position: relative;';
+                th.style.cssText = 'border: 1px solid var(--card-border); padding: 12px; text-align: center; background: var(--bg-color); font-weight: bold; color: var(--text-color); min-width: 150px; position: relative;';
                 th.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span>${colName}</span>
@@ -3670,10 +3670,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // 첫 번째 열 (항목 이름)
                 const th = document.createElement('td');
-                th.style.cssText = 'border: 1px solid #dee2e6; padding: 12px; background: #fff; font-weight: bold; position: sticky; left: 0; z-index: 1; cursor: grab;';
+                th.style.cssText = 'border: 1px solid var(--card-border); padding: 12px; background: var(--card-bg); color: var(--text-color); font-weight: bold; position: sticky; left: 0; z-index: 1; cursor: grab;';
                 th.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-grip-vertical" style="color: #ccc;"></i> ${rowName}</span>
+                        <span style="display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-grip-vertical" style="color: var(--text-muted); opacity: 0.5;"></i> ${rowName}</span>
                         <button class="btn-del-row" data-idx="${rIdx}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 2px 5px;"><i class="fa-solid fa-times"></i></button>
                     </div>
                 `;
@@ -3682,12 +3682,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 나머지 열 (팀원별 셀)
                 matrixData.cols.forEach((_, cIdx) => {
                     const td = document.createElement('td');
-                    td.style.cssText = 'border: 1px solid #dee2e6; padding: 0; background: #fff; vertical-align: top;';
+                    td.style.cssText = 'border: 1px solid var(--card-border); padding: 0; background: var(--card-bg); vertical-align: top;';
                     
                     const cellKey = `${rIdx}_${cIdx}`;
                     const val = matrixData.cells[cellKey] || '';
                     
-                    td.innerHTML = `<textarea class="matrix-cell-input" data-key="${cellKey}" style="width: 100%; height: 60px; border: none; padding: 10px; resize: vertical; outline: none; background: transparent; font-family: inherit; font-size: 0.9rem;">${val}</textarea>`;
+                    td.innerHTML = `<textarea class="matrix-cell-input" data-key="${cellKey}" style="width: 100%; height: 60px; border: none; padding: 10px; resize: vertical; outline: none; background: transparent; color: var(--text-color); font-family: inherit; font-size: 0.9rem;">${val}</textarea>`;
                     tr.appendChild(td);
                 });
                 
