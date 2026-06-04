@@ -535,7 +535,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    if (data.isMaster) return; // 마스터 본인은 리스트에서 제외
                     
                     const item = document.createElement('div');
                     item.style.cssText = 'display: flex; flex-direction: column; gap: 10px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 10px; color: #2d3436;';
