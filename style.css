@@ -3029,3 +3029,23 @@ main:has(#tab-projects.active) {
     max-width: 1400px !important;
     width: 95% !important;
 }
+
+/* 스마트 단어장 단어 카드 디자인 */
+.word-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    box-shadow: 0 4px 15px var(--card-shadow);
+    transition: var(--transition-smooth);
+    animation: slideInUp 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) both;
+}
+
+.word-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px var(--card-shadow);
+    border-color: rgba(108, 92, 231, 0.25);
+}
