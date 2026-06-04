@@ -1091,8 +1091,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             links.forEach(link => {
                 const iconClass = link.icon || 'fa-solid fa-link';
-                const deleteBtnHtml = currentUser ? `<button class="work-card-delete item-delete-btn" onclick="event.preventDefault(); window.deleteItem('workLinks', '${link.id}')"><i class="fa-solid fa-xmark"></i></button>` : '';
+                const isMine = currentUser && link.authorId && currentUser.uid === link.authorId;
+                const isMaster = currentUserDoc && currentUserDoc.isMaster === true;
+                const canEditDelete = isMine || isMaster;
                 
+                let actionBtnsHtml = '';
+                if (canEditDelete) {
+                    actionBtnsHtml = `
+                    <div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 5px; z-index: 10;">
+                        <button class="btn-edit-bookmark" data-id="${link.id}" data-title="${(link.title||'').replace(/"/g, '&quot;')}" data-url="${link.url}" data-category="${(link.category||'').replace(/"/g, '&quot;')}" data-icon="${(link.icon||'').replace(/"/g, '&quot;')}" onclick="event.preventDefault(); window.openEditBookmarkModal(this);" style="background: rgba(255,255,255,0.8); border: none; border-radius: 4px; padding: 5px 8px; cursor: pointer; color: #4a69bd;" title="수정"><i class="fa-solid fa-pen"></i></button>
+                        <button class="work-card-delete item-delete-btn" style="position: static;" onclick="event.preventDefault(); window.deleteItem('workLinks', '${link.id}')" title="삭제"><i class="fa-solid fa-xmark"></i></button>
+                    </div>`;
+                }
+
                 // 도메인 추출 및 파비콘 이미지 적용
                 let domain = '';
                 try {
@@ -1115,7 +1126,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             ${iconHtml}
                         </div>
                         <div class="work-info"><h4>${link.title}</h4><p>${link.url}</p></div>
-                        ${deleteBtnHtml}
+                        ${actionBtnsHtml}
                     </a>
                 `);
             });
@@ -1131,12 +1142,49 @@ document.addEventListener('DOMContentLoaded', () => {
             title: document.getElementById('bm-title').value.trim(),
             url: document.getElementById('bm-url').value.trim(),
             icon: document.getElementById('bm-icon').value.trim(),
-            createdBy: currentUser.uid,
+            authorId: currentUser ? currentUser.uid : null,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         }).then(() => {
             e.target.reset();
             document.getElementById('modal-bookmarks').classList.add('hidden');
         });
+    });
+
+    window.openEditBookmarkModal = function(btn) {
+        document.getElementById('edit-bm-id').value = btn.getAttribute('data-id');
+        document.getElementById('edit-bm-category').value = btn.getAttribute('data-category');
+        document.getElementById('edit-bm-title').value = btn.getAttribute('data-title');
+        document.getElementById('edit-bm-url').value = btn.getAttribute('data-url');
+        document.getElementById('edit-bm-icon').value = btn.getAttribute('data-icon');
+        document.getElementById('modal-edit-bookmarks').classList.remove('hidden');
+    };
+
+    document.getElementById('form-edit-bookmarks')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit-bm-id').value;
+        const category = document.getElementById('edit-bm-category').value.trim();
+        db.collection('workLinks').doc(id).update({
+            category: category || '기타',
+            title: document.getElementById('edit-bm-title').value.trim(),
+            url: document.getElementById('edit-bm-url').value.trim(),
+            icon: document.getElementById('edit-bm-icon').value.trim(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+            alert("북마크가 수정되었습니다.");
+            document.getElementById('form-edit-bookmarks').reset();
+            document.getElementById('modal-edit-bookmarks').classList.add('hidden');
+        }).catch(err => {
+            console.error(err);
+            alert("수정 실패: " + err.message);
+        });
+    });
+
+    // 모달 닫기 버튼 이벤트 위임
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal-close-btn')) {
+            const overlay = e.target.closest('.auth-modal-overlay');
+            if (overlay) overlay.classList.add('hidden');
+        }
     });
 
     // ====================================================
