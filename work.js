@@ -1457,10 +1457,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Project name quick-jump list
-        if (psData.length > 0) {
+        const rootProjects = psData.filter(p => !p.parentId);
+        if (rootProjects.length > 0) {
             html += '<optgroup label="프로젝트 이동">';
-            psData.forEach(p => {
-                const displayName = (p.name || '(무제)') + (p.parentId ? ' (하위)' : '');
+            rootProjects.forEach(p => {
+                const displayName = p.name || '(무제)';
                 html += `<option value="goto:${p.id}">${displayName}</option>`;
             });
             html += '</optgroup>';
@@ -1909,7 +1910,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.innerHTML = `
                 <div class="ps-col-0">${globalIndex}</div>
                 <div class="ps-col-1" style="padding-left: ${10 + level * 20}px; display: flex; align-items: center; padding-right: 5px;">
-                    ${hasChildren ? `<span style="cursor:pointer; width:15px; display:inline-block; font-weight:bold; color:#555;" onclick="event.stopPropagation(); window.psUpdateField('${task.id}', 'expanded', ${!isExpanded})">${isExpanded ? '▼' : '▶'}</span>` : '<span style="width:15px; display:inline-block;"></span>'}
+                    <span style="width:15px; display:inline-block;"></span>
                     <span style="margin-right:5px; color:#666; font-size:11px; display:inline-block; min-width:45px; flex-shrink:0; white-space:nowrap;">${prefix}</span>
                     <input class="ps-tree-input" value="${task.name || ''}" onchange="window.psUpdateField('${task.id}', 'name', this.value)" ${disabledAttr} style="flex: 1;">
                     <i class="fa-solid fa-note-sticky" onclick="event.stopPropagation(); psSelectedId='${task.id}'; window.openMemoModal(${JSON.stringify(task).replace(/"/g, '&quot;')}, event.clientX, event.clientY);" style="margin-left:5px; cursor:pointer; font-size:13px; color: ${task.memo ? '#f59e0b' : '#ccc'};" title="메모 열기"></i>
@@ -2000,11 +2001,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            // 하위 노드는 나오지 않도록 렌더링을 차단합니다.
+            /*
             if (isExpanded) {
                 children.forEach((child, idx) => {
                     renderRow(child, level + 1, `${prefix}-${idx + 1}`);
                 });
             }
+            */
         }
 
         rootTasks.forEach((root, idx) => {
@@ -4027,6 +4031,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                             </div>
                         `;
+                        card.style.cursor = 'pointer';
+                        card.addEventListener('click', () => {
+                            showPostDetail(data, '아이디어');
+                        });
                         ideasGrid.appendChild(card);
                     });
                     
@@ -4256,6 +4264,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                             </div>
                         `;
+                        card.style.cursor = 'pointer';
+                        card.addEventListener('click', () => {
+                            showPostDetail(data, '정보마당');
+                        });
                         infoGrid.appendChild(card);
                     });
                     
@@ -4483,6 +4495,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </div>
                             </div>
                         `;
+                        card.style.cursor = 'pointer';
+                        card.addEventListener('click', () => {
+                            showPostDetail(data, '알림마당');
+                        });
                         noticeGrid.appendChild(card);
                     });
                     
@@ -4508,6 +4524,64 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     initNoticesLogic();
+
+    // 게시글 상세보기 모달 함수 정의 및 이벤트 바인딩
+    function showPostDetail(data, categoryName) {
+        const viewModal = document.getElementById('view-post-modal');
+        const viewImageContainer = document.getElementById('post-view-image-container');
+        const viewImage = document.getElementById('post-view-image');
+        const viewBadge = document.getElementById('post-view-badge');
+        const viewTitle = document.getElementById('post-view-title');
+        const viewAvatar = document.getElementById('post-view-avatar');
+        const viewAuthor = document.getElementById('post-view-author');
+        const viewDate = document.getElementById('post-view-date');
+        const viewContent = document.getElementById('post-view-content');
+
+        if (!viewModal) return;
+
+        // 이미지 표시 여부
+        if (data.image) {
+            viewImage.src = data.image;
+            viewImageContainer.style.display = 'block';
+        } else {
+            viewImage.src = '';
+            viewImageContainer.style.display = 'none';
+        }
+
+        // 분류 뱃지 색상 및 텍스트 설정
+        viewBadge.innerText = categoryName;
+        if (categoryName === '아이디어') {
+            viewBadge.style.background = 'rgba(245, 158, 11, 0.15)';
+            viewBadge.style.color = '#f59e0b';
+            viewBadge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+            viewAvatar.style.background = '#f59e0b';
+        } else if (categoryName === '정보마당') {
+            viewBadge.style.background = 'rgba(74, 105, 189, 0.15)';
+            viewBadge.style.color = '#4a69bd';
+            viewBadge.style.borderColor = 'rgba(74, 105, 189, 0.3)';
+            viewAvatar.style.background = '#4a69bd';
+        } else if (categoryName === '알림마당') {
+            viewBadge.style.background = 'rgba(229, 80, 57, 0.15)';
+            viewBadge.style.color = '#e55039';
+            viewBadge.style.borderColor = 'rgba(229, 80, 57, 0.3)';
+            viewAvatar.style.background = '#e55039';
+        }
+
+        viewTitle.innerText = data.title || '';
+        viewAuthor.innerText = data.authorName || '익명';
+        viewAvatar.innerText = (data.authorName || '?').charAt(0);
+        
+        const date = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleDateString('ko-KR') : '방금 전';
+        viewDate.innerText = date;
+        viewContent.innerText = data.content || '';
+
+        viewModal.classList.remove('hidden');
+    }
+
+    const closePostViewBtn = document.getElementById('close-post-view');
+    closePostViewBtn?.addEventListener('click', () => {
+        document.getElementById('view-post-modal')?.classList.add('hidden');
+    });
 
     initParticles();
     animateParticles();
