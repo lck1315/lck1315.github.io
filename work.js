@@ -359,9 +359,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 프로젝트 탭 복구는 페이지 새로고침 필요하므로 일단 UI 초기화
-        renderWorkLinks();
-        renderSchedules();
-        renderPerformances();
+        if (typeof renderWorkLinks === 'function') renderWorkLinks();
+        if (typeof renderSchedules === 'function') renderSchedules();
+        if (typeof renderPerformances === 'function') renderPerformances();
         if (window.renderWorkMembers) window.renderWorkMembers();
         if (typeof renderPsScheduler === 'function') renderPsScheduler();
         if (typeof renderNotices === 'function') renderNotices();
