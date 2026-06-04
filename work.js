@@ -279,13 +279,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const btnAddInfo = document.getElementById('btn-add-info');
 
         if (!currentUser || !currentUserDoc || !currentUserDoc.isApproved) {
-            showAuthRequiredMessage('work-content-container');
-            showAuthRequiredMessage('schedule-content-container');
-            showAuthRequiredMessage('performance-content-container');
-            showAuthRequiredMessage('members-content-container');
-            
+            showTabLockOverlay('tab-main');
+            showTabLockOverlay('tab-schedule');
+            showTabLockOverlay('tab-performance');
+            showTabLockOverlay('tab-members');
             showTabLockOverlay('tab-ideas');
             showTabLockOverlay('tab-info');
+            showTabLockOverlay('tab-notice');
             
             if (btnAddIdea) btnAddIdea.style.display = 'none';
             if (btnAddInfo) btnAddInfo.style.display = 'none';
@@ -313,8 +313,13 @@ document.addEventListener('DOMContentLoaded', () => {
             psLock.innerHTML = '';
         }
 
+        hideTabLockOverlay('tab-main');
+        hideTabLockOverlay('tab-schedule');
+        hideTabLockOverlay('tab-performance');
+        hideTabLockOverlay('tab-members');
         hideTabLockOverlay('tab-ideas');
         hideTabLockOverlay('tab-info');
+        hideTabLockOverlay('tab-notice');
 
         if (btnAddIdea) btnAddIdea.style.display = '';
         if (btnAddInfo) btnAddInfo.style.display = '';
@@ -338,7 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 프로젝트 탭 복구는 페이지 새로고침 필요하므로 일단 UI 초기화 (간단히 하기 위해 페이지 강제 리로드하거나 기존 렌더 함수 호출)
+        // 프로젝트 탭 복구는 페이지 새로고침 필요하므로 일단 UI 초기화
         renderWorkLinks();
         renderSchedules();
         renderPerformances();
