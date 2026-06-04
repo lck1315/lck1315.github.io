@@ -286,6 +286,8 @@ document.addEventListener('DOMContentLoaded', () => {
             showTabLockOverlay('tab-ideas');
             showTabLockOverlay('tab-info');
             showTabLockOverlay('tab-notice');
+            showTabLockOverlay('tab-bookmarks');
+            showTabLockOverlay('tab-projects');
             
             if (btnAddIdea) btnAddIdea.style.display = 'none';
             if (btnAddInfo) btnAddInfo.style.display = 'none';
@@ -320,6 +322,8 @@ document.addEventListener('DOMContentLoaded', () => {
         hideTabLockOverlay('tab-ideas');
         hideTabLockOverlay('tab-info');
         hideTabLockOverlay('tab-notice');
+        hideTabLockOverlay('tab-bookmarks');
+        hideTabLockOverlay('tab-projects');
 
         if (btnAddIdea) btnAddIdea.style.display = '';
         if (btnAddInfo) btnAddInfo.style.display = '';
