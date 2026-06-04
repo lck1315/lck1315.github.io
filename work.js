@@ -75,6 +75,24 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentUser = null;
     let currentUserDoc = null;
     let workUserListener = null;
+    
+    // 탭별 접근 권한 설정 객체 (공개, 로그인필수, 승인필수 등)
+    let tabPermissions = {};
+    
+    // Firestore 설정 리스너 등록
+    db.collection('workSettings').doc('permissions').onSnapshot(doc => {
+        if (doc.exists) {
+            tabPermissions = doc.data() || {};
+        } else {
+            tabPermissions = {};
+        }
+        // 권한 변경 시 화면 재렌더링
+        if (typeof renderRestrictedContent === 'function') {
+            renderRestrictedContent();
+        }
+    }, err => console.error("권한 설정 로드 에러:", err));
+    
+    let workUserListenerActive = false;
 
     const authStatusHeader = document.getElementById('auth-status-header');
     const btnClaimMaster = document.getElementById('btn-claim-master');
@@ -309,37 +327,67 @@ document.addEventListener('DOMContentLoaded', () => {
         const btnAddIdea = document.getElementById('btn-add-idea');
         const btnAddInfo = document.getElementById('btn-add-info');
 
-        const allTabs = ['tab-main', 'tab-schedule', 'tab-performance', 'tab-members', 'tab-ideas', 'tab-info', 'tab-notice', 'tab-bookmarks', 'tab-projects'];
+        const allTabs = ['tab-schedule', 'tab-performance', 'tab-members', 'tab-ideas', 'tab-info', 'tab-notice', 'tab-bookmarks', 'tab-projects'];
 
         // 항상 먼저 모든 오버레이를 제거
         allTabs.forEach(tabId => hideTabLockOverlay(tabId));
 
-        if (!currentUser || !currentUserDoc || !currentUserDoc.isApproved) {
-            // 비로그인 또는 미승인 → 오버레이 다시 추가
-            allTabs.forEach(tabId => showTabLockOverlay(tabId));
+        let anyLocked = false;
+        
+        allTabs.forEach(tabId => {
+            const reqPerm = tabPermissions[tabId] || 'approval_required'; // 기본값은 승인 회원 전용
+            let hasAccess = false;
             
-            if (btnAddIdea) btnAddIdea.style.display = 'none';
-            if (btnAddInfo) btnAddInfo.style.display = 'none';
+            if (reqPerm === 'public') {
+                hasAccess = true;
+            } else if (reqPerm === 'login_only') {
+                hasAccess = !!currentUser;
+            } else { // approval_required
+                hasAccess = !!(currentUser && currentUserDoc && currentUserDoc.isApproved);
+            }
             
-            if (typeof window.unsubscribeIdeas === 'function') window.unsubscribeIdeas();
-            if (typeof window.unsubscribeInfo === 'function') window.unsubscribeInfo();
-            
-            // 프로젝트 탭은 .ps-desktop-app을 숨기고
-            if (psApp) psApp.style.setProperty('display', 'none', 'important');
-            return;
-        }
+            if (!hasAccess) {
+                showTabLockOverlay(tabId);
+                anyLocked = true;
+                
+                // 해당 탭의 특수 기능 제한 (버튼 숨김, 구독 취소 등)
+                if (tabId === 'tab-ideas') {
+                    if (btnAddIdea) btnAddIdea.style.display = 'none';
+                    if (typeof window.unsubscribeIdeas === 'function') window.unsubscribeIdeas();
+                }
+                if (tabId === 'tab-info') {
+                    if (btnAddInfo) btnAddInfo.style.display = 'none';
+                    if (typeof window.unsubscribeInfo === 'function') window.unsubscribeInfo();
+                }
+                if (tabId === 'tab-projects' && psApp) {
+                    psApp.style.setProperty('display', 'none', 'important');
+                }
+            } else {
+                // 접근 허용 시 복구
+                if (tabId === 'tab-ideas') {
+                    if (btnAddIdea) btnAddIdea.style.display = '';
+                    if (typeof window.subscribeIdeas === 'function') window.subscribeIdeas();
+                }
+                if (tabId === 'tab-info') {
+                    if (btnAddInfo) btnAddInfo.style.display = '';
+                    if (typeof window.subscribeInfo === 'function') window.subscribeInfo();
+                }
+                if (tabId === 'tab-projects' && psApp) {
+                    psApp.style.display = '';
+                }
+            }
+        });
 
-        // 로그인 및 승인됨 → 정상 렌더링 복구
-        if (psApp) psApp.style.display = ''; // 원래 display로 복귀
         if (psLock) {
-            psLock.classList.add('hidden');
-            psLock.innerHTML = '';
+            if (anyLocked) {
+                // 혹시 프로젝트 앱 자체에 오버레이를 띄워야 한다면 여기에 처리 (현재는 탭에 오버레이)
+            } else {
+                psLock.classList.add('hidden');
+                psLock.innerHTML = '';
+            }
         }
 
-        if (btnAddIdea) btnAddIdea.style.display = '';
-        if (btnAddInfo) btnAddInfo.style.display = '';
-
-        // 로그인 및 승인됨 -> 정상 렌더링
+        // 공통 UI 요소 렌더링 (마스터 전용 버튼 등)
         const workHeroEditTrigger = document.getElementById('work-hero-img-edit-trigger');
         if (workHeroEditTrigger) {
             if (currentUserDoc && currentUserDoc.isMaster) {
@@ -358,15 +406,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 프로젝트 탭 복구는 페이지 새로고침 필요하므로 일단 UI 초기화
+        // 공통 렌더링 로직 재호출 (권한 있는 곳만 볼 수 있도록 각 함수 내부에서 권한을 재확인하거나 렌더링)
+        // 위에서 권한 있는 탭에 한해서 subscribe 함수들이 호출되므로 여기서는 제외함
         if (typeof renderWorkLinks === 'function') renderWorkLinks();
         if (typeof renderSchedules === 'function') renderSchedules();
         if (typeof renderPerformances === 'function') renderPerformances();
         if (window.renderWorkMembers) window.renderWorkMembers();
         if (typeof renderPsScheduler === 'function') renderPsScheduler();
         if (typeof renderNotices === 'function') renderNotices();
-        if (typeof window.subscribeIdeas === 'function') window.subscribeIdeas();
-        if (typeof window.subscribeInfo === 'function') window.subscribeInfo();
     }
 
     auth.onAuthStateChanged((user) => {
@@ -517,7 +564,106 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnMasterAdmin) {
         btnMasterAdmin.addEventListener('click', () => {
             masterAdminModal.classList.remove('hidden');
+            // 기본 탭 활성화
+            document.getElementById('tab-btn-master-users').click();
+        });
+    }
+
+    // 마스터 모달 탭 전환 로직
+    const tabBtnMasterUsers = document.getElementById('tab-btn-master-users');
+    const tabBtnMasterPerms = document.getElementById('tab-btn-master-perms');
+    const masterUsersSection = document.getElementById('master-users-section');
+    const masterPermsSection = document.getElementById('master-perms-section');
+
+    if (tabBtnMasterUsers && tabBtnMasterPerms) {
+        tabBtnMasterUsers.addEventListener('click', () => {
+            tabBtnMasterUsers.style.background = 'var(--primary-color)';
+            tabBtnMasterUsers.style.color = '#fff';
+            tabBtnMasterPerms.style.background = '#f1f2f6';
+            tabBtnMasterPerms.style.color = '#576574';
+            masterUsersSection.classList.remove('hidden');
+            masterPermsSection.classList.add('hidden');
             loadMasterApprovalList();
+        });
+
+        tabBtnMasterPerms.addEventListener('click', () => {
+            tabBtnMasterPerms.style.background = 'var(--primary-color)';
+            tabBtnMasterPerms.style.color = '#fff';
+            tabBtnMasterUsers.style.background = '#f1f2f6';
+            tabBtnMasterUsers.style.color = '#576574';
+            masterPermsSection.classList.remove('hidden');
+            masterUsersSection.classList.add('hidden');
+            loadMasterPermissionsList();
+        });
+    }
+
+    // 메뉴 권한 설정 로드
+    const TABS_INFO = [
+        { id: 'tab-schedule', name: '일정관리', icon: 'fa-calendar-check' },
+        { id: 'tab-performance', name: '개인성과', icon: 'fa-trophy' },
+        { id: 'tab-projects', name: '프로젝트', icon: 'fa-bars-progress' },
+        { id: 'tab-ideas', name: '아이디어', icon: 'fa-lightbulb' },
+        { id: 'tab-members', name: '구성원', icon: 'fa-users' },
+        { id: 'tab-info', name: '정보마당', icon: 'fa-newspaper' },
+        { id: 'tab-notice', name: '알림마당', icon: 'fa-bullhorn' },
+        { id: 'tab-bookmarks', name: '북마크', icon: 'fa-bookmark' }
+    ];
+
+    function loadMasterPermissionsList() {
+        const listEl = document.getElementById('master-permissions-list');
+        if (!listEl) return;
+        
+        listEl.innerHTML = '';
+        
+        TABS_INFO.forEach(tab => {
+            const currentPerm = tabPermissions[tab.id] || 'approval_required'; // 기본값
+            
+            const item = document.createElement('div');
+            item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e2e8f0;';
+            
+            item.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 30px; height: 30px; border-radius: 6px; background: var(--primary-color); color: white; display: flex; align-items: center; justify-content: center;">
+                        <i class="fa-solid ${tab.icon}"></i>
+                    </div>
+                    <span style="font-weight: bold; color: #2d3436;">${tab.name}</span>
+                </div>
+                <select id="perm-select-${tab.id}" style="padding: 8px; border-radius: 6px; border: 1px solid #ced4da; font-family: inherit; font-size: 0.85rem; color: #495057; outline: none; background: #fff;">
+                    <option value="public" ${currentPerm === 'public' ? 'selected' : ''}>전체 공개 (비로그인 가능)</option>
+                    <option value="login_only" ${currentPerm === 'login_only' ? 'selected' : ''}>로그인 필수</option>
+                    <option value="approval_required" ${currentPerm === 'approval_required' ? 'selected' : ''}>마스터 승인 회원 전용 (기본)</option>
+                </select>
+            `;
+            listEl.appendChild(item);
+        });
+    }
+
+    const btnSavePermissions = document.getElementById('btn-save-permissions');
+    if (btnSavePermissions) {
+        btnSavePermissions.addEventListener('click', () => {
+            const newPerms = {};
+            TABS_INFO.forEach(tab => {
+                const selectEl = document.getElementById(`perm-select-${tab.id}`);
+                if (selectEl) {
+                    newPerms[tab.id] = selectEl.value;
+                }
+            });
+            
+            btnSavePermissions.disabled = true;
+            btnSavePermissions.innerHTML = '저장 중...';
+            
+            db.collection('workSettings').doc('permissions').set(newPerms, { merge: true })
+                .then(() => {
+                    alert('권한 설정이 저장되었습니다.');
+                })
+                .catch(err => {
+                    console.error('권한 저장 오류:', err);
+                    alert('저장 중 오류가 발생했습니다.');
+                })
+                .finally(() => {
+                    btnSavePermissions.disabled = false;
+                    btnSavePermissions.innerHTML = '권한 설정 저장';
+                });
         });
     }
 

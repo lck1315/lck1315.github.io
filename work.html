@@ -448,10 +448,26 @@
     <div id="master-admin-modal" class="auth-modal-overlay hidden" style="z-index: 10000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center;">
         <div class="auth-modal-content" style="width: 90%; max-width: 650px; padding: 2.5rem; position: relative; background: #ffffff; color: #2d3436; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); border: 1px solid #e2e8f0;">
             <button class="modal-close-btn" style="position: absolute; right: 20px; top: 15px; font-size: 1.8rem; cursor: pointer; color: #2d3436; background: none; border: none;">&times;</button>
-            <h3 class="modal-title" style="color: #6c5ce7; font-size: 1.4rem; font-weight: 800; margin-bottom: 1.5rem;">👑 마스터 관리</h3>
-            <div id="master-approval-list" style="margin-top: 20px; max-height: 550px; overflow-y: auto;">
-                <p style="text-align: center; color: #636e72;">대기 중인 회원이 없습니다.</p>
+            <h3 class="modal-title" style="color: #6c5ce7; font-size: 1.4rem; font-weight: 800; margin-bottom: 1rem;">👑 마스터 관리</h3>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                <button id="tab-btn-master-users" class="btn" style="background: var(--primary-color); color: #fff; font-size: 0.9rem; padding: 6px 15px; border-radius: 20px; border: none; font-weight: bold;">회원 승인 관리</button>
+                <button id="tab-btn-master-perms" class="btn" style="background: #f1f2f6; color: #576574; font-size: 0.9rem; padding: 6px 15px; border-radius: 20px; border: none; font-weight: bold;">메뉴 권한 설정</button>
             </div>
+
+            <div id="master-users-section">
+                <div id="master-approval-list" style="max-height: 500px; overflow-y: auto;">
+                    <p style="text-align: center; color: #636e72;">대기 중인 회원이 없습니다.</p>
+                </div>
+            </div>
+
+            <div id="master-perms-section" class="hidden">
+                <div id="master-permissions-list" style="max-height: 500px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+                    <!-- JS로 동적 생성됨 -->
+                </div>
+                <button id="btn-save-permissions" class="btn btn-primary" style="width: 100%; margin-top: 15px; padding: 10px; font-weight: bold;">권한 설정 저장</button>
+            </div>
+
             <div
                 style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 20px; display: flex; justify-content: space-between; align-items: center;">
                 <button id="btn-master-logout" class="btn btn-secondary"
