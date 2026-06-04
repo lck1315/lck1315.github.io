@@ -2287,6 +2287,84 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const disabledAttr = !currentUser ? 'disabled' : '';
 
+            if (currentUser) {
+                tr.draggable = true;
+                tr.addEventListener('dragstart', (e) => {
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') {
+                        e.preventDefault();
+                        return;
+                    }
+                    e.dataTransfer.setData('text/plain', task.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                    tr.style.opacity = '0.5';
+                });
+                tr.addEventListener('dragend', (e) => {
+                    tr.style.opacity = '1';
+                    document.querySelectorAll('.ps-tree-row').forEach(r => {
+                        r.style.borderTop = '';
+                        r.style.borderBottom = '';
+                    });
+                });
+                tr.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    const rect = tr.getBoundingClientRect();
+                    const mid = rect.top + rect.height / 2;
+                    if (e.clientY < mid) {
+                        tr.style.borderTop = '2px solid var(--primary-color)';
+                        tr.style.borderBottom = '';
+                    } else {
+                        tr.style.borderBottom = '2px solid var(--primary-color)';
+                        tr.style.borderTop = '';
+                    }
+                });
+                tr.addEventListener('dragleave', (e) => {
+                    tr.style.borderTop = '';
+                    tr.style.borderBottom = '';
+                });
+                tr.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    tr.style.borderTop = '';
+                    tr.style.borderBottom = '';
+                    const draggedId = e.dataTransfer.getData('text/plain');
+                    if (!draggedId || draggedId === task.id) return;
+                    
+                    const draggedTask = psData.find(p => p.id === draggedId);
+                    const targetTask = task;
+                    
+                    if (draggedTask.parentId !== targetTask.parentId) {
+                        alert('동일한 상위 항목(같은 레벨) 내에서만 순서를 변경할 수 있습니다.');
+                        return;
+                    }
+                    
+                    const siblings = psData.filter(p => p.parentId === targetTask.parentId).sort((a,b) => a.order - b.order);
+                    const draggedIdx = siblings.findIndex(p => p.id === draggedId);
+                    
+                    const rect = tr.getBoundingClientRect();
+                    const mid = rect.top + rect.height / 2;
+                    const insertAfter = e.clientY >= mid;
+                    
+                    siblings.splice(draggedIdx, 1);
+                    
+                    let newTargetIdx = siblings.findIndex(p => p.id === targetTask.id);
+                    if (insertAfter) newTargetIdx++;
+                    
+                    siblings.splice(newTargetIdx, 0, draggedTask);
+                    
+                    const batch = db.batch();
+                    siblings.forEach((sib, idx) => {
+                        sib.order = idx + 1;
+                        batch.update(db.collection('workProjects').doc(sib.id), { order: sib.order });
+                    });
+                    
+                    try {
+                        await batch.commit();
+                    } catch(err) {
+                        console.error('Order update failed:', err);
+                    }
+                });
+            }
+
             tr.innerHTML = `
                 <div class="ps-col-0">${globalIndex}</div>
                 <div class="ps-col-1" style="padding-left: ${10 + level * 20}px; display: flex; align-items: center; padding-right: 5px;">
