@@ -4120,10 +4120,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        // 로그인 상태 변경 감지하여 구독 관리
-        auth.onAuthStateChanged(user => {
-            subscribeIdeas();
-        });
+        // 구독은 renderRestrictedContent()에서 관리
     }
     initIdeasLogic();
 
@@ -4365,9 +4362,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        auth.onAuthStateChanged(user => {
-            subscribeInfo();
-        });
+        // 구독은 renderRestrictedContent()에서 관리
     }
     initInfoLogic();
 
