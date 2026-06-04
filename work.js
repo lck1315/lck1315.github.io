@@ -4002,7 +4002,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 아이디어 실시간 목록 렌더링
         function subscribeIdeas() {
-            if (ideasUnsubscribe) ideasUnsubscribe();
+            if (ideasUnsubscribe) {
+                ideasUnsubscribe();
+                ideasUnsubscribe = null;
+            }
+            if (!currentUser || !currentUserDoc || !currentUserDoc.isApproved) {
+                return;
+            }
             
             ideasUnsubscribe = db.collection('workIdeas')
                 .orderBy('createdAt', 'desc')
@@ -4231,7 +4237,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         function subscribeInfo() {
-            if (infoUnsubscribe) infoUnsubscribe();
+            if (infoUnsubscribe) {
+                infoUnsubscribe();
+                infoUnsubscribe = null;
+            }
+            if (!currentUser || !currentUserDoc || !currentUserDoc.isApproved) {
+                return;
+            }
             
             infoUnsubscribe = db.collection('workInfo')
                 .onSnapshot(snapshot => {
