@@ -4551,10 +4551,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // 분류 뱃지 색상 및 텍스트 설정
         viewBadge.innerText = categoryName;
         if (categoryName === '아이디어') {
-            viewBadge.style.background = 'rgba(245, 158, 11, 0.15)';
-            viewBadge.style.color = '#f59e0b';
-            viewBadge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
-            viewAvatar.style.background = '#f59e0b';
+            viewBadge.style.background = 'rgba(108, 92, 231, 0.15)';
+            viewBadge.style.color = '#6c5ce7';
+            viewBadge.style.borderColor = 'rgba(108, 92, 231, 0.3)';
+            viewAvatar.style.background = '#6c5ce7';
         } else if (categoryName === '정보마당') {
             viewBadge.style.background = 'rgba(74, 105, 189, 0.15)';
             viewBadge.style.color = '#4a69bd';
