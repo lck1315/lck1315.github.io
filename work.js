@@ -243,12 +243,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderRestrictedContent() {
         const psApp = document.querySelector('.ps-desktop-app');
         const psLock = document.getElementById('ps-auth-lock');
+        const btnAddIdea = document.getElementById('btn-add-idea');
+        const btnAddInfo = document.getElementById('btn-add-info');
 
         if (!currentUser || !currentUserDoc || !currentUserDoc.isApproved) {
             showAuthRequiredMessage('work-content-container');
             showAuthRequiredMessage('schedule-content-container');
             showAuthRequiredMessage('performance-content-container');
             showAuthRequiredMessage('members-content-container');
+            showAuthRequiredMessage('ideas-grid');
+            showAuthRequiredMessage('info-grid');
+            
+            if (btnAddIdea) btnAddIdea.style.display = 'none';
+            if (btnAddInfo) btnAddInfo.style.display = 'none';
             
             // 프로젝트 탭은 .ps-desktop-app을 숨기고, #ps-auth-lock을 노출
             if (psApp) psApp.style.setProperty('display', 'none', 'important');
@@ -269,6 +276,9 @@ document.addEventListener('DOMContentLoaded', () => {
             psLock.classList.add('hidden');
             psLock.innerHTML = '';
         }
+
+        if (btnAddIdea) btnAddIdea.style.display = '';
+        if (btnAddInfo) btnAddInfo.style.display = '';
 
         // 로그인 및 승인됨 -> 정상 렌더링
         const workHeroEditTrigger = document.getElementById('work-hero-img-edit-trigger');
@@ -296,6 +306,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.renderWorkMembers) window.renderWorkMembers();
         if (typeof renderPsScheduler === 'function') renderPsScheduler();
         if (typeof renderNotices === 'function') renderNotices();
+        if (typeof window.subscribeIdeas === 'function') window.subscribeIdeas();
+        if (typeof window.subscribeInfo === 'function') window.subscribeInfo();
     }
 
     auth.onAuthStateChanged((user) => {
@@ -4055,6 +4067,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error("Error fetching ideas:", error);
                 });
         }
+        window.subscribeIdeas = subscribeIdeas;
 
         // 로그인 상태 변경 감지하여 구독 관리
         auth.onAuthStateChanged(user => {
@@ -4287,6 +4300,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error("Error fetching info:", error);
                 });
         }
+        window.subscribeInfo = subscribeInfo;
 
         auth.onAuthStateChanged(user => {
             subscribeInfo();
