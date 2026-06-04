@@ -248,12 +248,43 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const overlay = document.createElement('div');
         overlay.className = 'tab-lock-overlay';
-        overlay.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; min-height: 500px; background: #f8f9fa; z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 50px; border-radius: 12px; border: 1px solid #e2e8f0; box-sizing: border-box;';
+        overlay.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; min-height: 450px; background: linear-gradient(135deg, #f5f7fa 0%, #f0f2f8 50%, #f5f7fa 100%); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; box-sizing: border-box; overflow: hidden;';
+        
+        // 장식용 점/선 배경 생성
+        const dots = [];
+        const colors = ['rgba(255, 71, 87, 0.15)', 'rgba(108, 92, 231, 0.12)', 'rgba(0, 206, 201, 0.12)', 'rgba(253, 203, 110, 0.15)', 'rgba(108, 92, 231, 0.08)'];
+        const positions = [
+            {x: '10%', y: '20%', size: 10}, {x: '25%', y: '35%', size: 6}, {x: '15%', y: '65%', size: 8},
+            {x: '75%', y: '25%', size: 7}, {x: '85%', y: '50%', size: 10}, {x: '70%', y: '70%', size: 5},
+            {x: '40%', y: '15%', size: 5}, {x: '60%', y: '80%', size: 8}, {x: '90%', y: '35%', size: 6},
+            {x: '5%', y: '45%', size: 7}
+        ];
+        let dotsHTML = '';
+        positions.forEach((pos, i) => {
+            dotsHTML += `<div style="position:absolute; left:${pos.x}; top:${pos.y}; width:${pos.size}px; height:${pos.size}px; border-radius:50%; background:${colors[i % colors.length]}; pointer-events:none;"></div>`;
+        });
+        
+        // 장식용 선 생성
+        const linesHTML = `
+            <svg style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; opacity:0.08;" xmlns="http://www.w3.org/2000/svg">
+                <line x1="5%" y1="30%" x2="30%" y2="50%" stroke="#6c5ce7" stroke-width="1"/>
+                <line x1="30%" y1="50%" x2="20%" y2="75%" stroke="#6c5ce7" stroke-width="1"/>
+                <line x1="70%" y1="20%" x2="90%" y2="45%" stroke="#6c5ce7" stroke-width="1"/>
+                <line x1="60%" y1="65%" x2="85%" y2="55%" stroke="#6c5ce7" stroke-width="1"/>
+                <line x1="15%" y1="25%" x2="40%" y2="18%" stroke="#00cec9" stroke-width="1"/>
+                <line x1="75%" y1="70%" x2="55%" y2="80%" stroke="#00cec9" stroke-width="1"/>
+            </svg>
+        `;
+        
         overlay.innerHTML = `
-            <div style="color: #2d3436;">
-                <i class="fa-solid fa-lock" style="font-size: 3rem; margin-bottom: 20px; color: #ff4757;"></i>
-                <h3 style="font-size: 1.8rem; font-weight: 700; margin-bottom: 10px; color: #2d3436;">접근 권한이 없습니다</h3>
-                <p style="color: #636e72; font-size: 1rem; margin: 0;">내용을 보려면 로그인 및 마스터의 승인이 필요합니다.</p>
+            ${dotsHTML}
+            ${linesHTML}
+            <div style="position:relative; z-index:2; display:flex; flex-direction:column; align-items:center;">
+                <div style="width:64px; height:64px; border-radius:16px; background:linear-gradient(135deg, #ff4757, #ff6b81); display:flex; align-items:center; justify-content:center; margin-bottom:24px; box-shadow: 0 8px 24px rgba(255,71,87,0.25);">
+                    <i class="fa-solid fa-lock" style="font-size: 1.6rem; color: white;"></i>
+                </div>
+                <h3 style="font-size: 1.6rem; font-weight: 800; margin: 0 0 12px 0; color: #2d3436; letter-spacing: -0.5px;">접근 권한이 없습니다</h3>
+                <p style="color: #636e72; font-size: 0.95rem; margin: 0; line-height: 1.6;">내용을 보려면 로그인 및 마스터의 승인이 필요합니다.</p>
             </div>
         `;
         
@@ -295,16 +326,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof window.unsubscribeIdeas === 'function') window.unsubscribeIdeas();
             if (typeof window.unsubscribeInfo === 'function') window.unsubscribeInfo();
             
-            // 프로젝트 탭은 .ps-desktop-app을 숨기고, #ps-auth-lock을 노출
+            // 프로젝트 탭은 .ps-desktop-app을 숨기고
             if (psApp) psApp.style.setProperty('display', 'none', 'important');
-            if (psLock) {
-                psLock.classList.remove('hidden');
-                psLock.innerHTML = `<div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:300px; color: var(--text-muted);">
-                    <i class="fa-solid fa-lock" style="font-size: 3rem; margin-bottom: 20px; color: #ff4757;"></i>
-                    <h3 style="font-size: 1.5rem; margin-bottom: 10px;">접근 권한이 없습니다</h3>
-                    <p>내용을 보려면 로그인 및 마스터의 승인이 필요합니다.</p>
-                </div>`;
-            }
             return;
         }
 
