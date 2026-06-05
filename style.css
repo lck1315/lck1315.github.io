@@ -2702,7 +2702,7 @@ main:has(#tab-projects.active) {
 .ps-left-tool-btn:hover { background-color: #f1f3f5; border-color: #adb5bd; }
 
 .ps-tree-header {
-    height: 200px;
+    height: 125px;
     background-color: #f0f0f0;
     border-bottom: 1px solid #d0d0d0;
     display: flex;
@@ -2717,8 +2717,8 @@ main:has(#tab-projects.active) {
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    padding-bottom: 15px;
-    font-size: 14px;
+    padding-bottom: 5px;
+    font-size: 13px;
     font-weight: bold;
     color: #333;
     flex-shrink: 0;
@@ -2847,7 +2847,7 @@ main:has(#tab-projects.active) {
 }
 
 .ps-gantt-header {
-    height: 200px;
+    height: 125px;
     background-color: #f8f9fa;
     position: sticky;
     top: 0;
@@ -2858,9 +2858,9 @@ main:has(#tab-projects.active) {
 /* 5 tiers of header: Year(40px), Week(40px), Month(40px), Day(40px), Weekday(40px) */
 .ps-gantt-header-row {
     display: flex;
-    height: 40px;
-    min-height: 40px;
-    max-height: 40px;
+    height: 25px;
+    min-height: 25px;
+    max-height: 25px;
     border-bottom: 1px solid #d0d0d0;
     overflow: hidden;
 }
@@ -2869,7 +2869,7 @@ main:has(#tab-projects.active) {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 11px;
     font-weight: bold;
     border-right: 1px solid #d0d0d0;
     color: #333;
