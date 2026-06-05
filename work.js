@@ -4331,17 +4331,48 @@ document.addEventListener('DOMContentLoaded', () => {
             hallDiv.onclick = () => selectMember('public_hall', '전체 광장 채팅방', '모든 멤버 수다방', hallDiv);
             listEl.appendChild(hallDiv);
 
-            if(snapshot.empty) {
+            // 2. 내 정보 가져오기 및 본인 필터링
+            const myProfileContainer = document.getElementById('my-profile-container');
+            const myUid = auth.currentUser ? auth.currentUser.uid : null;
+            let myInfo = null;
+
+            const usersList = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                if (myUid && doc.id === myUid) {
+                    myInfo = { id: doc.id, data: data };
+                } else {
+                    usersList.push({ id: doc.id, data: data });
+                }
+            });
+
+            // 내 정보 상단 렌더링
+            if (myInfo && myProfileContainer) {
+                const isMaster = myInfo.data.isMaster === true;
+                const nickname = myInfo.data.nickname || '이름 없음';
+                const dept = myInfo.data.dept || '';
+                
+                myProfileContainer.style.display = 'flex';
+                myProfileContainer.innerHTML = `
+                    <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary-color, #6b46c1); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px;"><i class="fa-solid fa-user-check"></i></div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 700; color: #333; font-size: 0.9rem; display: flex; align-items: center; gap: 4px; line-height: 1.2;">
+                            <span style="color: #888; font-size: 0.8rem; font-weight: normal;">나:</span> ${nickname}${isMaster ? ' 👑' : ''}
+                        </div>
+                        ${dept ? `<div style="font-size: 0.75rem; color: #777; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;">${dept}</div>` : ''}
+                    </div>
+                `;
+            } else if (myProfileContainer) {
+                myProfileContainer.style.display = 'none';
+                myProfileContainer.innerHTML = '';
+            }
+
+            if(usersList.length === 0) {
                 if (currentSelectedMemberId === 'public_hall') {
                     selectMember('public_hall', '전체 광장 채팅방', '모든 멤버 수다방', hallDiv);
                 }
                 return;
             }
-            
-            const usersList = [];
-            snapshot.forEach(doc => {
-                usersList.push({ id: doc.id, data: doc.data() });
-            });
             
             usersList.sort((a, b) => {
                 const ta = a.data.createdAt ? a.data.createdAt.toMillis() : 0;

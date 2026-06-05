@@ -630,8 +630,12 @@
                     <div id="members-content-container" style="display: flex; gap: 20px; height: calc(100vh - 120px); max-width: 1200px; margin: 0 auto;">
                         <!-- Left: Member List -->
                         <div style="flex: 1; max-width: 300px; background: #fff; border: 1px solid var(--card-border); border-radius: 12px; display: flex; flex-direction: column;">
-                            <div style="padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
-                                <h3 style="font-weight: bold; margin: 0; font-size: 1.1rem;"><i class="fa-solid fa-users"></i> 구성원</h3>
+                            <div style="padding: 15px; border-bottom: 1px solid #eee; display: flex; flex-direction: column; gap: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <h3 style="font-weight: bold; margin: 0; font-size: 1.1rem; color: #2d3436;"><i class="fa-solid fa-users" style="color: var(--primary-color);"></i> 구성원</h3>
+                                </div>
+                                <!-- 로그인한 유저 본인 프로필 영역 -->
+                                <div id="my-profile-container" style="display: none; padding: 8px 12px; background: rgba(108, 92, 231, 0.06); border-radius: 8px; border: 1px dashed rgba(108, 92, 231, 0.2); align-items: center; gap: 10px; margin-top: 5px;"></div>
                             </div>
                             <div id="member-list" style="flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 5px;">
                                 <!-- 동적 생성 -->
