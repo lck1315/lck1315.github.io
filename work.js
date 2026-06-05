@@ -2093,11 +2093,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (parentTask) {
                 parentId = parentTask.parentId ? parentTask.parentId : parentTask.id;
             }
-        }
-        
-        const newTask = { ...psCopiedTask };
-        newTask.parentId = parentId;
-        newTask.name = newTask.name + ' (복사본)';
         newTask.order = Date.now();
         newTask.createdAt = firebase.firestore.FieldValue.serverTimestamp();
         
@@ -2183,9 +2178,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const displayEndMonth = psDisplayEndMonth;
 
         // --- 1. Gantt Header & Grid ---
-        const isLeapYear = (displayStartYear % 4 === 0 && displayStartYear % 100 !== 0) || (displayStartYear % 400 === 0);
-        const daysInMonth = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-        
         let headerHtml = `
             <div class="ps-gantt-header-row" id="gh-years"></div>
             <div class="ps-gantt-header-row" id="gh-weeks"></div>
@@ -2221,6 +2213,17 @@ document.addEventListener('DOMContentLoaded', () => {
         let yearGroupDays = 0;
         let yearGroupYear = currentYear;
         
+        // 연속된 주차 계산용 변수 (ISO 주차 기준)
+        let daysInCurrentWeek = 0;
+        let currentWeekNum = 0;
+        
+        function getISOWeekNum(year, month, day) {
+            const date = new Date(Date.UTC(year, month, day));
+            date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+            const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+            return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+        }
+        
         while (currentYear < displayEndYear || (currentYear === displayEndYear && currentMonth <= displayEndMonth)) {
             const mDays = daysInMonthFunc(currentYear, currentMonth);
             
@@ -2233,7 +2236,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 yDiv.style.fontWeight = 'bold';
                 yDiv.style.background = 'var(--primary-color)';
                 yDiv.style.color = '#fff';
-                yDiv.innerText = `${yearGroupYear}년`;
+                // 텍스트가 왼쪽에서 고정되어 보이도록 처리
+                yDiv.style.justifyContent = 'flex-start';
+                yDiv.innerHTML = `<span style="position: sticky; left: 12px; display: inline-block; padding: 4px 0;">${yearGroupYear}년</span>`;
                 ghYears.appendChild(yDiv);
                 yearGroupDays = 0;
                 yearGroupYear = currentYear;
@@ -2318,16 +2323,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 totalDays++;
                 
-                // 월 기준 주차 계산: 일요일마다 주차 마감, 마지막 날도 마감
+                // --- 주차(Week of the Year) 처리 ---
+                if (daysInCurrentWeek === 0) {
+                    currentWeekNum = getISOWeekNum(currentYear, currentMonth, d);
+                }
                 daysInCurrentWeek++;
-                const isLastDayOfMonth = (d === mDays);
-                if (dayOfWeek === 0 || isLastDayOfMonth) {
-                    monthWeekCount++;
+                
+                const isLastDayOfChart = (currentYear === displayEndYear && currentMonth === displayEndMonth && d === mDays);
+                
+                // 일요일(0)이거나 차트의 완전한 마지막 날일 때 주차 블록 마감
+                if (dayOfWeek === 0 || isLastDayOfChart) {
                     const wDiv = document.createElement('div');
                     wDiv.className = 'ps-gh-cell';
                     wDiv.style.width = `${daysInCurrentWeek * psDayWidth}px`;
                     wDiv.style.minWidth = `${daysInCurrentWeek * psDayWidth}px`;
-                    wDiv.innerText = `${monthWeekCount}주차`;
+                    wDiv.innerText = `${currentWeekNum}주차`;
                     ghWeeks.appendChild(wDiv);
                     daysInCurrentWeek = 0;
                 }

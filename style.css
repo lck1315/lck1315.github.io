@@ -2702,7 +2702,7 @@ main:has(#tab-projects.active) {
 .ps-left-tool-btn:hover { background-color: #f1f3f5; border-color: #adb5bd; }
 
 .ps-tree-header {
-    height: 160px;
+    height: 200px;
     background-color: #f0f0f0;
     border-bottom: 1px solid #d0d0d0;
     display: flex;
@@ -2847,18 +2847,22 @@ main:has(#tab-projects.active) {
 }
 
 .ps-gantt-header {
-    height: 160px;
+    height: 200px;
     background-color: #f8f9fa;
     position: sticky;
     top: 0;
     z-index: 20;
+    overflow: hidden;
 }
 
-/* 4 tiers of header: Week(40px), Month(40px), Day(40px), Weekday(40px) */
+/* 5 tiers of header: Year(40px), Week(40px), Month(40px), Day(40px), Weekday(40px) */
 .ps-gantt-header-row {
     display: flex;
     height: 40px;
+    min-height: 40px;
+    max-height: 40px;
     border-bottom: 1px solid #d0d0d0;
+    overflow: hidden;
 }
 
 .ps-gh-cell {
