@@ -2187,6 +2187,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const daysInMonth = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
         
         let headerHtml = `
+            <div class="ps-gantt-header-row" id="gh-years"></div>
             <div class="ps-gantt-header-row" id="gh-weeks"></div>
             <div class="ps-gantt-header-row" id="gh-months"></div>
             <div class="ps-gantt-header-row" id="gh-days"></div>
@@ -2194,6 +2195,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         ganttHeader.innerHTML = headerHtml;
         
+        const ghYears = document.getElementById('gh-years');
         const ghWeeks = document.getElementById('gh-weeks');
         const ghMonths = document.getElementById('gh-months');
         const ghDays = document.getElementById('gh-days');
@@ -2205,8 +2207,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const weekdaysStr = ['일', '월', '화', '수', '목', '금', '토'];
         
         let totalDays = 0;
-        let currentWeekCount = 0;
-        let daysInCurrentWeek = 0;
         
         // Generate months and days based on date range
         const daysInMonthFunc = (year, month) => {
@@ -2216,10 +2216,30 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let currentYear = displayStartYear;
         let currentMonth = displayStartMonth;
+
+        // 년도별 colspan 계산용
+        let yearGroupDays = 0;
+        let yearGroupYear = currentYear;
         
         while (currentYear < displayEndYear || (currentYear === displayEndYear && currentMonth <= displayEndMonth)) {
             const mDays = daysInMonthFunc(currentYear, currentMonth);
             
+            // 년도가 바뀌면 이전 년도 그룹 마무리
+            if (currentYear !== yearGroupYear) {
+                const yDiv = document.createElement('div');
+                yDiv.className = 'ps-gh-cell';
+                yDiv.style.width = `${yearGroupDays * psDayWidth}px`;
+                yDiv.style.minWidth = `${yearGroupDays * psDayWidth}px`;
+                yDiv.style.fontWeight = 'bold';
+                yDiv.style.background = 'var(--primary-color)';
+                yDiv.style.color = '#fff';
+                yDiv.innerText = `${yearGroupYear}년`;
+                ghYears.appendChild(yDiv);
+                yearGroupDays = 0;
+                yearGroupYear = currentYear;
+            }
+            yearGroupDays += mDays;
+
             // Month
             const mDiv = document.createElement('div');
             mDiv.className = 'ps-gh-cell';
@@ -2227,6 +2247,10 @@ document.addEventListener('DOMContentLoaded', () => {
             mDiv.style.minWidth = `${mDays * psDayWidth}px`;
             mDiv.innerText = `${currentMonth + 1}월`;
             ghMonths.appendChild(mDiv);
+            
+            // 이 달의 주차를 1주차부터 계산
+            let monthWeekCount = 0;
+            let daysInCurrentWeek = 0;
             
             for (let d = 1; d <= mDays; d++) {
                 const dayDate = new Date(currentYear, currentMonth, d);
@@ -2292,18 +2316,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 bgGrid.appendChild(gridLine);
                 
-                // Weeks calculation (roughly matching PyQt ISO week, simplified)
                 totalDays++;
                 
-                // Weeks calculation
+                // 월 기준 주차 계산: 일요일마다 주차 마감, 마지막 날도 마감
                 daysInCurrentWeek++;
-                if (dayOfWeek === 0 || (currentMonth === displayEndMonth && currentYear === displayEndYear && d === daysInMonthFunc(currentYear, currentMonth))) {
-                    currentWeekCount++;
+                const isLastDayOfMonth = (d === mDays);
+                if (dayOfWeek === 0 || isLastDayOfMonth) {
+                    monthWeekCount++;
                     const wDiv = document.createElement('div');
                     wDiv.className = 'ps-gh-cell';
                     wDiv.style.width = `${daysInCurrentWeek * psDayWidth}px`;
                     wDiv.style.minWidth = `${daysInCurrentWeek * psDayWidth}px`;
-                    wDiv.innerText = `${currentWeekCount}주차`;
+                    wDiv.innerText = `${monthWeekCount}주차`;
                     ghWeeks.appendChild(wDiv);
                     daysInCurrentWeek = 0;
                 }
@@ -2315,6 +2339,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentMonth = 0;
                 currentYear++;
             }
+        }
+
+        // 마지막 년도 그룹 마무리
+        if (yearGroupDays > 0) {
+            const yDiv = document.createElement('div');
+            yDiv.className = 'ps-gh-cell';
+            yDiv.style.width = `${yearGroupDays * psDayWidth}px`;
+            yDiv.style.minWidth = `${yearGroupDays * psDayWidth}px`;
+            yDiv.style.fontWeight = 'bold';
+            yDiv.style.background = 'var(--primary-color)';
+            yDiv.style.color = '#fff';
+            yDiv.innerText = `${yearGroupYear}년`;
+            ghYears.appendChild(yDiv);
         }
 
         // 헤더와 바디의 가로 폭을 전체 스케줄 너비로 명시적으로 설정하여 가로 스크롤 가능 범위를 확보합니다.
@@ -3500,6 +3537,207 @@ document.addEventListener('DOMContentLoaded', () => {
             reader.readAsText(file);
         });
     }
+    // ====================================================
+    // ☁️ 클라우드 백업 (Firestore workProjectBackups)
+    // ====================================================
+    (function initBackupLogic() {
+        const backupModal      = document.getElementById('ps-backup-modal');
+        const backupModalClose = document.getElementById('ps-backup-modal-close');
+        const backupManageBtn  = document.getElementById('ps-btn-backup-manage');
+        const backupSaveBtn    = document.getElementById('ps-backup-save-btn');
+        const backupNameInput  = document.getElementById('ps-backup-name-input');
+        const backupList       = document.getElementById('ps-backup-list');
+        const backupCount      = document.getElementById('ps-backup-count');
+        const restoreConfirm   = document.getElementById('ps-backup-restore-confirm');
+        const restoreNameEl    = document.getElementById('ps-backup-restore-name');
+        const restoreOkBtn     = document.getElementById('ps-backup-restore-ok');
+        const restoreCancelBtn = document.getElementById('ps-backup-restore-cancel');
+
+        if (!backupModal || !backupManageBtn) return;
+
+        let pendingRestoreId = null; // 복원 대기 중인 백업 ID
+
+        // ── 모달 열기/닫기 ──────────────────────────────
+        backupManageBtn.addEventListener('click', () => {
+            if (!currentUser) { alert('로그인이 필요합니다.'); return; }
+            backupModal.classList.remove('hidden');
+            loadBackupList();
+        });
+        backupModalClose.addEventListener('click', () => backupModal.classList.add('hidden'));
+        backupModal.addEventListener('click', e => { if (e.target === backupModal) backupModal.classList.add('hidden'); });
+
+        // ── 복원 확인 모달 ────────────────────────────────
+        restoreCancelBtn?.addEventListener('click', () => {
+            restoreConfirm.classList.add('hidden');
+            pendingRestoreId = null;
+        });
+        restoreOkBtn?.addEventListener('click', async () => {
+            if (!pendingRestoreId) return;
+            restoreOkBtn.disabled = true;
+            restoreOkBtn.textContent = '복원 중...';
+            try {
+                await doRestore(pendingRestoreId);
+                restoreConfirm.classList.add('hidden');
+                backupModal.classList.add('hidden');
+                alert('✅ 백업이 성공적으로 복원되었습니다!');
+            } catch (e) {
+                alert('복원 실패: ' + e.message);
+            } finally {
+                restoreOkBtn.disabled = false;
+                restoreOkBtn.textContent = '복원하기';
+                pendingRestoreId = null;
+            }
+        });
+
+        // ── 현재 데이터를 Firestore에 백업 저장 ──────────
+        backupSaveBtn.addEventListener('click', async () => {
+            if (!currentUser) { alert('로그인이 필요합니다.'); return; }
+            if (psData.length === 0) { alert('백업할 프로젝트 데이터가 없습니다.'); return; }
+
+            const name = (backupNameInput.value.trim()) || `백업 ${new Date().toLocaleString('ko-KR')}`;
+            backupSaveBtn.disabled = true;
+            backupSaveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...';
+
+            try {
+                // psData를 중첩 구조로 변환
+                const rootItems = psData.filter(p => !p.parentId).sort((a,b) => a.order - b.order);
+                function buildChildren(parentId) {
+                    return psData.filter(p => p.parentId === parentId)
+                        .sort((a,b) => a.order - b.order)
+                        .map(child => ({ ...child, children: buildChildren(child.id) }));
+                }
+                const nested = rootItems.map(r => ({ ...r, children: buildChildren(r.id) }));
+
+                await db.collection('workProjectBackups').add({
+                    name: name,
+                    year: psYear,
+                    data: nested,
+                    itemCount: psData.length,
+                    createdBy: currentUserDoc?.nickname || currentUser.email,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                backupNameInput.value = '';
+                alert(`✅ "${name}" 백업이 저장되었습니다!`);
+                loadBackupList();
+            } catch (e) {
+                alert('백업 저장 실패: ' + e.message);
+            } finally {
+                backupSaveBtn.disabled = false;
+                backupSaveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 지금 백업';
+            }
+        });
+
+        // ── 백업 목록 불러오기 ───────────────────────────
+        async function loadBackupList() {
+            if (!backupList) return;
+            backupList.innerHTML = '<div style="text-align:center; padding:24px; color:var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> 불러오는 중...</div>';
+            try {
+                const snap = await db.collection('workProjectBackups').orderBy('createdAt', 'desc').get();
+                if (snap.empty) {
+                    backupList.innerHTML = '<div style="text-align:center; padding:24px; color:var(--text-muted);"><i class="fa-solid fa-cloud-slash" style="font-size:2rem; display:block; margin-bottom:8px;"></i>저장된 백업이 없습니다.</div>';
+                    if (backupCount) backupCount.textContent = '0개';
+                    return;
+                }
+                if (backupCount) backupCount.textContent = `${snap.size}개`;
+                backupList.innerHTML = '';
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    const dateStr = d.createdAt ? new Date(d.createdAt.toDate()).toLocaleString('ko-KR') : '';
+                    const card = document.createElement('div');
+                    card.style.cssText = `background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; transition: box-shadow 0.2s;`;
+                    card.innerHTML = `
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:700; color:var(--text-color); font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                <i class="fa-solid fa-database" style="color:#6c5ce7; margin-right:6px;"></i>${d.name || '이름 없음'}
+                            </div>
+                            <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px; display:flex; gap:12px; flex-wrap:wrap;">
+                                <span><i class="fa-regular fa-clock"></i> ${dateStr}</span>
+                                <span><i class="fa-solid fa-list-check"></i> ${d.itemCount || '?'}개 항목</span>
+                                <span><i class="fa-solid fa-calendar"></i> ${d.year || ''}년</span>
+                                <span><i class="fa-solid fa-user"></i> ${d.createdBy || ''}</span>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px; flex-shrink:0;">
+                            <button class="btn-restore-backup" data-id="${doc.id}" data-name="${(d.name||'').replace(/"/g,'')}" style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:600; white-space:nowrap;">
+                                <i class="fa-solid fa-rotate-left"></i> 복원
+                            </button>
+                            <button class="btn-delete-backup" data-id="${doc.id}" style="background:transparent; color:#ff4757; border:1px solid #ff4757; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.82rem; white-space:nowrap;">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                    backupList.appendChild(card);
+                });
+
+                // 복원 버튼
+                backupList.querySelectorAll('.btn-restore-backup').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        pendingRestoreId = btn.dataset.id;
+                        if (restoreNameEl) restoreNameEl.textContent = `"${btn.dataset.name}"`;
+                        restoreConfirm?.classList.remove('hidden');
+                    });
+                });
+                // 삭제 버튼
+                backupList.querySelectorAll('.btn-delete-backup').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        if (!confirm('이 백업을 삭제하시겠습니까?')) return;
+                        await db.collection('workProjectBackups').doc(btn.dataset.id).delete();
+                        loadBackupList();
+                    });
+                });
+            } catch (e) {
+                backupList.innerHTML = `<div style="text-align:center; padding:24px; color:#ff4757;">오류: ${e.message}</div>`;
+            }
+        }
+
+        // ── 실제 복원 실행 ───────────────────────────────
+        async function doRestore(backupId) {
+            const doc = await db.collection('workProjectBackups').doc(backupId).get();
+            if (!doc.exists) throw new Error('백업 데이터를 찾을 수 없습니다.');
+            const bData = doc.data();
+
+            const batch = db.batch();
+            // 기존 데이터 삭제
+            const snap = await db.collection('workProjects').get();
+            snap.docs.forEach(d => batch.delete(d.ref));
+
+            // 중첩 데이터 평면화해서 저장
+            let orderCounter = 0;
+            function flattenAndSave(items, parentId) {
+                items.forEach(item => {
+                    orderCounter += 1000;
+                    const children = item.children || [];
+                    const docId = item.id || db.collection('workProjects').doc().id;
+                    const flatItem = {
+                        parentId: parentId,
+                        name: item.name || '',
+                        assignee: item.assignee || '',
+                        status: item.status || '대기중',
+                        startDate: item.startDate || '',
+                        endDate: item.endDate || '',
+                        expanded: item.expanded ?? true,
+                        color: item.color || (parentId ? '#e0f7fa' : '#fffacd'),
+                        order: orderCounter,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    batch.set(db.collection('workProjects').doc(docId), flatItem);
+                    if (children.length > 0) flattenAndSave(children, docId);
+                });
+            }
+            flattenAndSave(bData.data || [], null);
+
+            if (bData.year) {
+                psYear = bData.year;
+                const yearInput = document.getElementById('ps-year');
+                if (yearInput) yearInput.value = psYear;
+            }
+
+            await batch.commit();
+            renderPsScheduler();
+        }
+    })();
+
     // ====================================================
     // 프로젝트 엑셀 출력 (CSV 변환)
     // ====================================================

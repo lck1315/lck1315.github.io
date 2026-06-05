@@ -922,6 +922,7 @@
                         <button class="ps-tool-btn" id="ps-btn-excel-selected"><i class="fa-solid fa-file-export"></i> 선택 엑셀 출력</button>
                         <button class="ps-tool-btn" id="ps-btn-export-file"><i class="fa-solid fa-download"></i> 내보내기</button>
                         <button class="ps-tool-btn" id="ps-btn-import-file"><i class="fa-solid fa-upload"></i> 불러오기</button>
+                        <button class="ps-tool-btn" id="ps-btn-backup-manage" style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); color:#fff; border:none;"><i class="fa-solid fa-cloud-arrow-up"></i> 클라우드 백업</button>
                         <input type="file" id="ps-file-input" style="display:none;" accept=".json">
                         <div style="flex:1;"></div>
                         <button class="ps-tool-btn" id="ps-btn-today"><i class="fa-solid fa-calendar-day"></i> 오늘로
@@ -1477,8 +1478,55 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
+    <!-- 클라우드 백업 모달 -->
+    <div id="ps-backup-modal" class="auth-modal-overlay hidden" style="z-index: 9999;">
+        <div class="auth-modal" style="max-width: 700px; width: 95%; max-height: 85vh; display: flex; flex-direction: column; padding: 0; border-radius: 16px; overflow: hidden;">
+            <!-- 헤더 -->
+            <div style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: #fff;"><i class="fa-solid fa-cloud-arrow-up"></i> 클라우드 백업 관리</h3>
+                    <p style="margin: 4px 0 0; font-size: 0.82rem; color: rgba(255,255,255,0.8);">프로젝트 데이터를 클라우드에 저장하고 언제든지 복원할 수 있습니다.</p>
+                </div>
+                <button id="ps-backup-modal-close" style="background: rgba(255,255,255,0.2); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">✕</button>
+            </div>
+            <!-- 저장 영역 -->
+            <div style="padding: 20px 24px; border-bottom: 1px solid var(--card-border); background: var(--card-bg);">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="ps-backup-name-input" placeholder="백업 이름 입력 (예: 2026년 6월 백업)" style="flex:1; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color); font-size: 0.92rem;">
+                    <button id="ps-backup-save-btn" style="background: linear-gradient(135deg, #00b894, #00cec9); color:#fff; border:none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem; white-space: nowrap;">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> 지금 백업
+                    </button>
+                </div>
+            </div>
+            <!-- 백업 목록 -->
+            <div style="flex: 1; overflow-y: auto; padding: 16px 24px; background: var(--bg-color);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted);"><i class="fa-solid fa-list"></i> 저장된 백업 목록</span>
+                    <span id="ps-backup-count" style="font-size: 0.78rem; color: var(--text-muted);"></span>
+                </div>
+                <div id="ps-backup-list" style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="text-align:center; padding:30px; color:var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> 불러오는 중...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 백업 복원 확인 모달 -->
+    <div id="ps-backup-restore-confirm" class="auth-modal-overlay hidden" style="z-index: 10000;">
+        <div class="auth-modal" style="max-width: 440px; width: 95%; text-align: center; padding: 32px 24px;">
+            <div style="font-size: 2.5rem; margin-bottom: 16px;">⚠️</div>
+            <h3 style="margin: 0 0 8px; color: var(--text-color);">백업 복원</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0 0 8px;" id="ps-backup-restore-name"></p>
+            <p style="color: #ff4757; font-size: 0.85rem; margin: 0 0 24px;">⚠️ 현재 모든 프로젝트 데이터가 삭제되고 백업 데이터로 교체됩니다!</p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button id="ps-backup-restore-cancel" style="padding: 10px 24px; border-radius: 8px; border: 1px solid var(--card-border); background: transparent; color: var(--text-color); cursor: pointer; font-size: 0.9rem;">취소</button>
+                <button id="ps-backup-restore-ok" style="padding: 10px 24px; border-radius: 8px; border: none; background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: #fff; cursor: pointer; font-weight: 700; font-size: 0.9rem;">복원하기</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Work JavaScript -->
-    <script src="work.js?v=1.0.77"> </script>
+    <script src="work.js?v=1.0.78"> </script>
 </body>
 
 </html>
