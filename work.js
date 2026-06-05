@@ -2218,17 +2218,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let yearGroupDays = 0;
         let yearGroupYear = currentYear;
         
-        // 연속된 주차 계산용 변수 (ISO 주차 기준)
-        let daysInCurrentWeek = 0;
-        let currentWeekNum = 0;
-        
-        function getISOWeekNum(year, month, day) {
-            const date = new Date(Date.UTC(year, month, day));
-            date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
-            const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-            return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
-        }
-        
         while (currentYear < displayEndYear || (currentYear === displayEndYear && currentMonth <= displayEndMonth)) {
             const mDays = daysInMonthFunc(currentYear, currentMonth);
             
@@ -2255,17 +2244,32 @@ document.addEventListener('DOMContentLoaded', () => {
             mDiv.className = 'ps-gh-cell';
             mDiv.style.width = `${mDays * psDayWidth}px`;
             mDiv.style.minWidth = `${mDays * psDayWidth}px`;
-            mDiv.innerText = `${currentMonth + 1}월`;
+            mDiv.style.justifyContent = 'flex-start';
+            mDiv.innerHTML = `<span style="position: sticky; left: 12px; display: inline-block;">${currentMonth + 1}월</span>`;
             ghMonths.appendChild(mDiv);
             
-            // 이 달의 주차를 1주차부터 계산
-            let monthWeekCount = 0;
-            let daysInCurrentWeek = 0;
+            // 엑셀과 동일한 월별 주차 계산 로직
+            let currentWeek = 1;
+            let weekDaysCount = 0;
             
             for (let d = 1; d <= mDays; d++) {
                 const dayDate = new Date(currentYear, currentMonth, d);
-                const dayOfWeek = dayDate.getDay();
+                const dayOfWeek = dayDate.getDay(); // 0: 일, 1: 월, 6: 토
                 const isToday = (dayDate.getFullYear() === today.getFullYear() && dayDate.getMonth() === today.getMonth() && dayDate.getDate() === today.getDate());
+                
+                // 월요일(1)이면 새로운 주차 시작 (단, 첫째 날(d=1)이 월요일인 경우는 제외하지 않고 이전 주차 마감)
+                if (weekDaysCount > 0 && dayOfWeek === 1) {
+                    const wDiv = document.createElement('div');
+                    wDiv.className = 'ps-gh-cell';
+                    wDiv.style.width = `${weekDaysCount * psDayWidth}px`;
+                    wDiv.style.minWidth = `${weekDaysCount * psDayWidth}px`;
+                    wDiv.innerText = `${currentWeek}주차`;
+                    ghWeeks.appendChild(wDiv);
+                    currentWeek++;
+                    weekDaysCount = 0;
+                }
+                
+                weekDaysCount++;
                 
                 // Day number
                 const dDiv = document.createElement('div');
@@ -2319,32 +2323,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         window.psUpdateField(psSelectedId, 'startDate', currentClickedDateStr);
                     } else if (clickedMs > endMs) {
                         window.psUpdateField(psSelectedId, 'endDate', currentClickedDateStr);
-                    } else {
-                        // 중간 날짜 클릭 시 동작 안 함 (또는 원하는 로직 추가)
                     }
                 };
 
                 bgGrid.appendChild(gridLine);
-                
                 totalDays++;
                 
-                // --- 주차(Week of the Year) 처리 ---
-                if (daysInCurrentWeek === 0) {
-                    currentWeekNum = getISOWeekNum(currentYear, currentMonth, d);
-                }
-                daysInCurrentWeek++;
-                
+                // 달의 마지막 날이거나 차트의 마지막 날이면 남은 주차 블록 마감
                 const isLastDayOfChart = (currentYear === displayEndYear && currentMonth === displayEndMonth && d === mDays);
-                
-                // 일요일(0)이거나 차트의 완전한 마지막 날일 때 주차 블록 마감
-                if (dayOfWeek === 0 || isLastDayOfChart) {
+                if (d === mDays || isLastDayOfChart) {
                     const wDiv = document.createElement('div');
                     wDiv.className = 'ps-gh-cell';
-                    wDiv.style.width = `${daysInCurrentWeek * psDayWidth}px`;
-                    wDiv.style.minWidth = `${daysInCurrentWeek * psDayWidth}px`;
-                    wDiv.innerText = `${currentWeekNum}주차`;
+                    wDiv.style.width = `${weekDaysCount * psDayWidth}px`;
+                    wDiv.style.minWidth = `${weekDaysCount * psDayWidth}px`;
+                    wDiv.innerText = `${currentWeek}주차`;
                     ghWeeks.appendChild(wDiv);
-                    daysInCurrentWeek = 0;
                 }
             }
             
