@@ -2218,6 +2218,10 @@ document.addEventListener('DOMContentLoaded', () => {
         let yearGroupDays = 0;
         let yearGroupYear = currentYear;
         
+        // 엑셀과 동일한 월별 주차 계산 로직을 버리고 년도별 1~52주차 연속 로직을 사용합니다.
+        let weekDaysCount = 0;
+        let currentBlockWeekNum = 0;
+        
         while (currentYear < displayEndYear || (currentYear === displayEndYear && currentMonth <= displayEndMonth)) {
             const mDays = daysInMonthFunc(currentYear, currentMonth);
             
@@ -2247,10 +2251,6 @@ document.addEventListener('DOMContentLoaded', () => {
             mDiv.style.justifyContent = 'flex-start';
             mDiv.innerHTML = `<span style="position: sticky; left: 12px; display: inline-block;">${currentMonth + 1}월</span>`;
             ghMonths.appendChild(mDiv);
-            
-            // 엑셀과 동일한 월별 주차 계산 로직을 버리고 년도별 1~52주차 연속 로직을 사용합니다.
-            let weekDaysCount = 0;
-            let currentBlockWeekNum = 0;
             
             for (let d = 1; d <= mDays; d++) {
                 const dayDate = new Date(currentYear, currentMonth, d);
