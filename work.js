@@ -514,10 +514,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 userGoogleCalendarListener();
                 userGoogleCalendarListener = null;
             }
-            googleCalendarUrls = [];
+            // 공유 캘린더(workSiteSettings)는 별도 onSnapshot이 관리하므로 여기서 초기화하지 않음
             googleEvents = {};
-            fillGcalSlots();
-            renderGoogleCalendarFilters();
             if (typeof renderWorkCalendar === 'function') {
                 renderWorkCalendar();
             }
@@ -1303,22 +1301,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let workCurrentYear = workCurrentDate.getFullYear();
     let workCurrentMonth = workCurrentDate.getMonth();
 
-    // 구글 캘린더 연동 변수
+    // 구글 캘린더 연동 변수 (onSnapshot은 아래 함수 정의 완료 후 등록)
     let googleCalendarUrls = [];
     let googleEvents = {};
     let userGoogleCalendarListener = null;
-    
-    // 마스터가 공유한 캘린더 (workSiteSettings/calendarSettings)를 항상 실시간으로 로드
-    db.collection('workSiteSettings').doc('calendarSettings').onSnapshot(doc => {
-        if (doc.exists && doc.data().urls && Array.isArray(doc.data().urls)) {
-            googleCalendarUrls = doc.data().urls;
-        } else {
-            googleCalendarUrls = [];
-        }
-        fillGcalSlots();
-        renderGoogleCalendarFilters();
-        fetchGoogleCalendarEvents();
-    }, err => console.error("공유 캘린더 설정 로드 오류:", err));
 
 
     // iCal 텍스트를 파싱하여 이벤트 객체 배열 반환
@@ -1540,6 +1526,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ====================================================
+    // 마스터 공유 캘린더 실시간 리스너
+    // - workSiteSettings/calendarSettings 에 저장된 구글 캘린더 URL을
+    //   모든 팀원이 로그인 시 자동으로 가져와 캘린더에 표시합니다.
+    // ====================================================
+    db.collection('workSiteSettings').doc('calendarSettings').onSnapshot(doc => {
+        if (doc.exists && doc.data().urls && Array.isArray(doc.data().urls)) {
+            googleCalendarUrls = doc.data().urls;
+        } else {
+            googleCalendarUrls = [];
+        }
+        fillGcalSlots();
+        renderGoogleCalendarFilters();
+        fetchGoogleCalendarEvents();
+    }, err => console.error("[캘린더] 공유 캘린더 로드 오류:", err));
+
     db.collection('workSchedules').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
         schedulesData = [];
         snapshot.forEach(doc => schedulesData.push({ id: doc.id, ...doc.data() }));
@@ -1595,9 +1597,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         db.collection('workSiteSettings').doc('calendarSettings').set({
-            urls: newList
-        }, { merge: true }).then(() => {
-            alert("구글 캘린더 설정이 저장되었습니다.");
+            urls: newList,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+            alert("구글 캘린더 설정이 저장되었습니다.\n팀원들도 같은 캘린더 일정을 볼 수 있습니다! 🗓️");
             document.getElementById('work-calendar-settings-modal')?.classList.add('hidden');
         }).catch(err => {
             console.error("캘린더 설정 저장 오류:", err);
