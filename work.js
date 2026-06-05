@@ -13,12 +13,15 @@ const firebaseConfig = {
     databaseURL: "https://dodo-family-space-lck-default-rtdb.firebaseio.com"
 };
 
-// Initialize Firebase
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
+// Initialize a separate Firebase App ("work") to isolate the login session and authentication from the family space.
+let workApp;
+if (!firebase.apps.some(app => app.name === "work")) {
+    workApp = firebase.initializeApp(firebaseConfig, "work");
+} else {
+    workApp = firebase.app("work");
 }
-const db = firebase.firestore();
-const auth = firebase.auth();
+const db = workApp.firestore();
+const auth = workApp.auth();
 
 document.addEventListener('DOMContentLoaded', () => {
     // ----------------------------------------------------
@@ -75,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentUser = null;
     let currentUserDoc = null;
     let workUserListener = null;
+    let isSigningUp = false;
     
     // 탭별 접근 권한 설정 객체 (공개, 로그인필수, 승인필수 등)
     let tabPermissions = {};
@@ -170,8 +174,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const password = document.getElementById('work-login-password').value;
             
             auth.signInWithEmailAndPassword(email, password)
-                .then(() => {
-                    closeWorkAuth();
+                .then(async (userCredential) => {
+                    const user = userCredential.user;
+                    // 회사 공간 유저인지 검증
+                    try {
+                        const doc = await db.collection('workUsers').doc(user.uid).get();
+                        if (!doc.exists) {
+                            await auth.signOut();
+                            showWorkAuthError("회사 공간에 등록되지 않은 계정입니다.");
+                            return;
+                        }
+                        closeWorkAuth();
+                    } catch (err) {
+                        console.error("유저 검증 오류:", err);
+                        await auth.signOut();
+                        showWorkAuthError("로그인 검증 중 오류가 발생했습니다.");
+                    }
                 })
                 .catch(err => {
                     console.error("Work 로그인 에러:", err);
@@ -194,6 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const nickname = document.getElementById('work-signup-nickname').value;
             const dept = document.getElementById('work-signup-dept').value;
             
+            isSigningUp = true;
             auth.createUserWithEmailAndPassword(email, password)
                 .then(async (userCredential) => {
                     const user = userCredential.user;
@@ -211,10 +230,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
                     
+                    isSigningUp = false;
                     closeWorkAuth();
                     alert("회원가입 완료! 마스터의 가입 승인을 기다려주세요.");
                 })
                 .catch(err => {
+                    isSigningUp = false;
                     console.error("Work 회원가입 에러:", err);
                     if (err.code === 'auth/email-already-in-use') {
                         showWorkAuthError("이미 사용중인 이메일입니다.");
@@ -343,7 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (reqPerm === 'login_only') {
                 hasAccess = !!currentUser;
             } else { // approval_required
-                hasAccess = !!(currentUser && currentUserDoc && currentUserDoc.isApproved);
+                hasAccess = !!(currentUser && currentUserDoc && (currentUserDoc.isApproved || currentUserDoc.isMaster));
             }
             
             if (!hasAccess) {
@@ -436,16 +457,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             workUserListener = userRef.onSnapshot(doc => {
                 if (!doc.exists) {
-                    // 신규 유저 등록 (기본 승인 안 됨)
-                    userRef.set({
-                        uid: user.uid,
-                        email: user.email,
-                        nickname: user.displayName || user.email.split('@')[0],
-                        photoURL: user.photoURL,
-                        isApproved: false,
-                        isMaster: false,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+                    if (isSigningUp) {
+                        return; // 회원가입 중에는 강제 로그아웃 로직 우회
+                    }
+                    alert("회사 공간에 등록되지 않은 사용자 계정입니다. 계정을 새로 생성하거나 확인해주세요.");
+                    auth.signOut();
                     return;
                 }
                 
@@ -461,8 +477,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     loggedInUsernameEl.style.display = 'inline-block';
                 }
 
-                if (currentUserDoc.isApproved) {
-                    // 승인됨 -> 화면 표시
+                if (currentUserDoc.isApproved || currentUserDoc.isMaster) {
+                    // 승인됨 또는 마스터 -> 화면 표시
                     authStatusHeader.style.display = 'none';
                     btnWorkLogin.style.display = 'none';
                     
@@ -579,18 +595,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const masterPermsSection = document.getElementById('master-perms-section');
     const masterBackupSection = document.getElementById('master-backup-section');
 
-    if (tabBtnMasterUsers && tabBtnMasterPerms && tabBtnMasterBackup) {
+    if (tabBtnMasterUsers && tabBtnMasterPerms) {
         tabBtnMasterUsers.addEventListener('click', () => {
             tabBtnMasterUsers.style.background = 'var(--primary-color)';
             tabBtnMasterUsers.style.color = '#fff';
             tabBtnMasterPerms.style.background = '#f1f2f6';
             tabBtnMasterPerms.style.color = '#576574';
-            tabBtnMasterBackup.style.background = '#f1f2f6';
-            tabBtnMasterBackup.style.color = '#576574';
+            if (tabBtnMasterBackup) {
+                tabBtnMasterBackup.style.background = '#f1f2f6';
+                tabBtnMasterBackup.style.color = '#576574';
+            }
             
             masterUsersSection.classList.remove('hidden');
             masterPermsSection.classList.add('hidden');
-            masterBackupSection.classList.add('hidden');
+            if (masterBackupSection) masterBackupSection.classList.add('hidden');
             loadMasterApprovalList();
         });
 
@@ -599,27 +617,31 @@ document.addEventListener('DOMContentLoaded', () => {
             tabBtnMasterPerms.style.color = '#fff';
             tabBtnMasterUsers.style.background = '#f1f2f6';
             tabBtnMasterUsers.style.color = '#576574';
-            tabBtnMasterBackup.style.background = '#f1f2f6';
-            tabBtnMasterBackup.style.color = '#576574';
+            if (tabBtnMasterBackup) {
+                tabBtnMasterBackup.style.background = '#f1f2f6';
+                tabBtnMasterBackup.style.color = '#576574';
+            }
             
             masterPermsSection.classList.remove('hidden');
             masterUsersSection.classList.add('hidden');
-            masterBackupSection.classList.add('hidden');
+            if (masterBackupSection) masterBackupSection.classList.add('hidden');
             loadMasterPermissionsList();
         });
 
-        tabBtnMasterBackup.addEventListener('click', () => {
-            tabBtnMasterBackup.style.background = 'var(--primary-color)';
-            tabBtnMasterBackup.style.color = '#fff';
-            tabBtnMasterUsers.style.background = '#f1f2f6';
-            tabBtnMasterUsers.style.color = '#576574';
-            tabBtnMasterPerms.style.background = '#f1f2f6';
-            tabBtnMasterPerms.style.color = '#576574';
-            
-            masterBackupSection.classList.remove('hidden');
-            masterUsersSection.classList.add('hidden');
-            masterPermsSection.classList.add('hidden');
-        });
+        if (tabBtnMasterBackup) {
+            tabBtnMasterBackup.addEventListener('click', () => {
+                tabBtnMasterBackup.style.background = 'var(--primary-color)';
+                tabBtnMasterBackup.style.color = '#fff';
+                tabBtnMasterUsers.style.background = '#f1f2f6';
+                tabBtnMasterUsers.style.color = '#576574';
+                tabBtnMasterPerms.style.background = '#f1f2f6';
+                tabBtnMasterPerms.style.color = '#576574';
+                
+                if (masterBackupSection) masterBackupSection.classList.remove('hidden');
+                masterUsersSection.classList.add('hidden');
+                masterPermsSection.classList.add('hidden');
+            });
+        }
     }
 
     // --- 백업/복원 로직 ---
@@ -1452,14 +1474,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 구글 캘린더 개별 표시 필터 렌더링
     function renderGoogleCalendarFilters() {
+        const isMaster = currentUserDoc && currentUserDoc.isMaster === true;
         const settingsBtn = document.getElementById('work-calendar-settings-btn');
         const gcalSettingsBtn = document.getElementById('btn-gcal-settings');
         
         if (settingsBtn) {
-            settingsBtn.style.display = (currentUserDoc && currentUserDoc.isMaster === true) ? 'inline-block' : 'none';
+            settingsBtn.style.display = isMaster ? 'inline-block' : 'none';
         }
         if (gcalSettingsBtn) {
-            gcalSettingsBtn.style.display = (currentUserDoc && currentUserDoc.isMaster === true) ? 'inline-block' : 'none';
+            gcalSettingsBtn.style.display = isMaster ? 'inline-block' : 'none';
         }
 
         const filterContainer = document.getElementById('work-gcal-filter-container');
@@ -1492,8 +1515,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const isChecked = cal.enabled !== false;
 
             html += `
-                <label class="gcal-filter-item" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 6px 12px; border-radius: 20px; background: rgba(255,255,255,0.04); font-size: 0.85rem; border: 1px solid var(--card-border); user-select: none; transition: all 0.2s ease;">
-                    <input type="checkbox" data-index="${index}" ${isChecked ? 'checked' : ''} style="width: 14px; height: 14px; cursor: pointer; accent-color: ${calColor}; margin: 0;">
+                <label class="gcal-filter-item" style="display: flex; align-items: center; gap: 8px; cursor: ${isMaster ? 'pointer' : 'default'}; padding: 6px 12px; border-radius: 20px; background: rgba(255,255,255,0.04); font-size: 0.85rem; border: 1px solid var(--card-border); user-select: none; transition: all 0.2s ease; ${isMaster ? '' : 'opacity: 0.8;'}">
+                    <input type="checkbox" data-index="${index}" ${isChecked ? 'checked' : ''} ${isMaster ? '' : 'disabled'} style="width: 14px; height: 14px; cursor: ${isMaster ? 'pointer' : 'default'}; accent-color: ${calColor}; margin: 0;">
                     <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background-color: ${calColor};"></span>
                     <span style="color: ${isChecked ? 'var(--text-color)' : 'var(--text-muted)'}; font-weight: ${isChecked ? '600' : '400'};">${cal.name}</span>
                 </label>
@@ -1506,6 +1529,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const checkboxes = filterContainer.querySelectorAll('input[type="checkbox"]');
         checkboxes.forEach(chk => {
             chk.addEventListener('change', (e) => {
+                if (!isMaster) {
+                    e.preventDefault();
+                    return;
+                }
                 const idx = parseInt(e.target.getAttribute('data-index'), 10);
                 const isChecked = e.target.checked;
                 
@@ -1516,13 +1543,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     fillGcalSlots();
 
                     // Firestore에 실시간 저장 (마스터만)
-                    if (currentUserDoc && currentUserDoc.isMaster === true) {
-                        db.collection('workSiteSettings').doc('calendarSettings').set({
-                            urls: googleCalendarUrls
-                        }, { merge: true }).catch(err => {
-                            console.error("Firestore 필터 동기화 실패:", err);
-                        });
-                    }
+                    db.collection('workSiteSettings').doc('calendarSettings').set({
+                        urls: googleCalendarUrls
+                    }, { merge: true }).catch(err => {
+                        console.error("Firestore 필터 동기화 실패:", err);
+                    });
 
                     // 캘린더 표시 갱신
                     fetchGoogleCalendarEvents();
@@ -4658,10 +4683,85 @@ document.addEventListener('DOMContentLoaded', () => {
             theadTr.innerHTML = '<th style="border: 1px solid var(--card-border); padding: 12px; text-align: left; position: sticky; top: 0; left: 0; background: var(--bg-color); z-index: 2; min-width: 200px; font-weight: bold; color: var(--text-color);">평가 항목</th>';
             matrixData.cols.forEach((colName, cIdx) => {
                 const th = document.createElement('th');
-                th.style.cssText = 'border: 1px solid var(--card-border); padding: 12px; text-align: center; background: var(--bg-color); font-weight: bold; color: var(--text-color); min-width: 150px; position: relative;';
+                th.style.cssText = `border: 1px solid var(--card-border); padding: 12px; text-align: center; background: var(--bg-color); font-weight: bold; color: var(--text-color); min-width: 150px; position: relative; cursor: ${currentUser ? 'grab' : 'default'};`;
+                th.draggable = !!currentUser;
+                th.dataset.cIdx = cIdx;
+
+                th.addEventListener('dragstart', function(e) {
+                    if (isEditing) { e.preventDefault(); return; }
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', `col_${this.dataset.cIdx}`);
+                    this.style.opacity = '0.4';
+                });
+                th.addEventListener('dragover', function(e) {
+                    if (e.preventDefault) { e.preventDefault(); }
+                    e.dataTransfer.dropEffect = 'move';
+                    return false;
+                });
+                th.addEventListener('dragenter', function(e) {
+                    this.style.borderLeft = '2px dashed var(--primary-color)';
+                });
+                th.addEventListener('dragleave', function(e) {
+                    this.style.borderLeft = '';
+                });
+                th.addEventListener('drop', function(e) {
+                    if (e.stopPropagation) { e.stopPropagation(); }
+                    this.style.borderLeft = '';
+                    
+                    const dragData = e.dataTransfer.getData('text/plain');
+                    if (!dragData.startsWith('col_')) return;
+                    
+                    const fromIdx = parseInt(dragData.substring(4));
+                    const toIdx = parseInt(this.dataset.cIdx);
+                    
+                    if (fromIdx !== toIdx && !isNaN(fromIdx) && !isNaN(toIdx)) {
+                        const colCount = matrixData.cols.length;
+                        
+                        // 새 cells 구성
+                        const oldIdxs = [];
+                        for (let i = 0; i < colCount; i++) {
+                            if (i === toIdx) {
+                                oldIdxs.push(fromIdx);
+                            } else {
+                                let old = i;
+                                if (fromIdx < toIdx) {
+                                    if (i >= fromIdx && i < toIdx) {
+                                        old = i + 1;
+                                    }
+                                } else {
+                                    if (i > toIdx && i <= fromIdx) {
+                                        old = i - 1;
+                                    }
+                                }
+                                oldIdxs.push(old);
+                            }
+                        }
+
+                        const newCells = {};
+                        matrixData.rows.forEach((_, r) => {
+                            for (let c = 0; c < colCount; c++) {
+                                const oldC = oldIdxs[c];
+                                newCells[`${r}_${c}`] = matrixData.cells[`${r}_${oldC}`] || '';
+                            }
+                        });
+
+                        const movedCol = matrixData.cols.splice(fromIdx, 1)[0];
+                        matrixData.cols.splice(toIdx, 0, movedCol);
+                        
+                        matrixData.cells = newCells;
+                        renderMatrix();
+                        saveMatrixToDB();
+                    }
+                });
+                th.addEventListener('dragend', function(e) {
+                    this.style.opacity = '1';
+                });
+
                 th.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>${colName}</span>
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                        <span style="display: flex; align-items: center; gap: 4px;">
+                            ${currentUser ? '<i class="fa-solid fa-grip-vertical" style="color: var(--text-muted); opacity: 0.5;"></i>' : ''} ${colName}
+                        </span>
                         ${isMaster ? `<button class="btn-del-col" data-idx="${cIdx}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 2px 5px;"><i class="fa-solid fa-times"></i></button>` : ''}
                     </div>
                 `;
@@ -4672,7 +4772,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tbody.innerHTML = '';
             matrixData.rows.forEach((rowName, rIdx) => {
                 const tr = document.createElement('tr');
-                tr.draggable = isMaster;
+                tr.draggable = !!currentUser;
                 tr.dataset.rIdx = rIdx;
                 
                 tr.addEventListener('dragstart', function(e) {
@@ -4695,7 +4795,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 tr.addEventListener('drop', function(e) {
                     if (e.stopPropagation) { e.stopPropagation(); }
                     this.style.borderTop = '';
-                    const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+                    
+                    const dragData = e.dataTransfer.getData('text/plain');
+                    if (dragData.startsWith('col_')) return; // ignore column drag here
+                    
+                    const fromIdx = parseInt(dragData);
                     const toIdx = parseInt(this.dataset.rIdx);
                     if (fromIdx !== toIdx && !isNaN(fromIdx) && !isNaN(toIdx)) {
                         const oldOrder = matrixData.rows.map((_, i) => i);
@@ -4724,10 +4828,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // 첫 번째 열 (항목 이름)
                 const th = document.createElement('td');
-                th.style.cssText = `border: 1px solid var(--card-border); padding: 12px; background: var(--card-bg); color: var(--text-color); font-weight: bold; position: sticky; left: 0; z-index: 1; ${isMaster ? 'cursor: grab;' : ''}`;
+                th.style.cssText = `border: 1px solid var(--card-border); padding: 12px; background: var(--card-bg); color: var(--text-color); font-weight: bold; position: sticky; left: 0; z-index: 1; ${currentUser ? 'cursor: grab;' : ''}`;
                 th.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="display: flex; align-items: center; gap: 8px;">${isMaster ? '<i class="fa-solid fa-grip-vertical" style="color: var(--text-muted); opacity: 0.5;"></i>' : ''} ${rowName}</span>
+                        <span style="display: flex; align-items: center; gap: 8px;">${currentUser ? '<i class="fa-solid fa-grip-vertical" style="color: var(--text-muted); opacity: 0.5;"></i>' : ''} ${rowName}</span>
                         ${isMaster ? `<button class="btn-del-row" data-idx="${rIdx}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 2px 5px;"><i class="fa-solid fa-times"></i></button>` : ''}
                     </div>
                 `;
@@ -4780,8 +4884,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if(!confirm('이 평가 항목을 삭제하시겠습니까?')) return;
                     const rIdx = parseInt(e.currentTarget.dataset.idx);
                     matrixData.rows.splice(rIdx, 1);
-                    // 삭제된 행의 셀 데이터 정리 및 인덱스 시프트 처리는 복잡하므로 단순화:
-                    // 새로 저장할 때 현재 rows/cols 기준으로만 셀을 맵핑함.
                     const newCells = {};
                     for(let r=0; r<matrixData.rows.length; r++) {
                         for(let c=0; c<matrixData.cols.length; c++) {
@@ -4816,15 +4918,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         async function saveMatrixToDB() {
-            if (!auth.currentUser) return;
+            if (!currentUser) return; // auth.currentUser 대신 전역 변수 currentUser 사용
             try {
-                await db.collection('workEvaluations').doc(auth.currentUser.uid).set(matrixData);
+                await db.collection('workEvaluations').doc('shared').set(matrixData);
             } catch(e) {
                 console.error("Matrix save error:", e);
             }
         }
 
         btnAddRow?.addEventListener('click', () => {
+            if (!currentUserDoc || currentUserDoc.isMaster !== true) return alert('마스터 권한이 필요합니다.');
             const name = prompt('추가할 평가 항목의 이름을 입력하세요 (예: 업무 완성도, 책임감 등)');
             if (name && name.trim()) {
                 matrixData.rows.push(name.trim());
@@ -4834,6 +4937,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         btnAddCol?.addEventListener('click', () => {
+            if (!currentUserDoc || currentUserDoc.isMaster !== true) return alert('마스터 권한이 필요합니다.');
             const name = prompt('평가할 팀원의 이름을 입력하세요 (예: 홍길동)');
             if (name && name.trim()) {
                 matrixData.cols.push(name.trim());
@@ -4843,7 +4947,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         btnSave?.addEventListener('click', async () => {
-            if (!auth.currentUser) return alert('로그인이 필요합니다.');
+            if (!currentUser) return alert('로그인이 필요합니다.');
+            if (!currentUserDoc || currentUserDoc.isMaster !== true) return alert('마스터 권한이 필요합니다.');
             
             btnSave.disabled = true;
             btnSave.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장중';
@@ -4861,7 +4966,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (user) {
                 if (unsubscribePerf) unsubscribePerf();
                 
-                unsubscribePerf = db.collection('workEvaluations').doc(user.uid).onSnapshot(doc => {
+                unsubscribePerf = db.collection('workEvaluations').doc('shared').onSnapshot(doc => {
                     if (!isEditing) {
                         if (doc.exists) {
                             const data = doc.data();
@@ -4883,6 +4988,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderMatrix();
             }
         });
+
+        window.renderPerformances = renderMatrix;
     }
     initPerformanceLogic();
 

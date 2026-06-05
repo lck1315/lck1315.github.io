@@ -851,15 +851,7 @@
                                         <i class="fa-solid fa-spinner fa-spin"></i> 캘린더를 불러오는 중...</div>
                                 </div>
                                 
-                                <!-- 구글 캘린더 연동 영역 -->
-                                <div id="google-calendar-container" style="display: none; margin-top: 30px; border-top: 1px solid var(--card-border); padding-top: 20px;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                        <h3 style="font-size: 1.2rem; font-weight: bold; margin: 0;"><i class="fa-brands fa-google" style="color: #ea4335;"></i> 구글 캘린더</h3>
-                                    </div>
-                                    <div id="google-calendar-iframe-wrapper" style="width: 100%; height: 600px; border-radius: 12px; overflow: hidden; border: 1px solid var(--card-border); background: #fff;">
-                                        <!-- Iframe injected here -->
-                                    </div>
-                                </div>
+
                             </div>
                         </div>
                     </div>
@@ -1472,7 +1464,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
     <!-- 클라우드 백업 모달 -->
-    <div id="ps-backup-modal" class="auth-modal-overlay hidden" style="z-index: 9999;">
+    <div id="ps-backup-modal" class="auth-modal-overlay hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 12, 27, 0.9); backdrop-filter: blur(12px); z-index: 9999; justify-content: center; align-items: center;">
         <div class="auth-modal" style="max-width: 700px; width: 95%; max-height: 85vh; display: flex; flex-direction: column; padding: 0; border-radius: 16px; overflow: hidden;">
             <!-- 헤더 -->
             <div style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); padding: 20px 24px; display: flex; justify-content: space-between; align-items: center;">
@@ -1505,7 +1497,7 @@
     </div>
 
     <!-- 백업 복원 확인 모달 -->
-    <div id="ps-backup-restore-confirm" class="auth-modal-overlay hidden" style="z-index: 10000;">
+    <div id="ps-backup-restore-confirm" class="auth-modal-overlay hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 12, 27, 0.9); backdrop-filter: blur(12px); z-index: 10000; justify-content: center; align-items: center;">
         <div class="auth-modal" style="max-width: 440px; width: 95%; text-align: center; padding: 32px 24px;">
             <div style="font-size: 2.5rem; margin-bottom: 16px;">⚠️</div>
             <h3 style="margin: 0 0 8px; color: var(--text-color);">백업 복원</h3>
@@ -1519,7 +1511,7 @@
     </div>
 
     <!-- 구글 캘린더 연동 설정 모달 (마스터 전용) -->
-    <div id="gcal-settings-modal" class="auth-modal-overlay hidden" style="z-index: 10000;">
+    <div id="gcal-settings-modal" class="auth-modal-overlay hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 12, 27, 0.9); backdrop-filter: blur(12px); z-index: 10000; justify-content: center; align-items: center;">
         <div class="auth-modal" style="max-width: 500px; width: 95%; padding: 24px;">
             <h3 style="margin: 0 0 16px; color: var(--text-color);"><i class="fa-brands fa-google" style="color: #ea4335;"></i> 구글 캘린더 연동 설정</h3>
             <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0 0 16px;">

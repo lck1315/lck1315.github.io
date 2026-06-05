@@ -50,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentUserInfo = null;
     let activeBoardFilter = 'all';
+    let isSigningUp = false;
 
     // 화면 전환 함수들
     function showWelcomeScreen() {
@@ -163,9 +164,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const password = document.getElementById('login-password').value;
 
         auth.signInWithEmailAndPassword(email, password)
-            .then(() => {
-                loginForm.reset();
-                authErrorMsg.classList.add('hidden');
+            .then(async (userCredential) => {
+                const user = userCredential.user;
+                // 가족 공간 유저인지 검증
+                try {
+                    const doc = await db.collection('users').doc(user.uid).get();
+                    if (!doc.exists) {
+                        await auth.signOut();
+                        showAuthError("가족 공간에 등록되지 않은 계정입니다.");
+                        return;
+                    }
+                    loginForm.reset();
+                    authErrorMsg.classList.add('hidden');
+                } catch (err) {
+                    console.error("유저 검증 오류:", err);
+                    await auth.signOut();
+                    showAuthError("로그인 검증 중 오류가 발생했습니다.");
+                }
             })
             .catch((error) => {
                 let errorMsg = "로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.";
@@ -193,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        isSigningUp = true;
         auth.createUserWithEmailAndPassword(email, password)
             .then((userCredential) => {
                 const user = userCredential.user;
@@ -207,20 +223,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
-                const memberRef = db.collection('workMembers').doc(user.uid);
-                batch.set(memberRef, {
-                    name: nickname,
-                    role: role,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
                 return batch.commit();
             })
             .then(() => {
+                isSigningUp = false;
                 signupForm.reset();
                 authErrorMsg.classList.add('hidden');
             })
             .catch((error) => {
+                isSigningUp = false;
                 let errorMsg = "회원가입에 실패했습니다.";
                 if (error.code === 'auth/email-already-in-use') {
                     errorMsg = "이미 가입된 이메일 주소입니다.";
@@ -338,8 +349,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             role: userData.role || "기타 🤍"
                         };
                     } else {
+                        if (isSigningUp) {
+                            return; // 회원가입 중에는 강제 로그아웃 로직 우회
+                        }
                         // DB에 유저 문서가 없으면 강제 로그아웃
-                        alert("사용자 정보를 찾을 수 없습니다. 다시 가입해주세요.");
+                        alert("가족 공간에 등록되지 않은 사용자 계정입니다. 계정을 확인해주세요.");
                         auth.signOut();
                         return;
                     }
@@ -3670,9 +3684,11 @@ function initCardSliders(container) {
     // ====================================================
     // 공지사항 (Notices) - index.html
     // ====================================================
+    // 공지사항 (Notices) - index.html (패밀리 공간)
+    // ====================================================
     const indexNoticeContainer = document.getElementById('index-notice-list-container');
     if (indexNoticeContainer) {
-        db.collection('workNotices').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
+        db.collection('familyNotices').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
             indexNoticeContainer.innerHTML = '';
             if (snapshot.empty) {
                 indexNoticeContainer.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-muted);"><i class="fa-solid fa-bullhorn"></i> 등록된 공지사항이 없습니다.</div>';
@@ -3724,11 +3740,11 @@ function initCardSliders(container) {
                 return;
             }
 
-            db.collection('workNotices').add({
+            db.collection('familyNotices').add({
                 title: title,
                 content: content,
-                authorUid: currentUser.uid,
-                authorName: currentUserDoc ? currentUserDoc.displayName : currentUser.displayName || '이름 없음',
+                authorUid: currentUserInfo ? currentUserInfo.uid : currentUser.uid,
+                authorName: currentUserInfo ? currentUserInfo.nickname : currentUser.displayName || '이름 없음',
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             }).then(() => {
                 noticeWriteModal.classList.add('hidden');
