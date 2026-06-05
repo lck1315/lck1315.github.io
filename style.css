@@ -2034,6 +2034,16 @@ body.light-theme .guest-sticker {
 
 /* 14. 인증 관련 전용 클래스 */
 .auth-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 12, 27, 0.9);
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: opacity 0.3s ease;
 }
 .hidden {
