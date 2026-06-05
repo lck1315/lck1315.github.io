@@ -2093,6 +2093,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (parentTask) {
                 parentId = parentTask.parentId ? parentTask.parentId : parentTask.id;
             }
+        }
+        
+        const newTask = { ...psCopiedTask };
+        newTask.parentId = parentId;
+        newTask.name = newTask.name + ' (복사본)';
         newTask.order = Date.now();
         newTask.createdAt = firebase.firestore.FieldValue.serverTimestamp();
         
