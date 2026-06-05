@@ -2248,25 +2248,31 @@ document.addEventListener('DOMContentLoaded', () => {
             mDiv.innerHTML = `<span style="position: sticky; left: 12px; display: inline-block;">${currentMonth + 1}월</span>`;
             ghMonths.appendChild(mDiv);
             
-            // 엑셀과 동일한 월별 주차 계산 로직
-            let currentWeek = 1;
+            // 엑셀과 동일한 월별 주차 계산 로직을 버리고 년도별 1~52주차 연속 로직을 사용합니다.
             let weekDaysCount = 0;
+            let currentBlockWeekNum = 0;
             
             for (let d = 1; d <= mDays; d++) {
                 const dayDate = new Date(currentYear, currentMonth, d);
                 const dayOfWeek = dayDate.getDay(); // 0: 일, 1: 월, 6: 토
                 const isToday = (dayDate.getFullYear() === today.getFullYear() && dayDate.getMonth() === today.getMonth() && dayDate.getDate() === today.getDate());
                 
-                // 월요일(1)이면 새로운 주차 시작 (단, 첫째 날(d=1)이 월요일인 경우는 제외하지 않고 이전 주차 마감)
-                if (weekDaysCount > 0 && dayOfWeek === 1) {
-                    const wDiv = document.createElement('div');
-                    wDiv.className = 'ps-gh-cell';
-                    wDiv.style.width = `${weekDaysCount * psDayWidth}px`;
-                    wDiv.style.minWidth = `${weekDaysCount * psDayWidth}px`;
-                    wDiv.innerText = `${currentWeek}주차`;
-                    ghWeeks.appendChild(wDiv);
-                    currentWeek++;
-                    weekDaysCount = 0;
+                // --- 연간 주차(Week of the Year) 계산 함수 ---
+                // 년도가 넘어가면 무조건 1주차부터 다시 시작하도록 보장
+                function getStrictYearWeek(y, m, day) {
+                    const dt = new Date(y, m, day);
+                    const firstDayOfYear = new Date(y, 0, 1);
+                    const dayOfWeekOfFirstDay = firstDayOfYear.getDay(); 
+                    const daysToFirstSunday = dayOfWeekOfFirstDay === 0 ? 0 : 7 - dayOfWeekOfFirstDay;
+                    const firstSunday = new Date(y, 0, 1 + daysToFirstSunday);
+                    if (dt <= firstSunday) return 1;
+                    const msSinceFirstSunday = dt.getTime() - firstSunday.getTime();
+                    const daysSinceFirstSunday = Math.round(msSinceFirstSunday / 86400000);
+                    return Math.floor(daysSinceFirstSunday / 7) + 2;
+                }
+                
+                if (weekDaysCount === 0) {
+                    currentBlockWeekNum = getStrictYearWeek(currentYear, currentMonth, d);
                 }
                 
                 weekDaysCount++;
@@ -2329,15 +2335,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 bgGrid.appendChild(gridLine);
                 totalDays++;
                 
-                // 달의 마지막 날이거나 차트의 마지막 날이면 남은 주차 블록 마감
+                // 달의 마지막 날, 년도의 마지막 날, 혹은 차트의 마지막 날인지 확인
+                const isLastDayOfYear = (currentMonth === 11 && d === mDays);
                 const isLastDayOfChart = (currentYear === displayEndYear && currentMonth === displayEndMonth && d === mDays);
-                if (d === mDays || isLastDayOfChart) {
+                
+                // 일요일(0)이거나, 년도의 마지막 날이거나, 차트의 마지막 날이면 주차 블록 마감
+                if (dayOfWeek === 0 || isLastDayOfYear || isLastDayOfChart) {
                     const wDiv = document.createElement('div');
                     wDiv.className = 'ps-gh-cell';
                     wDiv.style.width = `${weekDaysCount * psDayWidth}px`;
                     wDiv.style.minWidth = `${weekDaysCount * psDayWidth}px`;
-                    wDiv.innerText = `${currentWeek}주차`;
+                    wDiv.innerText = `${currentBlockWeekNum}주차`;
                     ghWeeks.appendChild(wDiv);
+                    weekDaysCount = 0;
                 }
             }
             
@@ -3791,13 +3801,29 @@ document.addEventListener('DOMContentLoaded', () => {
         if (dateObjects.length > 0) {
             let currentMonth = dateObjects[0].getMonth();
             let monthColspan = 0;
-            let currentWeek = 1;
+            
+            // 엑셀 주차 계산용 변수
             let weekColspan = 0;
+            let currentBlockWeekNum = 0;
+            
+            // 동일한 주차 계산 함수 사용
+            function getStrictYearWeek(y, m, day) {
+                const dt = new Date(y, m, day);
+                const firstDayOfYear = new Date(y, 0, 1);
+                const dayOfWeekOfFirstDay = firstDayOfYear.getDay(); 
+                const daysToFirstSunday = dayOfWeekOfFirstDay === 0 ? 0 : 7 - dayOfWeekOfFirstDay;
+                const firstSunday = new Date(y, 0, 1 + daysToFirstSunday);
+                if (dt <= firstSunday) return 1;
+                const msSinceFirstSunday = dt.getTime() - firstSunday.getTime();
+                const daysSinceFirstSunday = Math.round(msSinceFirstSunday / 86400000);
+                return Math.floor(daysSinceFirstSunday / 7) + 2;
+            }
             
             for (let i = 0; i < dateObjects.length; i++) {
                 const d = dateObjects[i];
-                const day = d.getDay();
+                const day = d.getDay(); // 0: Sun, 1: Mon
                 const m = d.getMonth();
+                const y = d.getFullYear();
                 
                 if (m === currentMonth) {
                     monthColspan++;
@@ -3805,20 +3831,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     monthGroups.push({ text: (currentMonth + 1) + '월', colspan: monthColspan });
                     currentMonth = m;
                     monthColspan = 1;
-                    currentWeek = 1;
                 }
                 
-                if (weekColspan > 0 && day === 1) { // Monday starts new week
-                    weekGroups.push({ text: currentWeek + '주차', colspan: weekColspan });
-                    currentWeek++;
-                    weekColspan = 1;
-                } else {
-                    weekColspan++;
+                if (weekColspan === 0) {
+                    currentBlockWeekNum = getStrictYearWeek(y, m, d.getDate());
                 }
                 
-                if (i === dateObjects.length - 1) {
+                weekColspan++;
+                
+                const isLastDayOfYear = (m === 11 && d.getDate() === new Date(y, 11, 31).getDate());
+                const isLastDayOfChart = (i === dateObjects.length - 1);
+                
+                // 일요일이거나, 년도의 마지막 날이거나, 차트의 마지막 날이면 주차 블록 마감
+                if (day === 0 || isLastDayOfYear || isLastDayOfChart) {
+                    weekGroups.push({ text: currentBlockWeekNum + '주차', colspan: weekColspan });
+                    weekColspan = 0;
+                }
+                
+                if (isLastDayOfChart) {
                     monthGroups.push({ text: (currentMonth + 1) + '월', colspan: monthColspan });
-                    weekGroups.push({ text: currentWeek + '주차', colspan: weekColspan });
                 }
                 
                 let color = '#333';
