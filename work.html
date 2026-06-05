@@ -515,6 +515,7 @@
             <div class="header-actions" style="display: flex; gap: 10px; align-items: center;">
                 <span id="auth-status-header"
                     style="color: #ff4757; font-size: 0.85rem; font-weight: bold; display: none;">승인 대기중</span>
+                <span id="logged-in-username" style="display: none; font-size: 0.82rem; font-weight: 700; color: var(--primary-color); background: rgba(108,92,231,0.12); border: 1px solid rgba(108,92,231,0.25); padding: 4px 10px; border-radius: 20px; white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis;" title=""></span>
                 <button id="btn-claim-master" class="btn btn-secondary"
                     style="display: none; padding: 6px 10px; font-size: 0.85rem; border-color: #ffa502; color: #ffa502;">👑
                     마스터 획득</button>
@@ -719,11 +720,20 @@
 
                 <!-- 탭 내용: 북마크 (기존) -->
                 <div id="tab-bookmarks" class="tab-content">
-                    <div id="work-content-container">
-                        <div style="text-align:center; padding: 50px; color: var(--text-muted);"><i
-                                class="fa-solid fa-spinner fa-spin"></i> 데이터를 불러오는 중...</div>
+                    <div style="max-width: 1200px; margin: 0 auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2 style="font-size: 1.5rem; font-weight: bold; color: var(--text-color); margin: 0;"><i class="fa-solid fa-bookmark" style="color:#6c5ce7; margin-right:8px;"></i> 북마크</h2>
+                            <button id="btn-add-bookmark-top" class="btn btn-primary" style="font-size: 0.9rem; padding: 0.5rem 1rem; border-radius: 8px;">
+                                <i class="fa-solid fa-plus"></i> 북마크 추가
+                            </button>
+                        </div>
+                        <div id="work-content-container">
+                            <div style="text-align:center; padding: 50px; color: var(--text-muted);"><i
+                                    class="fa-solid fa-spinner fa-spin"></i> 데이터를 불러오는 중...</div>
+                        </div>
                     </div>
                 </div>
+
 
                 <!-- 메인 화면 (기본 표시) -->
                 <div id="tab-main" class="tab-content active">

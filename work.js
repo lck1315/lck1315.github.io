@@ -424,21 +424,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (user) {
-            // Check workCalendarUrls in users collection
+            // 개인 캘린더 리스너는 공유 캘린더(workSiteSettings)로 대체되어 비활성화
+            // (마스터가 workSiteSettings에 저장한 공유 캘린더를 모든 팀원이 볼 수 있음)
             if (userGoogleCalendarListener) {
                 userGoogleCalendarListener();
                 userGoogleCalendarListener = null;
             }
-            userGoogleCalendarListener = db.collection('users').doc(user.uid).onSnapshot((uDoc) => {
-                if (uDoc.exists && uDoc.data().workCalendarUrls && Array.isArray(uDoc.data().workCalendarUrls)) {
-                    googleCalendarUrls = uDoc.data().workCalendarUrls;
-                } else {
-                    googleCalendarUrls = [];
-                }
-                fillGcalSlots();
-                renderGoogleCalendarFilters();
-                fetchGoogleCalendarEvents();
-            }, err => console.error("DODO.work 구글 캘린더 리스너 에러:", err));
 
             // Check workUsers collection
             const userRef = db.collection('workUsers').doc(user.uid);
@@ -461,6 +452,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentUserDoc = doc.data();
                 checkMasterAvailability();
                 
+                // 공통: 로그인 사용자 이름 헤더 표시
+                const loggedInUsernameEl = document.getElementById('logged-in-username');
+                if (loggedInUsernameEl) {
+                    const displayName = currentUserDoc.nickname || currentUserDoc.email || user.email || '';
+                    loggedInUsernameEl.textContent = displayName;
+                    loggedInUsernameEl.title = displayName;
+                    loggedInUsernameEl.style.display = 'inline-block';
+                }
+
                 if (currentUserDoc.isApproved) {
                     // 승인됨 -> 화면 표시
                     authStatusHeader.style.display = 'none';
@@ -503,6 +503,10 @@ document.addEventListener('DOMContentLoaded', () => {
             btnWorkLogin.style.display = 'inline-block';
             btnClaimMaster.style.display = 'none';
             
+            // 로그인 아이디 숨기기
+            const loggedInUsernameElOut = document.getElementById('logged-in-username');
+            if (loggedInUsernameElOut) loggedInUsernameElOut.style.display = 'none';
+
             if (userProfileIcon) userProfileIcon.style.display = 'none';
             if (btnMasterAdmin) btnMasterAdmin.style.display = 'none';
  
@@ -1017,6 +1021,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if(modal) modal.classList.remove('hidden');
     });
 
+    // 북마크 탭 상단의 '북마크 추가' 버튼 연결
+    const btnAddBookmarkTop = document.getElementById('btn-add-bookmark-top');
+    if (btnAddBookmarkTop) {
+        btnAddBookmarkTop.addEventListener('click', () => {
+            if (!currentUser) {
+                loginRequiredModal.classList.remove('hidden');
+                return;
+            }
+            const modal = document.getElementById('modal-bookmarks');
+            if (modal) modal.classList.remove('hidden');
+        });
+    }
+
     document.querySelectorAll('.modal-close-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.target.closest('.auth-modal-overlay').classList.add('hidden');
@@ -1290,6 +1307,19 @@ document.addEventListener('DOMContentLoaded', () => {
     let googleCalendarUrls = [];
     let googleEvents = {};
     let userGoogleCalendarListener = null;
+    
+    // 마스터가 공유한 캘린더 (workSiteSettings/calendarSettings)를 항상 실시간으로 로드
+    db.collection('workSiteSettings').doc('calendarSettings').onSnapshot(doc => {
+        if (doc.exists && doc.data().urls && Array.isArray(doc.data().urls)) {
+            googleCalendarUrls = doc.data().urls;
+        } else {
+            googleCalendarUrls = [];
+        }
+        fillGcalSlots();
+        renderGoogleCalendarFilters();
+        fetchGoogleCalendarEvents();
+    }, err => console.error("공유 캘린더 설정 로드 오류:", err));
+
 
     // iCal 텍스트를 파싱하여 이벤트 객체 배열 반환
     function parseICalText(text) {
@@ -3560,6 +3590,8 @@ document.addEventListener('DOMContentLoaded', () => {
             table { border-collapse: collapse; font-family: 'Malgun Gothic', sans-serif; font-size: 9pt; }
             th, td { border: 1px solid #d1d5db; text-align: center; vertical-align: middle; white-space: nowrap; height: 25px; }
             .header-cell { background: #f1f5f9; font-weight: bold; }
+            .row-project { background: #ede9fe; font-weight: bold; }
+            .row-task { background: #ffffff; }
         </style>
         </head>
         <body>
@@ -3567,7 +3599,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <thead>
                 <tr>
                     <th rowspan="4" class="header-cell" style="width: 40px;">No.</th>
-                    <th rowspan="4" class="header-cell" style="width: 250px;">Project / Task</th>
+                    <th rowspan="4" class="header-cell" style="width: 250px; text-align:left; padding-left:8px;">Project / Task</th>
                     <th rowspan="4" class="header-cell" style="width: 80px;">Assignee</th>
                     <th rowspan="4" class="header-cell" style="width: 80px;">Status</th>
                     <th rowspan="4" class="header-cell" style="width: 90px;">Start</th>
@@ -3584,13 +3616,19 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         
         data.forEach((item, idx) => {
-            let tr = '<tr>';
-            tr += `<td>${idx + 1}</td>`;
-            tr += `<td style="text-align:left; padding-left:5px;">${(item.name || '').replace(/</g, '&lt;')}</td>`;
-            tr += `<td>${item.assignee || ''}</td>`;
-            tr += `<td style="color:${item.status === '진행중' ? '#3b82f6' : (item.status === '완료' ? '#10b981' : '#6b7280')}">${item.status || ''}</td>`;
-            tr += `<td>${item.startDate || ''}</td>`;
-            tr += `<td>${item.endDate || ''}</td>`;
+            const isProject = !item.parentId;
+            const rowClass = isProject ? 'row-project' : 'row-task';
+            const rowBgBase = isProject ? '#ede9fe' : '#ffffff';
+            const indent = isProject ? '' : '&nbsp;&nbsp;&nbsp;└ ';
+            
+            let tr = `<tr class="${rowClass}">`;
+            tr += `<td style="background:${rowBgBase};">${idx + 1}</td>`;
+            tr += `<td style="text-align:left; padding-left:8px; background:${rowBgBase}; font-weight:${isProject ? 'bold' : 'normal'};">${indent}${(item.name || '').replace(/</g, '&lt;')}</td>`;
+            tr += `<td style="background:${rowBgBase};">${item.assignee || ''}</td>`;
+            const statusColor = item.status === '진행중' ? '#3b82f6' : (item.status === '완료' ? '#10b981' : '#6b7280');
+            tr += `<td style="color:${statusColor}; background:${rowBgBase};">${item.status || ''}</td>`;
+            tr += `<td style="background:${rowBgBase};">${item.startDate || ''}</td>`;
+            tr += `<td style="background:${rowBgBase};">${item.endDate || ''}</td>`;
             
             dateObjects.forEach(d => {
                 const yyyy = d.getFullYear();
@@ -3599,9 +3637,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dStr = `${yyyy}-${mm}-${dd}`;
                 
                 const day = d.getDay();
-                let bg = '#fff';
-                if (day === 0) bg = '#fff0f0';
-                if (day === 6) bg = '#f0f4ff';
+                let bg = rowBgBase;
+                if (day === 0) bg = isProject ? '#ffd6da' : '#fff0f0';
+                if (day === 6) bg = isProject ? '#d6e4ff' : '#f0f4ff';
                 
                 let isFill = false;
                 if (item.startDate && item.endDate && dStr >= item.startDate && dStr <= item.endDate) {
@@ -3611,8 +3649,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 if (isFill) {
-                    bg = item.color || '#fde047';
-                    tr += `<td style="background:${bg}; border-top:1px solid #ccc; border-bottom:1px solid #ccc; border-left:none; border-right:none;"></td>`;
+                    const fillColor = item.color || '#fde047';
+                    tr += `<td style="background:${fillColor}; border-top:1px solid #aaa; border-bottom:1px solid #aaa; border-left:none; border-right:none;"></td>`;
                 } else {
                     tr += `<td style="background:${bg};"></td>`;
                 }
@@ -3643,7 +3681,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (psExcelAllBtn) {
         psExcelAllBtn.addEventListener('click', () => {
             if (!currentUser) { alert('로그인이 필요합니다.'); return; }
-            exportToCsv(psData, `project_all_${new Date().toISOString().slice(0, 10)}.csv`);
+            exportToExcelWithStyle(psData, `project_all_${new Date().toISOString().slice(0, 10)}.xls`);
         });
     }
 
@@ -3667,7 +3705,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             findChildren(psSelectedId);
-            exportToCsv(selectedItems, `project_selected_${new Date().toISOString().slice(0, 10)}.csv`);
+            exportToExcelWithStyle(selectedItems, `project_selected_${new Date().toISOString().slice(0, 10)}.xls`);
         });
     }
 
