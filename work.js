@@ -1453,8 +1453,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // 구글 캘린더 개별 표시 필터 렌더링
     function renderGoogleCalendarFilters() {
         const settingsBtn = document.getElementById('work-calendar-settings-btn');
+        const gcalSettingsBtn = document.getElementById('btn-gcal-settings');
+        
         if (settingsBtn) {
             settingsBtn.style.display = (currentUserDoc && currentUserDoc.isMaster === true) ? 'inline-block' : 'none';
+        }
+        if (gcalSettingsBtn) {
+            gcalSettingsBtn.style.display = (currentUserDoc && currentUserDoc.isMaster === true) ? 'inline-block' : 'none';
         }
 
         const filterContainer = document.getElementById('work-gcal-filter-container');
@@ -1537,6 +1542,44 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             googleCalendarUrls = [];
         }
+        
+        // Iframe 캘린더 연동 렌더링
+        const iframeUrl = doc.exists ? doc.data().iframeUrl : '';
+        const container = document.getElementById('google-calendar-container');
+        const wrapper = document.getElementById('google-calendar-iframe-wrapper');
+        const inputUrl = document.getElementById('input-gcal-url');
+        
+        if (inputUrl && iframeUrl) {
+            inputUrl.value = iframeUrl;
+        }
+        
+        if (iframeUrl && iframeUrl.trim() !== '') {
+            if (container) container.style.display = 'block';
+            if (wrapper) {
+                // iframe 태그 전체인지 url인지 확인
+                let finalIframe = '';
+                if (iframeUrl.trim().toLowerCase().startsWith('<iframe')) {
+                    finalIframe = iframeUrl;
+                } else {
+                    finalIframe = `<iframe src="${iframeUrl}" style="border: 0" width="100%" height="100%" frameborder="0" scrolling="no"></iframe>`;
+                }
+                wrapper.innerHTML = finalIframe;
+                
+                // 크기 강제 조정
+                setTimeout(() => {
+                    const iframeEl = wrapper.querySelector('iframe');
+                    if (iframeEl) {
+                        iframeEl.style.width = '100%';
+                        iframeEl.style.height = '100%';
+                        iframeEl.style.border = 'none';
+                    }
+                }, 100);
+            }
+        } else {
+            if (container) container.style.display = 'none';
+            if (wrapper) wrapper.innerHTML = '';
+        }
+        
         fillGcalSlots();
         renderGoogleCalendarFilters();
         fetchGoogleCalendarEvents();
@@ -1607,6 +1650,50 @@ document.addEventListener('DOMContentLoaded', () => {
             alert("설정 저장 중 오류가 발생했습니다.");
         });
     });
+
+    // 구글 캘린더 iframe 설정 모달 (마스터 전용)
+    const btnGcalSettings = document.getElementById('btn-gcal-settings');
+    const gcalSettingsModal = document.getElementById('gcal-settings-modal');
+    const btnGcalSettingsCancel = document.getElementById('btn-gcal-settings-cancel');
+    const btnGcalSettingsSave = document.getElementById('btn-gcal-settings-save');
+    const inputGcalUrl = document.getElementById('input-gcal-url');
+
+    if (btnGcalSettings) {
+        btnGcalSettings.addEventListener('click', () => {
+            if (!currentUserDoc || currentUserDoc.isMaster !== true) {
+                alert("관리자만 캘린더 연동을 설정할 수 있습니다.");
+                return;
+            }
+            if (gcalSettingsModal) gcalSettingsModal.classList.remove('hidden');
+        });
+    }
+
+    if (btnGcalSettingsCancel) {
+        btnGcalSettingsCancel.addEventListener('click', () => {
+            if (gcalSettingsModal) gcalSettingsModal.classList.add('hidden');
+        });
+    }
+
+    if (btnGcalSettingsSave) {
+        btnGcalSettingsSave.addEventListener('click', () => {
+            if (!currentUserDoc || currentUserDoc.isMaster !== true) {
+                alert("관리자 권한이 없습니다.");
+                return;
+            }
+            const iframeUrl = inputGcalUrl ? inputGcalUrl.value.trim() : '';
+            
+            db.collection('workSiteSettings').doc('calendarSettings').set({
+                iframeUrl: iframeUrl,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true }).then(() => {
+                alert("구글 캘린더 연동이 저장되었습니다.\n이제 팀원들도 구글 캘린더를 볼 수 있습니다! 🎉");
+                if (gcalSettingsModal) gcalSettingsModal.classList.add('hidden');
+            }).catch(err => {
+                console.error("캘린더 연동 저장 오류:", err);
+                alert("저장 중 오류가 발생했습니다.");
+            });
+        });
+    }
 
     window.renderWorkCalendar = function() {
         if (!workCalendarGrid) return;
