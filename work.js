@@ -4739,6 +4739,47 @@ document.addEventListener('DOMContentLoaded', () => {
         let matrixData = { rows: [], cols: [], cells: {}, colWidths: {}, rowHeights: {} };
         let unsubscribePerf = null;
         let isEditing = false; // 방해 방지용
+        
+        // 커스텀 리사이즈 변수
+        let resizingCol = null;
+        let resizingRow = null;
+        let startPos = 0;
+        let startSize = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            if (resizingCol) {
+                const newWidth = Math.max(50, startSize + (e.pageX - startPos));
+                resizingCol.th.style.width = newWidth + 'px';
+                resizingCol.th.style.minWidth = newWidth + 'px';
+                resizingCol.th.style.maxWidth = newWidth + 'px';
+            }
+            if (resizingRow) {
+                const newHeight = Math.max(60, startSize + (e.pageY - startPos));
+                resizingRow.td.style.height = newHeight + 'px';
+                if (resizingRow.td.parentElement) {
+                    resizingRow.td.parentElement.style.height = newHeight + 'px';
+                }
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (resizingCol) {
+                const cIdx = resizingCol.cIdx;
+                matrixData.colWidths[cIdx] = parseFloat(resizingCol.th.style.width);
+                saveMatrixToDB();
+                if(resizingCol.resizer) resizingCol.resizer.style.background = 'transparent';
+                resizingCol = null;
+                document.body.cursor = 'default';
+            }
+            if (resizingRow) {
+                const rIdx = resizingRow.rIdx;
+                matrixData.rowHeights[rIdx] = parseFloat(resizingRow.td.style.height);
+                saveMatrixToDB();
+                if(resizingRow.resizer) resizingRow.resizer.style.background = 'transparent';
+                resizingRow = null;
+                document.body.style.cursor = 'default';
+            }
+        });
 
         function renderMatrix() {
             if (!theadTr || !tbody) return;
@@ -4753,9 +4794,25 @@ document.addEventListener('DOMContentLoaded', () => {
             matrixData.cols.forEach((colName, cIdx) => {
                 const savedWidth = matrixData.colWidths && matrixData.colWidths[cIdx] ? `${matrixData.colWidths[cIdx]}px` : '150px';
                 const th = document.createElement('th');
-                th.style.cssText = `border: 1px solid var(--card-border); padding: 12px; text-align: center; background: var(--bg-color); font-weight: bold; color: var(--text-color); min-width: ${savedWidth}; width: ${savedWidth}; position: relative; cursor: ${currentUser ? 'grab' : 'default'};`;
+                th.style.cssText = `border: 1px solid var(--card-border); padding: 12px; text-align: center; background: var(--bg-color); font-weight: bold; color: var(--text-color); min-width: ${savedWidth}; max-width: ${savedWidth}; width: ${savedWidth}; position: relative; cursor: ${currentUser ? 'grab' : 'default'};`;
                 th.draggable = !!currentUser;
                 th.dataset.cIdx = cIdx;
+
+                if (isMaster) {
+                    const resizer = document.createElement('div');
+                    resizer.style.cssText = 'position: absolute; top: 0; right: 0; width: 6px; height: 100%; cursor: col-resize; z-index: 10; background: transparent;';
+                    resizer.addEventListener('mouseenter', () => { if(!resizingCol) resizer.style.background = 'var(--primary-color)'; });
+                    resizer.addEventListener('mouseleave', () => { if(!resizingCol) resizer.style.background = 'transparent'; });
+                    resizer.addEventListener('mousedown', (e) => {
+                        e.stopPropagation(); e.preventDefault();
+                        resizingCol = { th: th, cIdx: cIdx, resizer: resizer };
+                        startPos = e.pageX;
+                        startSize = th.offsetWidth;
+                        document.body.style.cursor = 'col-resize';
+                        resizer.style.background = 'var(--primary-color)';
+                    });
+                    th.appendChild(resizer);
+                }
 
                 th.addEventListener('dragstart', function(e) {
                     if (isEditing) { e.preventDefault(); return; }
@@ -4897,14 +4954,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 
                 // 첫 번째 열 (항목 이름)
+                const savedRowHeight = matrixData.rowHeights && matrixData.rowHeights[rIdx] ? `${matrixData.rowHeights[rIdx]}px` : '60px';
                 const th = document.createElement('td');
-                th.style.cssText = `border: 1px solid var(--card-border); padding: 12px; background: var(--card-bg); color: var(--text-color); font-weight: bold; position: sticky; left: 0; z-index: 1; width: 1%; white-space: nowrap; ${currentUser ? 'cursor: grab;' : ''}`;
+                th.style.cssText = `border: 1px solid var(--card-border); padding: 12px; background: var(--card-bg); color: var(--text-color); font-weight: bold; position: sticky; left: 0; z-index: 1; width: 1%; white-space: nowrap; height: ${savedRowHeight}; ${currentUser ? 'cursor: grab;' : ''}`;
+                tr.style.height = savedRowHeight;
+                
                 th.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; height: 100%;">
                         <span style="display: flex; align-items: center; gap: 8px;">${currentUser ? '<i class="fa-solid fa-grip-vertical" style="color: var(--text-muted); opacity: 0.5;"></i>' : ''} ${rowName}</span>
                         ${isMaster ? `<button class="btn-del-row" data-idx="${rIdx}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 2px 5px;"><i class="fa-solid fa-times"></i></button>` : ''}
                     </div>
                 `;
+                
+                if (isMaster) {
+                    const rowResizer = document.createElement('div');
+                    rowResizer.style.cssText = 'position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; cursor: row-resize; z-index: 10; background: transparent;';
+                    rowResizer.addEventListener('mouseenter', () => { if(!resizingRow) rowResizer.style.background = 'var(--primary-color)'; });
+                    rowResizer.addEventListener('mouseleave', () => { if(!resizingRow) rowResizer.style.background = 'transparent'; });
+                    rowResizer.addEventListener('mousedown', (e) => {
+                        e.stopPropagation(); e.preventDefault();
+                        resizingRow = { td: th, rIdx: rIdx, resizer: rowResizer };
+                        startPos = e.pageY;
+                        startSize = th.offsetHeight;
+                        document.body.style.cursor = 'row-resize';
+                        rowResizer.style.background = 'var(--primary-color)';
+                    });
+                    th.appendChild(rowResizer);
+                }
                 tr.appendChild(th);
                 
                 // 나머지 열 (팀원별 셀)
@@ -4915,10 +4991,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const cellKey = `${rIdx}_${cIdx}`;
                     const val = matrixData.cells[cellKey] || '';
                     
-                    const savedWidth = matrixData.colWidths && matrixData.colWidths[cIdx] ? `${matrixData.colWidths[cIdx]}px` : '100%';
-                    const savedHeight = matrixData.rowHeights && matrixData.rowHeights[rIdx] ? `${matrixData.rowHeights[rIdx]}px` : '60px';
-                    
-                    td.innerHTML = `<textarea class="matrix-cell-input" wrap="off" data-key="${cellKey}" style="width: ${savedWidth}; min-width: 100px; height: ${savedHeight}; min-height: 60px; border: none; padding: 10px; resize: both; outline: none; background: transparent; color: var(--text-color); font-family: inherit; font-size: 0.9rem; overflow: auto;" ${isMaster ? '' : 'readonly'}>${val}</textarea>`;
+                    td.innerHTML = `<textarea class="matrix-cell-input" wrap="off" data-key="${cellKey}" style="width: 100%; height: 100%; min-width: 100px; min-height: 60px; border: none; padding: 10px; resize: none; outline: none; background: transparent; color: var(--text-color); font-family: inherit; font-size: 0.9rem; overflow: auto; box-sizing: border-box;" ${isMaster ? '' : 'readonly'}>${val}</textarea>`;
                     tr.appendChild(td);
                 });
                 
@@ -4948,43 +5021,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 input.addEventListener('input', (e) => {
                     const key = e.target.dataset.key;
                     matrixData.cells[key] = e.target.value;
-                });
-                input.addEventListener('mouseup', (e) => {
-                    const key = e.target.dataset.key;
-                    const [rIdxStr, cIdxStr] = key.split('_');
-                    const rIdx = parseInt(rIdxStr);
-                    const cIdx = parseInt(cIdxStr);
-                    const newWidth = e.target.offsetWidth;
-                    const newHeight = e.target.offsetHeight;
-                    
-                    if (!matrixData.colWidths) matrixData.colWidths = {};
-                    if (!matrixData.rowHeights) matrixData.rowHeights = {};
-                    
-                    let changed = false;
-                    // textarea의 최소 너비/높이 제한 고려
-                    if (matrixData.colWidths[cIdx] !== newWidth && newWidth > 0) {
-                        matrixData.colWidths[cIdx] = newWidth;
-                        changed = true;
-                    }
-                    if (matrixData.rowHeights[rIdx] !== newHeight && newHeight > 0) {
-                        matrixData.rowHeights[rIdx] = newHeight;
-                        changed = true;
-                    }
-                    
-                    if (changed) {
-                        // 같은 행/열의 다른 요소들 크기 즉시 동기화
-                        document.querySelectorAll('.matrix-cell-input').forEach(ta => {
-                            const [r, c] = ta.dataset.key.split('_');
-                            if (parseInt(c) === cIdx) ta.style.width = newWidth + 'px';
-                            if (parseInt(r) === rIdx) ta.style.height = newHeight + 'px';
-                        });
-                        const ths = document.querySelectorAll('#perf-matrix-header th');
-                        if (ths[cIdx + 1]) {
-                            ths[cIdx + 1].style.width = newWidth + 'px';
-                            ths[cIdx + 1].style.minWidth = newWidth + 'px';
-                        }
-                        saveMatrixToDB();
-                    }
                 });
             });
 
