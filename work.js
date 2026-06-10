@@ -3750,8 +3750,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        window.hasAutoBackedUpToday = false;
-
         async function cleanupOldBackups() {
             try {
                 const snap = await db.collection('workProjectBackups').orderBy('createdAt', 'desc').get();
@@ -3822,11 +3820,29 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        window.checkAndRunAutoBackup = async function() {
-            if (!currentUser || psData.length === 0 || window.hasAutoBackedUpToday) return;
-            window.hasAutoBackedUpToday = true;
+        window.lastAutoBackupDateStr = null;
 
+        function scheduleNextMidnightBackup() {
+            const now = new Date();
+            const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1); // 다음날 0시 0분 1초
+            const timeUntilMidnight = tomorrow.getTime() - now.getTime();
+            
+            setTimeout(() => {
+                if (typeof window.checkAndRunAutoBackup === 'function') {
+                    console.log("자정이 되었습니다. 자동 백업을 실행합니다.");
+                    window.checkAndRunAutoBackup();
+                }
+            }, timeUntilMidnight);
+        }
+
+        window.checkAndRunAutoBackup = async function() {
+            if (!currentUser || psData.length === 0) return;
+            
             const todayStr = new Date().toLocaleDateString('ko-KR');
+            if (window.lastAutoBackupDateStr === todayStr) return; // 이미 오늘 실행됨
+            
+            window.lastAutoBackupDateStr = todayStr;
+
             try {
                 // 최근 10개만 조회해서 오늘 자동 백업이 있는지 확인
                 const snap = await db.collection('workProjectBackups').orderBy('createdAt', 'desc').limit(10).get();
@@ -3842,9 +3858,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log("오늘의 프로젝트 자동 백업을 시작합니다...");
                     await saveBackup(`자동 백업 ${todayStr}`, 'auto', true);
                 }
+                
+                // 백업 처리가 끝난 후 다음 자정 타이머 설정
+                scheduleNextMidnightBackup();
             } catch (e) {
                 console.error("자동 백업 오류:", e);
-                window.hasAutoBackedUpToday = false; // 실패 시 다시 시도할 수 있도록 초기화
+                window.lastAutoBackupDateStr = null; // 실패 시 다시 시도할 수 있도록 초기화
             }
         };
 
@@ -3879,36 +3898,65 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 if (backupCount) backupCount.textContent = `${snap.size}개`;
-                backupList.innerHTML = '';
+                
+                let autoCardsHtml = '';
+                let manualCardsHtml = '';
+                let autoCount = 0;
+                let manualCount = 0;
+
                 snap.forEach(doc => {
                     const d = doc.data();
                     const dateStr = d.createdAt ? new Date(d.createdAt.toDate()).toLocaleString('ko-KR') : '';
-                    const card = document.createElement('div');
-                    card.style.cssText = `background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; transition: box-shadow 0.2s;`;
-                    card.innerHTML = `
-                        <div style="flex:1; min-width:0;">
-                            <div style="font-weight:700; color:var(--text-color); font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                <i class="fa-solid fa-database" style="color:${d.type === 'auto' ? '#ff9f43' : '#6c5ce7'}; margin-right:6px;"></i>${d.name || '이름 없음'}
-                                ${d.type === 'auto' ? '<span style="font-size:0.7rem; background:#ff9f43; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle;">자동</span>' : '<span style="font-size:0.7rem; background:#6c5ce7; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle;">수동</span>'}
+                    const cardHtml = `
+                        <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 12px; transition: box-shadow 0.2s;">
+                            <div style="flex:1; min-width:0;">
+                                <div style="font-weight:700; color:var(--text-color); font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                    <i class="fa-solid fa-database" style="color:${d.type === 'auto' ? '#ff9f43' : '#6c5ce7'}; margin-right:6px;"></i>${d.name || '이름 없음'}
+                                    ${d.type === 'auto' ? '<span style="font-size:0.7rem; background:#ff9f43; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle;">자동</span>' : '<span style="font-size:0.7rem; background:#6c5ce7; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle;">수동</span>'}
+                                </div>
+                                <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px; display:flex; gap:12px; flex-wrap:wrap;">
+                                    <span><i class="fa-regular fa-clock"></i> ${dateStr}</span>
+                                    <span><i class="fa-solid fa-list-check"></i> ${d.itemCount || '?'}개 항목</span>
+                                    <span><i class="fa-solid fa-calendar"></i> ${d.year || ''}년</span>
+                                    <span><i class="fa-solid fa-user"></i> ${d.createdBy || ''}</span>
+                                </div>
                             </div>
-                            <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px; display:flex; gap:12px; flex-wrap:wrap;">
-                                <span><i class="fa-regular fa-clock"></i> ${dateStr}</span>
-                                <span><i class="fa-solid fa-list-check"></i> ${d.itemCount || '?'}개 항목</span>
-                                <span><i class="fa-solid fa-calendar"></i> ${d.year || ''}년</span>
-                                <span><i class="fa-solid fa-user"></i> ${d.createdBy || ''}</span>
+                            <div style="display:flex; gap:8px; flex-shrink:0;">
+                                <button class="btn-restore-backup" data-id="${doc.id}" data-name="${(d.name||'').replace(/"/g,'')}" style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:600; white-space:nowrap;">
+                                    <i class="fa-solid fa-rotate-left"></i> 복원
+                                </button>
+                                <button class="btn-delete-backup" data-id="${doc.id}" style="background:transparent; color:#ff4757; border:1px solid #ff4757; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.82rem; white-space:nowrap;">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
                             </div>
-                        </div>
-                        <div style="display:flex; gap:8px; flex-shrink:0;">
-                            <button class="btn-restore-backup" data-id="${doc.id}" data-name="${(d.name||'').replace(/"/g,'')}" style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-size:0.82rem; font-weight:600; white-space:nowrap;">
-                                <i class="fa-solid fa-rotate-left"></i> 복원
-                            </button>
-                            <button class="btn-delete-backup" data-id="${doc.id}" style="background:transparent; color:#ff4757; border:1px solid #ff4757; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:0.82rem; white-space:nowrap;">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
                         </div>
                     `;
-                    backupList.appendChild(card);
+                    
+                    if (d.type === 'auto') {
+                        autoCardsHtml += cardHtml;
+                        autoCount++;
+                    } else {
+                        manualCardsHtml += cardHtml;
+                        manualCount++;
+                    }
                 });
+
+                backupList.innerHTML = `
+                    <div style="margin-bottom: 24px;">
+                        <h3 style="font-size: 1.05rem; color: var(--text-color); margin-bottom: 12px; border-bottom: 2px solid #6c5ce7; padding-bottom: 8px; display:flex; justify-content:space-between;">
+                            <span><i class="fa-solid fa-hand-pointer" style="color:#6c5ce7; margin-right:8px;"></i>수동 백업 목록</span>
+                            <span style="font-size:0.9rem; color:var(--text-muted);">${manualCount} / 50</span>
+                        </h3>
+                        ${manualCardsHtml || '<div style="color:var(--text-muted); text-align:center; padding: 12px;">수동 백업이 없습니다.</div>'}
+                    </div>
+                    <div>
+                        <h3 style="font-size: 1.05rem; color: var(--text-color); margin-bottom: 12px; border-bottom: 2px solid #ff9f43; padding-bottom: 8px; display:flex; justify-content:space-between;">
+                            <span><i class="fa-solid fa-robot" style="color:#ff9f43; margin-right:8px;"></i>자동 백업 목록</span>
+                            <span style="font-size:0.9rem; color:var(--text-muted);">${autoCount} / 50</span>
+                        </h3>
+                        ${autoCardsHtml || '<div style="color:var(--text-muted); text-align:center; padding: 12px;">자동 백업이 없습니다.</div>'}
+                    </div>
+                `;
 
                 // 복원 버튼
                 backupList.querySelectorAll('.btn-restore-backup').forEach(btn => {
