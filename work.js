@@ -2799,7 +2799,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const trRect = firstTr.getBoundingClientRect();
                 const hlRect = firstHline.getBoundingClientRect();
                 const diff = trRect.top - hlRect.top;
-                if (Math.abs(diff) > 0) {
+                if (Math.abs(diff) > 0.5) {
                     const currentMargin = parseFloat(window.getComputedStyle(ganttBody).marginTop) || 0;
                     ganttBody.style.marginTop = `${currentMargin + diff}px`;
                     console.log('[단차 자동 교정] 좌우 패널 높이 차이 보정:', diff, 'px');
