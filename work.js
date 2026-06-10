@@ -2788,6 +2788,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 스크롤 동기화 핸들러 (onscroll = 매번 덮어쓰므로 누적 안됨)
+        
+        // [강제 단차 교정 로직]
+        // OS나 브라우저별 스크롤바, 보더, 렌더링 차이로 인해 미세하게 틀어지는 단차를
+        // 첫 번째 행의 실제 화면상 좌표(BoundingClientRect)를 직접 측정하여 완벽하게 일치시킵니다.
+        requestAnimationFrame(() => {
+            const firstTr = treeBody.querySelector('.ps-tree-row');
+            const firstHline = bgHlines.querySelector('.ps-gantt-hline');
+            if (firstTr && firstHline) {
+                const trRect = firstTr.getBoundingClientRect();
+                const hlRect = firstHline.getBoundingClientRect();
+                const diff = trRect.top - hlRect.top;
+                if (Math.abs(diff) > 0) {
+                    const currentMargin = parseFloat(window.getComputedStyle(ganttBody).marginTop) || 0;
+                    ganttBody.style.marginTop = `${currentMargin + diff}px`;
+                    console.log('[단차 자동 교정] 좌우 패널 높이 차이 보정:', diff, 'px');
+                }
+            }
+        });
         if (ganttContainer) {
             let _syncLock = false;
 

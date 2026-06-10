@@ -2712,7 +2712,7 @@ main:has(#tab-projects.active) {
 .ps-left-tool-btn:hover { background-color: #f1f3f5; border-color: #adb5bd; }
 
 .ps-tree-header {
-    height: 125px;
+    height: 125px; box-sizing: border-box;
     background-color: #f0f0f0;
     border-bottom: 1px solid #d0d0d0;
     display: flex;
@@ -2857,7 +2857,7 @@ main:has(#tab-projects.active) {
 }
 
 .ps-gantt-header {
-    height: 125px;
+    height: 125px; box-sizing: border-box;
     background-color: #f8f9fa;
     position: sticky;
     top: 0;
