@@ -4794,9 +4794,22 @@ document.addEventListener('DOMContentLoaded', () => {
             matrixData.cols.forEach((colName, cIdx) => {
                 const savedWidth = matrixData.colWidths && matrixData.colWidths[cIdx] ? `${matrixData.colWidths[cIdx]}px` : '150px';
                 const th = document.createElement('th');
-                th.style.cssText = `border: 1px solid var(--card-border); padding: 12px; text-align: center; background: var(--bg-color); font-weight: bold; color: var(--text-color); min-width: ${savedWidth}; max-width: ${savedWidth}; width: ${savedWidth}; position: relative; cursor: ${currentUser ? 'grab' : 'default'};`;
+                th.style.cssText = `border: 1px solid var(--card-border); padding: 0; text-align: center; background: var(--bg-color); font-weight: bold; color: var(--text-color); min-width: ${savedWidth}; max-width: ${savedWidth}; width: ${savedWidth}; cursor: ${currentUser ? 'grab' : 'default'};`;
                 th.draggable = !!currentUser;
                 th.dataset.cIdx = cIdx;
+
+                const wrapper = document.createElement('div');
+                wrapper.style.cssText = 'position: relative; width: 100%; height: 100%; padding: 12px; box-sizing: border-box;';
+                
+                const content = document.createElement('div');
+                content.style.cssText = 'display: flex; justify-content: space-between; align-items: center; gap: 8px;';
+                content.innerHTML = `
+                    <span style="display: flex; align-items: center; gap: 4px;">
+                        ${currentUser ? '<i class="fa-solid fa-grip-vertical" style="color: var(--text-muted); opacity: 0.5;"></i>' : ''} ${colName}
+                    </span>
+                    ${isMaster ? `<button class="btn-del-col" data-idx="${cIdx}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 2px 5px;"><i class="fa-solid fa-times"></i></button>` : ''}
+                `;
+                wrapper.appendChild(content);
 
                 if (isMaster) {
                     const resizer = document.createElement('div');
@@ -4811,8 +4824,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         document.body.style.cursor = 'col-resize';
                         resizer.style.background = 'var(--primary-color)';
                     });
-                    th.appendChild(resizer);
+                    wrapper.appendChild(resizer);
                 }
+
+                th.appendChild(wrapper);
 
                 th.addEventListener('dragstart', function(e) {
                     if (isEditing) { e.preventDefault(); return; }
@@ -4884,14 +4899,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.style.opacity = '1';
                 });
 
-                th.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                        <span style="display: flex; align-items: center; gap: 4px;">
-                            ${currentUser ? '<i class="fa-solid fa-grip-vertical" style="color: var(--text-muted); opacity: 0.5;"></i>' : ''} ${colName}
-                        </span>
-                        ${isMaster ? `<button class="btn-del-col" data-idx="${cIdx}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 2px 5px;"><i class="fa-solid fa-times"></i></button>` : ''}
-                    </div>
-                `;
                 theadTr.appendChild(th);
             });
 
@@ -4956,14 +4963,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 첫 번째 열 (항목 이름)
                 const savedRowHeight = matrixData.rowHeights && matrixData.rowHeights[rIdx] ? `${matrixData.rowHeights[rIdx]}px` : '60px';
                 const th = document.createElement('td');
-                th.style.cssText = `border: 1px solid var(--card-border); padding: 12px; background: var(--card-bg); color: var(--text-color); font-weight: bold; position: sticky; left: 0; z-index: 1; width: 1%; white-space: nowrap; height: ${savedRowHeight}; ${currentUser ? 'cursor: grab;' : ''}`;
+                th.style.cssText = `border: 1px solid var(--card-border); padding: 0; background: var(--card-bg); color: var(--text-color); font-weight: bold; position: sticky; left: 0; z-index: 1; width: 1%; white-space: nowrap; height: ${savedRowHeight}; ${currentUser ? 'cursor: grab;' : ''}`;
                 tr.style.height = savedRowHeight;
                 
-                th.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; height: 100%;">
-                        <span style="display: flex; align-items: center; gap: 8px;">${currentUser ? '<i class="fa-solid fa-grip-vertical" style="color: var(--text-muted); opacity: 0.5;"></i>' : ''} ${rowName}</span>
-                        ${isMaster ? `<button class="btn-del-row" data-idx="${rIdx}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 2px 5px;"><i class="fa-solid fa-times"></i></button>` : ''}
-                    </div>
+                const wrapper = document.createElement('div');
+                wrapper.style.cssText = 'position: relative; width: 100%; height: 100%; padding: 12px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center;';
+                
+                wrapper.innerHTML = `
+                    <span style="display: flex; align-items: center; gap: 8px;">${currentUser ? '<i class="fa-solid fa-grip-vertical" style="color: var(--text-muted); opacity: 0.5;"></i>' : ''} ${rowName}</span>
+                    ${isMaster ? `<button class="btn-del-row" data-idx="${rIdx}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 2px 5px;"><i class="fa-solid fa-times"></i></button>` : ''}
                 `;
                 
                 if (isMaster) {
@@ -4979,19 +4987,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         document.body.style.cursor = 'row-resize';
                         rowResizer.style.background = 'var(--primary-color)';
                     });
-                    th.appendChild(rowResizer);
+                    wrapper.appendChild(rowResizer);
                 }
+                th.appendChild(wrapper);
                 tr.appendChild(th);
                 
                 // 나머지 열 (팀원별 셀)
                 matrixData.cols.forEach((_, cIdx) => {
                     const td = document.createElement('td');
-                    td.style.cssText = 'border: 1px solid var(--card-border); padding: 0; background: var(--card-bg); vertical-align: top; position: relative;';
+                    td.style.cssText = 'border: 1px solid var(--card-border); padding: 0; background: var(--card-bg); vertical-align: top;';
                     
                     const cellKey = `${rIdx}_${cIdx}`;
                     const val = matrixData.cells[cellKey] || '';
                     
-                    td.innerHTML = `<textarea class="matrix-cell-input" wrap="off" data-key="${cellKey}" style="width: 100%; height: 100%; min-width: 100px; min-height: 60px; border: none; padding: 10px; resize: none; outline: none; background: transparent; color: var(--text-color); font-family: inherit; font-size: 0.9rem; overflow: auto; box-sizing: border-box;" ${isMaster ? '' : 'readonly'}>${val}</textarea>`;
+                    const cellWrapper = document.createElement('div');
+                    cellWrapper.style.cssText = 'position: relative; width: 100%; height: 100%; min-width: 100px; min-height: 60px;';
+                    
+                    cellWrapper.innerHTML = `<textarea class="matrix-cell-input" wrap="off" data-key="${cellKey}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; padding: 10px; resize: none; outline: none; background: transparent; color: var(--text-color); font-family: inherit; font-size: 0.9rem; overflow: auto; box-sizing: border-box;" ${isMaster ? '' : 'readonly'}>${val}</textarea>`;
                     
                     if (isMaster) {
                         // 열 리사이저 (우측 가장자리)
@@ -5004,11 +5016,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             const th = document.querySelector(`#perf-matrix-header th[data-c-idx="${cIdx}"]`);
                             resizingCol = { th: th, cIdx: cIdx, resizer: colResizer };
                             startPos = e.pageX;
-                            startSize = th.offsetWidth;
+                            startSize = th.offsetHeight; // we only need startPos and width/height for calc
+                            // Wait, th.offsetWidth! 
+                            startSize = th ? th.offsetWidth : td.offsetWidth;
                             document.body.style.cursor = 'col-resize';
                             colResizer.style.background = 'var(--primary-color)';
                         });
-                        td.appendChild(colResizer);
+                        cellWrapper.appendChild(colResizer);
                         
                         // 행 리사이저 (하단 가장자리)
                         const rowResizer = document.createElement('div');
@@ -5020,12 +5034,13 @@ document.addEventListener('DOMContentLoaded', () => {
                             const rowTh = tr.querySelector('td:first-child');
                             resizingRow = { td: rowTh, rIdx: rIdx, resizer: rowResizer };
                             startPos = e.pageY;
-                            startSize = rowTh.offsetHeight;
+                            startSize = rowTh ? rowTh.offsetHeight : td.offsetHeight;
                             document.body.style.cursor = 'row-resize';
                             rowResizer.style.background = 'var(--primary-color)';
                         });
-                        td.appendChild(rowResizer);
+                        cellWrapper.appendChild(rowResizer);
                     }
+                    td.appendChild(cellWrapper);
                     tr.appendChild(td);
                 });
                 
