@@ -2025,6 +2025,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof window.renderPerformanceDashboard === 'function') {
             window.renderPerformanceDashboard();
         }
+        if (typeof window.checkAndRunAutoBackup === 'function') {
+            window.checkAndRunAutoBackup();
+        }
     });
 
     function updateSearchDropdown() {
@@ -3747,37 +3750,115 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // ── 현재 데이터를 Firestore에 백업 저장 ──────────
+        window.hasAutoBackedUpToday = false;
+
+        async function cleanupOldBackups() {
+            try {
+                const snap = await db.collection('workProjectBackups').orderBy('createdAt', 'desc').get();
+                const autoDocs = [];
+                const manualDocs = [];
+                
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    if (d.type === 'auto') autoDocs.push(doc);
+                    else manualDocs.push(doc);
+                });
+
+                const batch = db.batch();
+                let deleteCount = 0;
+
+                // 자동 백업 30개 유지
+                if (autoDocs.length > 30) {
+                    for (let i = 30; i < autoDocs.length; i++) {
+                        batch.delete(autoDocs[i].ref);
+                        deleteCount++;
+                    }
+                }
+                // 수동 백업 30개 유지
+                if (manualDocs.length > 30) {
+                    for (let i = 30; i < manualDocs.length; i++) {
+                        batch.delete(manualDocs[i].ref);
+                        deleteCount++;
+                    }
+                }
+
+                if (deleteCount > 0) {
+                    await batch.commit();
+                    console.log(`오래된 백업 ${deleteCount}개 자동 삭제 완료`);
+                }
+            } catch (e) {
+                console.error("백업 정리 중 오류:", e);
+            }
+        }
+
+        async function saveBackup(name, type, silent = false) {
+            const rootItems = psData.filter(p => !p.parentId).sort((a,b) => a.order - b.order);
+            function buildChildren(parentId) {
+                return psData.filter(p => p.parentId === parentId)
+                    .sort((a,b) => a.order - b.order)
+                    .map(child => ({ ...child, children: buildChildren(child.id) }));
+            }
+            const nested = rootItems.map(r => ({ ...r, children: buildChildren(r.id) }));
+
+            const dateStr = new Date().toLocaleDateString('ko-KR');
+
+            await db.collection('workProjectBackups').add({
+                name: name,
+                type: type, // 'auto' or 'manual'
+                dateStr: dateStr,
+                year: psYear,
+                data: nested,
+                itemCount: psData.length,
+                createdBy: currentUserDoc?.nickname || currentUser.email || 'System',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            await cleanupOldBackups();
+
+            if (!silent) {
+                backupNameInput.value = '';
+                alert(`✅ "${name}" 백업이 저장되었습니다!`);
+                loadBackupList();
+            }
+        }
+
+        window.checkAndRunAutoBackup = async function() {
+            if (!currentUser || psData.length === 0 || window.hasAutoBackedUpToday) return;
+            window.hasAutoBackedUpToday = true;
+
+            const todayStr = new Date().toLocaleDateString('ko-KR');
+            try {
+                // 최근 10개만 조회해서 오늘 자동 백업이 있는지 확인
+                const snap = await db.collection('workProjectBackups').orderBy('createdAt', 'desc').limit(10).get();
+                let alreadyBackedUp = false;
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    if (d.type === 'auto' && d.dateStr === todayStr) {
+                        alreadyBackedUp = true;
+                    }
+                });
+
+                if (!alreadyBackedUp) {
+                    console.log("오늘의 프로젝트 자동 백업을 시작합니다...");
+                    await saveBackup(`자동 백업 ${todayStr}`, 'auto', true);
+                }
+            } catch (e) {
+                console.error("자동 백업 오류:", e);
+                window.hasAutoBackedUpToday = false; // 실패 시 다시 시도할 수 있도록 초기화
+            }
+        };
+
+        // ── 현재 데이터를 Firestore에 백업 저장 (수동) ──────────
         backupSaveBtn.addEventListener('click', async () => {
             if (!currentUser) { alert('로그인이 필요합니다.'); return; }
             if (psData.length === 0) { alert('백업할 프로젝트 데이터가 없습니다.'); return; }
 
-            const name = (backupNameInput.value.trim()) || `백업 ${new Date().toLocaleString('ko-KR')}`;
+            const name = (backupNameInput.value.trim()) || `수동 백업 ${new Date().toLocaleString('ko-KR')}`;
             backupSaveBtn.disabled = true;
             backupSaveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...';
 
             try {
-                // psData를 중첩 구조로 변환
-                const rootItems = psData.filter(p => !p.parentId).sort((a,b) => a.order - b.order);
-                function buildChildren(parentId) {
-                    return psData.filter(p => p.parentId === parentId)
-                        .sort((a,b) => a.order - b.order)
-                        .map(child => ({ ...child, children: buildChildren(child.id) }));
-                }
-                const nested = rootItems.map(r => ({ ...r, children: buildChildren(r.id) }));
-
-                await db.collection('workProjectBackups').add({
-                    name: name,
-                    year: psYear,
-                    data: nested,
-                    itemCount: psData.length,
-                    createdBy: currentUserDoc?.nickname || currentUser.email,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-
-                backupNameInput.value = '';
-                alert(`✅ "${name}" 백업이 저장되었습니다!`);
-                loadBackupList();
+                await saveBackup(name, 'manual', false);
             } catch (e) {
                 alert('백업 저장 실패: ' + e.message);
             } finally {
@@ -3807,7 +3888,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     card.innerHTML = `
                         <div style="flex:1; min-width:0;">
                             <div style="font-weight:700; color:var(--text-color); font-size:0.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                <i class="fa-solid fa-database" style="color:#6c5ce7; margin-right:6px;"></i>${d.name || '이름 없음'}
+                                <i class="fa-solid fa-database" style="color:${d.type === 'auto' ? '#ff9f43' : '#6c5ce7'}; margin-right:6px;"></i>${d.name || '이름 없음'}
+                                ${d.type === 'auto' ? '<span style="font-size:0.7rem; background:#ff9f43; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle;">자동</span>' : '<span style="font-size:0.7rem; background:#6c5ce7; color:white; padding:2px 6px; border-radius:4px; margin-left:6px; vertical-align:middle;">수동</span>'}
                             </div>
                             <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px; display:flex; gap:12px; flex-wrap:wrap;">
                                 <span><i class="fa-regular fa-clock"></i> ${dateStr}</span>
