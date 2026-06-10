@@ -3767,16 +3767,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const batch = db.batch();
                 let deleteCount = 0;
 
-                // 자동 백업 30개 유지
-                if (autoDocs.length > 30) {
-                    for (let i = 30; i < autoDocs.length; i++) {
+                // 자동 백업 50개 유지
+                if (autoDocs.length > 50) {
+                    for (let i = 50; i < autoDocs.length; i++) {
                         batch.delete(autoDocs[i].ref);
                         deleteCount++;
                     }
                 }
-                // 수동 백업 30개 유지
-                if (manualDocs.length > 30) {
-                    for (let i = 30; i < manualDocs.length; i++) {
+                // 수동 백업 50개 유지
+                if (manualDocs.length > 50) {
+                    for (let i = 50; i < manualDocs.length; i++) {
                         batch.delete(manualDocs[i].ref);
                         deleteCount++;
                     }
