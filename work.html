@@ -863,40 +863,39 @@
                     </div>
                 </div>
 
-                <!-- 탭 내용: 개인성과 (팀원 평가 매트릭스) -->
-                <div id="tab-performance" class="tab-content">
-                    <div id="performance-content-container" style="max-width: 1200px; margin: 0 auto; height: 100%; display: flex; flex-direction: column;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <h2 style="font-size: 1.5rem; font-weight: bold; color: var(--text-color); margin: 0;">
-                                <i class="fa-solid fa-users-viewfinder" style="color: var(--primary-color); margin-right: 8px;"></i> 팀원 평가 매트릭스
-                            </h2>
-                            <div style="display: flex; gap: 10px;">
-                                <button id="btn-perf-save" class="btn btn-primary" style="font-size: 0.85rem;"><i class="fa-solid fa-save"></i> 저장</button>
-                                <button id="btn-perf-add-row" class="btn btn-secondary" style="font-size: 0.85rem;"><i class="fa-solid fa-layer-group"></i> 항목 추가</button>
-                                <button id="btn-perf-add-col" class="btn btn-secondary" style="font-size: 0.85rem;"><i class="fa-solid fa-user-plus"></i> 팀원 추가</button>
-                            </div>
+                <!-- 탭 내용: 프로젝트 (전체 폭 사용을 위해 container 외부로 분리) -->
+            </div>
+
+            <!-- 탭 내용: 개인성과 (팀원 평가 매트릭스, 전체 폭 사용을 위해 container 외부로 분리) -->
+            <div id="tab-performance" class="tab-content" style="width: 100%; max-width: 100%; padding: 0 20px; box-sizing: border-box;">
+                <div id="performance-content-container" style="max-width: 100%; margin: 0 auto; height: 100%; display: flex; flex-direction: column;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="font-size: 1.5rem; font-weight: bold; color: var(--text-color); margin: 0;">
+                            <i class="fa-solid fa-users-viewfinder" style="color: var(--primary-color); margin-right: 8px;"></i> 팀원 평가 매트릭스
+                        </h2>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="btn-perf-save" class="btn btn-primary" style="font-size: 0.85rem;"><i class="fa-solid fa-save"></i> 저장</button>
+                            <button id="btn-perf-add-row" class="btn btn-secondary" style="font-size: 0.85rem;"><i class="fa-solid fa-layer-group"></i> 항목 추가</button>
+                            <button id="btn-perf-add-col" class="btn btn-secondary" style="font-size: 0.85rem;"><i class="fa-solid fa-user-plus"></i> 팀원 추가</button>
                         </div>
-                        
-                        <!-- 엑셀형 테이블 컨테이너 -->
-                        <div class="glass-card" style="flex: 1; overflow: auto; border-radius: 12px; border: 1px solid var(--card-border); background: var(--card-bg); padding: 0;">
-                            <table id="perf-matrix-table" style="width: 100%; border-collapse: collapse; min-width: 800px;">
-                                <thead>
-                                    <tr id="perf-matrix-header" style="background: var(--bg-color);">
-                                        <th style="border: 1px solid var(--card-border); padding: 12px; text-align: left; position: sticky; top: 0; left: 0; background: var(--bg-color); z-index: 2; min-width: 200px; font-weight: bold; color: var(--text-color);">평가 항목</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="perf-matrix-body">
-                                </tbody>
-                            </table>
-                            <div id="perf-matrix-empty" style="text-align: center; padding: 50px; color: #888; display: none;">
-                                상단의 버튼을 눌러 평가 항목과 팀원을 추가해보세요!
-                            </div>
+                    </div>
+                    
+                    <!-- 엑셀형 테이블 컨테이너 -->
+                    <div class="glass-card" style="flex: 1; overflow: auto; border-radius: 12px; border: 1px solid var(--card-border); background: var(--card-bg); padding: 0;">
+                        <table id="perf-matrix-table" style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                            <thead>
+                                <tr id="perf-matrix-header" style="background: var(--bg-color);">
+                                    <th style="border: 1px solid var(--card-border); padding: 12px; text-align: left; position: sticky; top: 0; left: 0; background: var(--bg-color); z-index: 2; min-width: 200px; font-weight: bold; color: var(--text-color);">평가 항목</th>
+                                </tr>
+                            </thead>
+                            <tbody id="perf-matrix-body">
+                            </tbody>
+                        </table>
+                        <div id="perf-matrix-empty" style="text-align: center; padding: 50px; color: #888; display: none;">
+                            상단의 버튼을 눌러 평가 항목과 팀원을 추가해보세요!
                         </div>
                     </div>
                 </div>
-
-
-                <!-- 탭 내용: 프로젝트 (전체 폭 사용을 위해 container 외부로 분리) -->
             </div>
             <div id="tab-projects" class="tab-content"
                 style="width: 100%; max-width: 100%; padding: 0 20px; box-sizing: border-box;">
