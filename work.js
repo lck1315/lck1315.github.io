@@ -4986,12 +4986,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 나머지 열 (팀원별 셀)
                 matrixData.cols.forEach((_, cIdx) => {
                     const td = document.createElement('td');
-                    td.style.cssText = 'border: 1px solid var(--card-border); padding: 0; background: var(--card-bg); vertical-align: top;';
+                    td.style.cssText = 'border: 1px solid var(--card-border); padding: 0; background: var(--card-bg); vertical-align: top; position: relative;';
                     
                     const cellKey = `${rIdx}_${cIdx}`;
                     const val = matrixData.cells[cellKey] || '';
                     
                     td.innerHTML = `<textarea class="matrix-cell-input" wrap="off" data-key="${cellKey}" style="width: 100%; height: 100%; min-width: 100px; min-height: 60px; border: none; padding: 10px; resize: none; outline: none; background: transparent; color: var(--text-color); font-family: inherit; font-size: 0.9rem; overflow: auto; box-sizing: border-box;" ${isMaster ? '' : 'readonly'}>${val}</textarea>`;
+                    
+                    if (isMaster) {
+                        // 열 리사이저 (우측 가장자리)
+                        const colResizer = document.createElement('div');
+                        colResizer.style.cssText = 'position: absolute; top: 0; right: 0; width: 6px; height: 100%; cursor: col-resize; z-index: 10; background: transparent;';
+                        colResizer.addEventListener('mouseenter', () => { if(!resizingCol) colResizer.style.background = 'var(--primary-color)'; });
+                        colResizer.addEventListener('mouseleave', () => { if(!resizingCol) colResizer.style.background = 'transparent'; });
+                        colResizer.addEventListener('mousedown', (e) => {
+                            e.stopPropagation(); e.preventDefault();
+                            const th = document.querySelector(`#perf-matrix-header th[data-c-idx="${cIdx}"]`);
+                            resizingCol = { th: th, cIdx: cIdx, resizer: colResizer };
+                            startPos = e.pageX;
+                            startSize = th.offsetWidth;
+                            document.body.style.cursor = 'col-resize';
+                            colResizer.style.background = 'var(--primary-color)';
+                        });
+                        td.appendChild(colResizer);
+                        
+                        // 행 리사이저 (하단 가장자리)
+                        const rowResizer = document.createElement('div');
+                        rowResizer.style.cssText = 'position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; cursor: row-resize; z-index: 10; background: transparent;';
+                        rowResizer.addEventListener('mouseenter', () => { if(!resizingRow) rowResizer.style.background = 'var(--primary-color)'; });
+                        rowResizer.addEventListener('mouseleave', () => { if(!resizingRow) rowResizer.style.background = 'transparent'; });
+                        rowResizer.addEventListener('mousedown', (e) => {
+                            e.stopPropagation(); e.preventDefault();
+                            const rowTh = tr.querySelector('td:first-child');
+                            resizingRow = { td: rowTh, rIdx: rIdx, resizer: rowResizer };
+                            startPos = e.pageY;
+                            startSize = rowTh.offsetHeight;
+                            document.body.style.cursor = 'row-resize';
+                            rowResizer.style.background = 'var(--primary-color)';
+                        });
+                        td.appendChild(rowResizer);
+                    }
                     tr.appendChild(td);
                 });
                 
