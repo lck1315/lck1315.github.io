@@ -4898,7 +4898,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // 첫 번째 열 (항목 이름)
                 const th = document.createElement('td');
-                th.style.cssText = `border: 1px solid var(--card-border); padding: 12px; background: var(--card-bg); color: var(--text-color); font-weight: bold; position: sticky; left: 0; z-index: 1; ${currentUser ? 'cursor: grab;' : ''}`;
+                th.style.cssText = `border: 1px solid var(--card-border); padding: 12px; background: var(--card-bg); color: var(--text-color); font-weight: bold; position: sticky; left: 0; z-index: 1; width: auto; white-space: nowrap; ${currentUser ? 'cursor: grab;' : ''}`;
                 th.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="display: flex; align-items: center; gap: 8px;">${currentUser ? '<i class="fa-solid fa-grip-vertical" style="color: var(--text-muted); opacity: 0.5;"></i>' : ''} ${rowName}</span>
@@ -4918,7 +4918,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const savedWidth = matrixData.colWidths && matrixData.colWidths[cIdx] ? `${matrixData.colWidths[cIdx]}px` : '100%';
                     const savedHeight = matrixData.rowHeights && matrixData.rowHeights[rIdx] ? `${matrixData.rowHeights[rIdx]}px` : '60px';
                     
-                    td.innerHTML = `<textarea class="matrix-cell-input" data-key="${cellKey}" style="width: ${savedWidth}; min-width: 100px; height: ${savedHeight}; min-height: 60px; border: none; padding: 10px; resize: both; outline: none; background: transparent; color: var(--text-color); font-family: inherit; font-size: 0.9rem;" ${isMaster ? '' : 'readonly'}>${val}</textarea>`;
+                    td.innerHTML = `<textarea class="matrix-cell-input" wrap="off" data-key="${cellKey}" style="width: ${savedWidth}; min-width: 100px; height: ${savedHeight}; min-height: 60px; border: none; padding: 10px; resize: both; outline: none; background: transparent; color: var(--text-color); font-family: inherit; font-size: 0.9rem; overflow: auto;" ${isMaster ? '' : 'readonly'}>${val}</textarea>`;
                     tr.appendChild(td);
                 });
                 
