@@ -427,17 +427,28 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        const btnGcalSettings = document.getElementById('btn-gcal-settings');
+        if (btnGcalSettings) {
+            if (currentUserDoc && currentUserDoc.isMaster) {
+                btnGcalSettings.style.display = 'inline-block';
+            } else {
+                btnGcalSettings.style.display = 'none';
+            }
+        }
+
         // 공통 렌더링 로직 재호출 (권한 있는 곳만 볼 수 있도록 각 함수 내부에서 권한을 재확인하거나 렌더링)
         // 위에서 권한 있는 탭에 한해서 subscribe 함수들이 호출되므로 여기서는 제외함
         if (typeof renderWorkLinks === 'function') renderWorkLinks();
         if (typeof renderSchedules === 'function') renderSchedules();
         if (typeof renderPerformances === 'function') renderPerformances();
-        if (window.renderWorkMembers) window.renderWorkMembers();
+        if (window.renderWorkMembersChatList) window.renderWorkMembersChatList();
         if (typeof renderPsScheduler === 'function') renderPsScheduler();
         if (typeof renderNotices === 'function') renderNotices();
     }
 
     auth.onAuthStateChanged((user) => {
+        // LOCAL TEST OVERRIDE (Disabled for production)
+        // user = { uid: "M7XrlN7UNNYJf4cIQyDKwyml2pr1", email: "lck1316@gmail.com" };
         currentUser = user;
         if (workUserListener) {
             workUserListener(); // Unsubscribe previous listener
@@ -3370,7 +3381,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!workHeroImagesGrid) return;
         workHeroImagesGrid.innerHTML = '';
         
+        // 등록된 이미지가 없거나 기본 이미지 한 장만 있으면 '없음' 표시
+        if (workHeroImages.length === 0 || (workHeroImages.length === 1 && workHeroImages[0] === "./assets/dodo_hero.png")) {
+            workHeroImagesGrid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding: 1.5rem; color:var(--text-muted); font-size:0.85rem;">등록된 배경 사진이 없습니다.</p>';
+            return;
+        }
+
         workHeroImages.forEach((imgUrl, idx) => {
+            if (imgUrl === "./assets/dodo_hero.png") return;
+
             const wrapper = document.createElement('div');
             wrapper.style.position = 'relative';
             wrapper.style.aspectRatio = '16/9';
@@ -3405,17 +3424,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(confirm("이 배경 사진을 삭제하시겠습니까?")) {
                     const newImages = [...workHeroImages];
                     newImages.splice(idx, 1);
+                    const finalImages = newImages.length === 0 ? ['./assets/dodo_hero.png'] : newImages;
                     db.collection('workSiteSettings').doc('heroImages').set({
-                        images: newImages,
+                        images: finalImages,
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }).then(() => {
+                        if (workHeroSliderIndex >= finalImages.length) {
+                            workHeroSliderIndex = 0;
+                        }
                     });
                 }
             });
             
             wrapper.appendChild(img);
-            if (workHeroImages.length > 1) {
-                wrapper.appendChild(delBtn);
-            }
+            wrapper.appendChild(delBtn);
             workHeroImagesGrid.appendChild(wrapper);
         });
     }
@@ -3461,7 +3483,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
                     
-                    const newImages = [...workHeroImages, compressedBase64];
+                    let newImages = [];
+                    if (workHeroImages.length === 1 && workHeroImages[0] === "./assets/dodo_hero.png") {
+                        newImages = [compressedBase64];
+                    } else {
+                        newImages = [...workHeroImages, compressedBase64];
+                    }
+                    
                     db.collection('workSiteSettings').doc('heroImages').set({
                         images: newImages,
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -4303,120 +4331,130 @@ document.addEventListener('DOMContentLoaded', () => {
     let unsubscribeMemberChat = null;
     let currentChatMode = 'public';
 
+    let lastMembersSnapshot = null;
+    
+    window.renderWorkMembersChatList = function() {
+        if (!lastMembersSnapshot) return;
+        const listEl = document.getElementById('member-list');
+        if(!listEl) return;
+        listEl.innerHTML = '';
+        
+        const snapshot = lastMembersSnapshot;
+        
+        // 1. 전체 광장 채팅방 아이템 상단 고정 추가
+        const hallDiv = document.createElement('div');
+        hallDiv.className = `member-list-item`;
+        const isHallSelected = currentSelectedMemberId === 'public_hall' || !currentSelectedMemberId;
+        if (isHallSelected) {
+            currentSelectedMemberId = 'public_hall';
+        }
+        hallDiv.style.cssText = `padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s; background: ${isHallSelected ? '#e3f2fd' : 'transparent'}; font-weight: bold;`;
+        hallDiv.innerHTML = `
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary-color, #6b46c1); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;"><i class="fa-solid fa-comments"></i></div>
+            <div>
+                <div style="color: #333; font-size: 0.95rem;">💬 전체 광장 채팅방</div>
+                <div style="font-size: 0.8rem; color: #888; font-weight: normal;">모든 멤버 수다방</div>
+            </div>
+        `;
+        hallDiv.onmouseover = () => { if(currentSelectedMemberId !== 'public_hall') hallDiv.style.background = '#f1f3f5'; };
+        hallDiv.onmouseout = () => { if(currentSelectedMemberId !== 'public_hall') hallDiv.style.background = 'transparent'; };
+        hallDiv.onclick = () => selectMember('public_hall', '전체 광장 채팅방', '모든 멤버 수다방', hallDiv);
+        listEl.appendChild(hallDiv);
+
+        // 2. 내 정보 가져오기 및 본인 필터링
+        const myProfileContainer = document.getElementById('my-profile-container');
+        const myUid = currentUser ? currentUser.uid : (auth.currentUser ? auth.currentUser.uid : null);
+        let myInfo = null;
+
+        const usersList = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            if (myUid && doc.id === myUid) {
+                myInfo = { id: doc.id, data: data };
+            } else {
+                usersList.push({ id: doc.id, data: data });
+            }
+        });
+
+        // 내 정보 상단 렌더링
+        if (myInfo && myProfileContainer) {
+            const isMaster = myInfo.data.isMaster === true;
+            const nickname = myInfo.data.nickname || '이름 없음';
+            const dept = myInfo.data.dept || '';
+            
+            myProfileContainer.style.display = 'flex';
+            myProfileContainer.innerHTML = `
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary-color, #6b46c1); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px;"><i class="fa-solid fa-user-check"></i></div>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-weight: 700; color: #333; font-size: 0.9rem; display: flex; align-items: center; gap: 4px; line-height: 1.2;">
+                        <span style="color: #888; font-size: 0.8rem; font-weight: normal;">나:</span> ${nickname}${isMaster ? ' 👑' : ''}
+                    </div>
+                    ${dept ? `<div style="font-size: 0.75rem; color: #777; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;">${dept}</div>` : ''}
+                </div>
+            `;
+        } else if (myProfileContainer) {
+            myProfileContainer.style.display = 'none';
+            myProfileContainer.innerHTML = '';
+        }
+
+        if(usersList.length === 0) {
+            if (currentSelectedMemberId === 'public_hall') {
+                selectMember('public_hall', '전체 광장 채팅방', '모든 멤버 수다방', hallDiv);
+            }
+            return;
+        }
+        
+        usersList.sort((a, b) => {
+            const ta = a.data.createdAt ? a.data.createdAt.toMillis() : 0;
+            const tb = b.data.createdAt ? b.data.createdAt.toMillis() : 0;
+            return ta - tb;
+        });
+        
+        usersList.forEach(item => {
+            const docId = item.id;
+            const data = item.data;
+            const isMaster = data.isMaster === true;
+            const nickname = data.nickname || '이름 없음';
+            const dept = data.dept || '';
+            
+            // 마스터는 이름 옆에 👑 표시
+            const nameDisplay = isMaster ? `${nickname} 👑` : nickname;
+            
+            const div = document.createElement('div');
+            div.className = `member-list-item`;
+            div.style.cssText = `padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s; background: ${currentSelectedMemberId === docId ? '#e3f2fd' : 'transparent'};`;
+            div.innerHTML = `
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: #ccc; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;"><i class="fa-solid fa-user"></i></div>
+                <div>
+                    <div style="font-weight: bold; color: #333; font-size: 0.95rem;">${nameDisplay}</div>
+                    ${dept ? `<div style="font-size: 0.8rem; color: #888;">${dept}</div>` : ''}
+                </div>
+            `;
+            
+            div.onmouseover = () => { if(currentSelectedMemberId !== docId) div.style.background = '#f1f3f5'; };
+            div.onmouseout = () => { if(currentSelectedMemberId !== docId) div.style.background = 'transparent'; };
+            
+            div.onclick = () => selectMember(docId, nickname, dept, div);
+            listEl.appendChild(div);
+        });
+
+        // 초기 자동 진입
+        if (currentSelectedMemberId === 'public_hall') {
+            selectMember('public_hall', '전체 광장 채팅방', '모든 멤버 수다방', hallDiv);
+        } else {
+            const foundItem = usersList.find(u => u.id === currentSelectedMemberId);
+            if (foundItem) {
+                selectMember(foundItem.id, foundItem.data.nickname || '이름 없음', foundItem.data.dept || '', null);
+            }
+        }
+    };
+
     function initMembersLogic() {
 
         // Load Members from workUsers
         db.collection('workUsers').where('isApproved', '==', true).onSnapshot(snapshot => {
-            const listEl = document.getElementById('member-list');
-            if(!listEl) return;
-            listEl.innerHTML = '';
-            
-            // 1. 전체 광장 채팅방 아이템 상단 고정 추가
-            const hallDiv = document.createElement('div');
-            hallDiv.className = `member-list-item`;
-            const isHallSelected = currentSelectedMemberId === 'public_hall' || !currentSelectedMemberId;
-            if (isHallSelected) {
-                currentSelectedMemberId = 'public_hall';
-            }
-            hallDiv.style.cssText = `padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s; background: ${isHallSelected ? '#e3f2fd' : 'transparent'}; font-weight: bold;`;
-            hallDiv.innerHTML = `
-                <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary-color, #6b46c1); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;"><i class="fa-solid fa-comments"></i></div>
-                <div>
-                    <div style="color: #333; font-size: 0.95rem;">💬 전체 광장 채팅방</div>
-                    <div style="font-size: 0.8rem; color: #888; font-weight: normal;">모든 멤버 수다방</div>
-                </div>
-            `;
-            hallDiv.onmouseover = () => { if(currentSelectedMemberId !== 'public_hall') hallDiv.style.background = '#f1f3f5'; };
-            hallDiv.onmouseout = () => { if(currentSelectedMemberId !== 'public_hall') hallDiv.style.background = 'transparent'; };
-            hallDiv.onclick = () => selectMember('public_hall', '전체 광장 채팅방', '모든 멤버 수다방', hallDiv);
-            listEl.appendChild(hallDiv);
-
-            // 2. 내 정보 가져오기 및 본인 필터링
-            const myProfileContainer = document.getElementById('my-profile-container');
-            const myUid = auth.currentUser ? auth.currentUser.uid : null;
-            let myInfo = null;
-
-            const usersList = [];
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                if (myUid && doc.id === myUid) {
-                    myInfo = { id: doc.id, data: data };
-                } else {
-                    usersList.push({ id: doc.id, data: data });
-                }
-            });
-
-            // 내 정보 상단 렌더링
-            if (myInfo && myProfileContainer) {
-                const isMaster = myInfo.data.isMaster === true;
-                const nickname = myInfo.data.nickname || '이름 없음';
-                const dept = myInfo.data.dept || '';
-                
-                myProfileContainer.style.display = 'flex';
-                myProfileContainer.innerHTML = `
-                    <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary-color, #6b46c1); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px;"><i class="fa-solid fa-user-check"></i></div>
-                    <div style="flex: 1; min-width: 0;">
-                        <div style="font-weight: 700; color: #333; font-size: 0.9rem; display: flex; align-items: center; gap: 4px; line-height: 1.2;">
-                            <span style="color: #888; font-size: 0.8rem; font-weight: normal;">나:</span> ${nickname}${isMaster ? ' 👑' : ''}
-                        </div>
-                        ${dept ? `<div style="font-size: 0.75rem; color: #777; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;">${dept}</div>` : ''}
-                    </div>
-                `;
-            } else if (myProfileContainer) {
-                myProfileContainer.style.display = 'none';
-                myProfileContainer.innerHTML = '';
-            }
-
-            if(usersList.length === 0) {
-                if (currentSelectedMemberId === 'public_hall') {
-                    selectMember('public_hall', '전체 광장 채팅방', '모든 멤버 수다방', hallDiv);
-                }
-                return;
-            }
-            
-            usersList.sort((a, b) => {
-                const ta = a.data.createdAt ? a.data.createdAt.toMillis() : 0;
-                const tb = b.data.createdAt ? b.data.createdAt.toMillis() : 0;
-                return ta - tb;
-            });
-            
-            usersList.forEach(item => {
-                const docId = item.id;
-                const data = item.data;
-                const isMaster = data.isMaster === true;
-                const nickname = data.nickname || '이름 없음';
-                const dept = data.dept || '';
-                
-                // 마스터는 이름 옆에 👑 표시
-                const nameDisplay = isMaster ? `${nickname} 👑` : nickname;
-                
-                const div = document.createElement('div');
-                div.className = `member-list-item`;
-                div.style.cssText = `padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s; background: ${currentSelectedMemberId === docId ? '#e3f2fd' : 'transparent'};`;
-                div.innerHTML = `
-                    <div style="width: 32px; height: 32px; border-radius: 50%; background: #ccc; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;"><i class="fa-solid fa-user"></i></div>
-                    <div>
-                        <div style="font-weight: bold; color: #333; font-size: 0.95rem;">${nameDisplay}</div>
-                        ${dept ? `<div style="font-size: 0.8rem; color: #888;">${dept}</div>` : ''}
-                    </div>
-                `;
-                
-                div.onmouseover = () => { if(currentSelectedMemberId !== docId) div.style.background = '#f1f3f5'; };
-                div.onmouseout = () => { if(currentSelectedMemberId !== docId) div.style.background = 'transparent'; };
-                
-                div.onclick = () => selectMember(docId, nickname, dept, div);
-                listEl.appendChild(div);
-            });
-
-            // 초기 자동 진입
-            if (currentSelectedMemberId === 'public_hall') {
-                selectMember('public_hall', '전체 광장 채팅방', '모든 멤버 수다방', hallDiv);
-            } else {
-                const foundItem = usersList.find(u => u.id === currentSelectedMemberId);
-                if (foundItem) {
-                    selectMember(foundItem.id, foundItem.data.nickname || '이름 없음', foundItem.data.dept || '', null);
-                }
-            }
+            lastMembersSnapshot = snapshot;
+            window.renderWorkMembersChatList();
         });
 
         const btnSend = document.getElementById('btn-send-member-chat');
