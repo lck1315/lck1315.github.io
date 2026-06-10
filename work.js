@@ -4749,7 +4749,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (btnSave) btnSave.style.display = isMaster ? 'inline-block' : 'none';
             
             // 헤더 렌더링
-            theadTr.innerHTML = '<th style="border: 1px solid var(--card-border); padding: 12px; text-align: left; position: sticky; top: 0; left: 0; background: var(--bg-color); z-index: 2; min-width: 200px; font-weight: bold; color: var(--text-color);">평가 항목</th>';
+            theadTr.innerHTML = '<th style="border: 1px solid var(--card-border); padding: 12px; text-align: left; position: sticky; top: 0; left: 0; background: var(--bg-color); z-index: 2; width: 1%; white-space: nowrap; font-weight: bold; color: var(--text-color);">평가 항목</th>';
             matrixData.cols.forEach((colName, cIdx) => {
                 const savedWidth = matrixData.colWidths && matrixData.colWidths[cIdx] ? `${matrixData.colWidths[cIdx]}px` : '150px';
                 const th = document.createElement('th');
