@@ -4736,7 +4736,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const emptyState = document.getElementById('perf-matrix-empty');
         const table = document.getElementById('perf-matrix-table');
         
-        let matrixData = { rows: [], cols: [], cells: {} };
+        let matrixData = { rows: [], cols: [], cells: {}, colWidths: {}, rowHeights: {} };
         let unsubscribePerf = null;
         let isEditing = false; // 방해 방지용
 
@@ -4751,8 +4751,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // 헤더 렌더링
             theadTr.innerHTML = '<th style="border: 1px solid var(--card-border); padding: 12px; text-align: left; position: sticky; top: 0; left: 0; background: var(--bg-color); z-index: 2; min-width: 200px; font-weight: bold; color: var(--text-color);">평가 항목</th>';
             matrixData.cols.forEach((colName, cIdx) => {
+                const savedWidth = matrixData.colWidths && matrixData.colWidths[cIdx] ? `${matrixData.colWidths[cIdx]}px` : '150px';
                 const th = document.createElement('th');
-                th.style.cssText = `border: 1px solid var(--card-border); padding: 12px; text-align: center; background: var(--bg-color); font-weight: bold; color: var(--text-color); min-width: 150px; position: relative; cursor: ${currentUser ? 'grab' : 'default'};`;
+                th.style.cssText = `border: 1px solid var(--card-border); padding: 12px; text-align: center; background: var(--bg-color); font-weight: bold; color: var(--text-color); min-width: ${savedWidth}; width: ${savedWidth}; position: relative; cursor: ${currentUser ? 'grab' : 'default'};`;
                 th.draggable = !!currentUser;
                 th.dataset.cIdx = cIdx;
 
@@ -4914,7 +4915,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const cellKey = `${rIdx}_${cIdx}`;
                     const val = matrixData.cells[cellKey] || '';
                     
-                    td.innerHTML = `<textarea class="matrix-cell-input" data-key="${cellKey}" style="width: 100%; min-width: 100px; height: 60px; min-height: 60px; border: none; padding: 10px; resize: both; outline: none; background: transparent; color: var(--text-color); font-family: inherit; font-size: 0.9rem;" ${isMaster ? '' : 'readonly'}>${val}</textarea>`;
+                    const savedWidth = matrixData.colWidths && matrixData.colWidths[cIdx] ? `${matrixData.colWidths[cIdx]}px` : '100%';
+                    const savedHeight = matrixData.rowHeights && matrixData.rowHeights[rIdx] ? `${matrixData.rowHeights[rIdx]}px` : '60px';
+                    
+                    td.innerHTML = `<textarea class="matrix-cell-input" data-key="${cellKey}" style="width: ${savedWidth}; min-width: 100px; height: ${savedHeight}; min-height: 60px; border: none; padding: 10px; resize: both; outline: none; background: transparent; color: var(--text-color); font-family: inherit; font-size: 0.9rem;" ${isMaster ? '' : 'readonly'}>${val}</textarea>`;
                     tr.appendChild(td);
                 });
                 
@@ -4944,6 +4948,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 input.addEventListener('input', (e) => {
                     const key = e.target.dataset.key;
                     matrixData.cells[key] = e.target.value;
+                });
+                input.addEventListener('mouseup', (e) => {
+                    const key = e.target.dataset.key;
+                    const [rIdxStr, cIdxStr] = key.split('_');
+                    const rIdx = parseInt(rIdxStr);
+                    const cIdx = parseInt(cIdxStr);
+                    const newWidth = e.target.offsetWidth;
+                    const newHeight = e.target.offsetHeight;
+                    
+                    if (!matrixData.colWidths) matrixData.colWidths = {};
+                    if (!matrixData.rowHeights) matrixData.rowHeights = {};
+                    
+                    let changed = false;
+                    // textarea의 최소 너비/높이 제한 고려
+                    if (matrixData.colWidths[cIdx] !== newWidth && newWidth > 0) {
+                        matrixData.colWidths[cIdx] = newWidth;
+                        changed = true;
+                    }
+                    if (matrixData.rowHeights[rIdx] !== newHeight && newHeight > 0) {
+                        matrixData.rowHeights[rIdx] = newHeight;
+                        changed = true;
+                    }
+                    
+                    if (changed) {
+                        // 같은 행/열의 다른 요소들 크기 즉시 동기화
+                        document.querySelectorAll('.matrix-cell-input').forEach(ta => {
+                            const [r, c] = ta.dataset.key.split('_');
+                            if (parseInt(c) === cIdx) ta.style.width = newWidth + 'px';
+                            if (parseInt(r) === rIdx) ta.style.height = newHeight + 'px';
+                        });
+                        const ths = document.querySelectorAll('#perf-matrix-header th');
+                        if (ths[cIdx + 1]) {
+                            ths[cIdx + 1].style.width = newWidth + 'px';
+                            ths[cIdx + 1].style.minWidth = newWidth + 'px';
+                        }
+                        saveMatrixToDB();
+                    }
                 });
             });
 
@@ -5042,8 +5083,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             matrixData.rows = data.rows || [];
                             matrixData.cols = data.cols || [];
                             matrixData.cells = data.cells || {};
+                            matrixData.colWidths = data.colWidths || {};
+                            matrixData.rowHeights = data.rowHeights || {};
                         } else {
-                            matrixData = { rows: [], cols: [], cells: {} };
+                            matrixData = { rows: [], cols: [], cells: {}, colWidths: {}, rowHeights: {} };
                         }
                         renderMatrix();
                     }
@@ -5053,7 +5096,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     unsubscribePerf();
                     unsubscribePerf = null;
                 }
-                matrixData = { rows: [], cols: [], cells: {} };
+                matrixData = { rows: [], cols: [], cells: {}, colWidths: {}, rowHeights: {} };
                 renderMatrix();
             }
         });
