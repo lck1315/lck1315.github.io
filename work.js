@@ -4747,13 +4747,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let startSize = 0;
 
         document.addEventListener('mousemove', (e) => {
-            if (resizingCol) {
+            if (resizingCol && resizingCol.th) {
                 const newWidth = Math.max(50, startSize + (e.pageX - startPos));
                 resizingCol.th.style.width = newWidth + 'px';
                 resizingCol.th.style.minWidth = newWidth + 'px';
                 resizingCol.th.style.maxWidth = newWidth + 'px';
             }
-            if (resizingRow) {
+            if (resizingRow && resizingRow.td) {
                 const newHeight = Math.max(60, startSize + (e.pageY - startPos));
                 resizingRow.td.style.height = newHeight + 'px';
                 if (resizingRow.td.parentElement) {
@@ -4995,7 +4995,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 나머지 열 (팀원별 셀)
                 matrixData.cols.forEach((_, cIdx) => {
                     const td = document.createElement('td');
-                    td.style.cssText = 'border: 1px solid var(--card-border); padding: 0; background: var(--card-bg); vertical-align: top;';
+                    td.style.cssText = 'border: 1px solid var(--card-border); padding: 0; background: var(--card-bg); vertical-align: top; height: 1px;';
                     
                     const cellKey = `${rIdx}_${cIdx}`;
                     const val = matrixData.cells[cellKey] || '';
