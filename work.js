@@ -4898,7 +4898,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // 첫 번째 열 (항목 이름)
                 const th = document.createElement('td');
-                th.style.cssText = `border: 1px solid var(--card-border); padding: 12px; background: var(--card-bg); color: var(--text-color); font-weight: bold; position: sticky; left: 0; z-index: 1; width: auto; white-space: nowrap; ${currentUser ? 'cursor: grab;' : ''}`;
+                th.style.cssText = `border: 1px solid var(--card-border); padding: 12px; background: var(--card-bg); color: var(--text-color); font-weight: bold; position: sticky; left: 0; z-index: 1; width: 1%; white-space: nowrap; ${currentUser ? 'cursor: grab;' : ''}`;
                 th.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="display: flex; align-items: center; gap: 8px;">${currentUser ? '<i class="fa-solid fa-grip-vertical" style="color: var(--text-muted); opacity: 0.5;"></i>' : ''} ${rowName}</span>
