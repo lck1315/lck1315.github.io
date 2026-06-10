@@ -2639,7 +2639,9 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.innerHTML = `
                 <div class="ps-col-0">${globalIndex}</div>
                 <div class="ps-col-1" style="padding-left: ${10 + level * 20}px; display: flex; align-items: center; padding-right: 5px;">
-                    <span style="width:15px; display:inline-block;"></span>
+                    <span style="width:20px; display:inline-block; text-align:center; cursor:pointer;" onclick="event.stopPropagation(); window.psUpdateField('${task.id}', 'expanded', ${!isExpanded})">
+                        ${hasChildren ? (isExpanded ? '<i class="fa-solid fa-chevron-down" style="color:#888; font-size:10px;"></i>' : '<i class="fa-solid fa-chevron-right" style="color:#888; font-size:10px;"></i>') : ''}
+                    </span>
                     <span style="margin-right:5px; color:#666; font-size:11px; display:inline-block; min-width:45px; flex-shrink:0; white-space:nowrap;">${prefix}</span>
                     <input class="ps-tree-input" value="${task.name || ''}" onchange="window.psUpdateField('${task.id}', 'name', this.value)" ${disabledAttr} style="flex: 1;">
                     <i class="fa-solid fa-note-sticky" onclick="event.stopPropagation(); psSelectedId='${task.id}'; window.openMemoModal(${JSON.stringify(task).replace(/"/g, '&quot;')}, event.clientX, event.clientY);" style="margin-left:5px; cursor:pointer; font-size:13px; color: ${task.memo ? '#f59e0b' : '#ccc'};" title="메모 열기"></i>
@@ -2730,14 +2732,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // 하위 노드는 나오지 않도록 렌더링을 차단합니다.
-            /*
+            // 하위 노드 렌더링 (isExpanded가 true일 때만)
             if (isExpanded) {
                 children.forEach((child, idx) => {
                     renderRow(child, level + 1, `${prefix}-${idx + 1}`);
                 });
             }
-            */
         }
 
         rootTasks.forEach((root, idx) => {
