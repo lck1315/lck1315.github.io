@@ -4914,7 +4914,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const cellKey = `${rIdx}_${cIdx}`;
                     const val = matrixData.cells[cellKey] || '';
                     
-                    td.innerHTML = `<textarea class="matrix-cell-input" data-key="${cellKey}" style="width: 100%; height: 60px; border: none; padding: 10px; resize: vertical; outline: none; background: transparent; color: var(--text-color); font-family: inherit; font-size: 0.9rem;" ${isMaster ? '' : 'readonly'}>${val}</textarea>`;
+                    td.innerHTML = `<textarea class="matrix-cell-input" data-key="${cellKey}" style="width: 100%; min-width: 100px; height: 60px; min-height: 60px; border: none; padding: 10px; resize: both; outline: none; background: transparent; color: var(--text-color); font-family: inherit; font-size: 0.9rem;" ${isMaster ? '' : 'readonly'}>${val}</textarea>`;
                     tr.appendChild(td);
                 });
                 
