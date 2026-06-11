@@ -356,9 +356,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let anyLocked = false;
         
         allTabs.forEach(tabId => {
-            const reqPerm = tabPermissions[tabId] || 'approval_required'; // 기본값은 승인 회원 전용
-            let hasAccess = false;
+            const reqPerm = tabPermissions[tabId] || 'approval_required'; // 기본 읽기 권한
+            const reqWritePerm = tabPermissions[tabId + '_write'] || 'approval_required'; // 기본 쓰기 권한
             
+            let hasAccess = false;
+            let hasWriteAccess = false;
+            
+            // 1. 읽기 권한 확인
             if (reqPerm === 'public') {
                 hasAccess = true;
             } else if (reqPerm === 'login_only') {
@@ -367,11 +371,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 hasAccess = !!(currentUser && currentUserDoc && (currentUserDoc.isApproved || currentUserDoc.isMaster));
             }
             
+            // 2. 쓰기 권한 확인
+            if (reqWritePerm === 'public') {
+                hasWriteAccess = true;
+            } else if (reqWritePerm === 'login_only') {
+                hasWriteAccess = !!currentUser;
+            } else if (reqWritePerm === 'master_only') {
+                hasWriteAccess = !!(currentUser && currentUserDoc && currentUserDoc.isMaster);
+            } else { // approval_required
+                hasWriteAccess = !!(currentUser && currentUserDoc && (currentUserDoc.isApproved || currentUserDoc.isMaster));
+            }
+            
+            // 읽기 권한이 없으면 쓰기 권한도 무조건 없음
+            if (!hasAccess) hasWriteAccess = false;
+            
             if (!hasAccess) {
                 showTabLockOverlay(tabId);
                 anyLocked = true;
                 
-                // 해당 탭의 특수 기능 제한 (버튼 숨김, 구독 취소 등)
+                // 해당 탭의 데이터 구독 해제 및 기본 요소 숨김
                 if (tabId === 'tab-ideas') {
                     if (btnAddIdea) btnAddIdea.style.display = 'none';
                     if (typeof window.unsubscribeIdeas === 'function') window.unsubscribeIdeas();
@@ -384,20 +402,51 @@ document.addEventListener('DOMContentLoaded', () => {
                     psApp.style.setProperty('display', 'none', 'important');
                 }
             } else {
-                // 접근 허용 시 복구
+                // 접근 허용 시 데이터 구독 복구
                 if (tabId === 'tab-ideas') {
-                    if (btnAddIdea) btnAddIdea.style.display = '';
                     if (typeof window.subscribeIdeas === 'function') window.subscribeIdeas();
                 }
                 if (tabId === 'tab-info') {
-                    if (btnAddInfo) btnAddInfo.style.display = '';
                     if (typeof window.subscribeInfo === 'function') window.subscribeInfo();
                 }
                 if (tabId === 'tab-projects' && psApp) {
                     psApp.style.display = '';
                 }
             }
+            
+            // 3. 쓰기 권한에 따른 작성/추가 버튼 UI 제어
+            if (tabId === 'tab-ideas' && btnAddIdea) {
+                btnAddIdea.style.display = hasWriteAccess ? '' : 'none';
+            }
+            if (tabId === 'tab-info' && btnAddInfo) {
+                btnAddInfo.style.display = hasWriteAccess ? '' : 'none';
+            }
+            if (tabId === 'tab-notice') {
+                const btnWriteNotice = document.getElementById('btn-write-notice');
+                if (btnWriteNotice) btnWriteNotice.style.display = hasWriteAccess ? '' : 'none';
+            }
+            if (tabId === 'tab-bookmarks') {
+                const btnAddBookmark = document.getElementById('btn-add-bookmark-top');
+                if (btnAddBookmark) btnAddBookmark.style.display = hasWriteAccess ? '' : 'none';
+            }
+            if (tabId === 'tab-projects') {
+                const projectToolbox = document.querySelector('.ps-left-toolbar');
+                if (projectToolbox) {
+                    projectToolbox.style.pointerEvents = hasWriteAccess ? 'auto' : 'none';
+                    projectToolbox.style.opacity = hasWriteAccess ? '1' : '0.4';
+                }
+            }
+            // (일정관리는 캘린더 빈칸 클릭 시 이벤트 추가가 동작하므로 별도로 hasWriteAccess 변수를 전역적으로 체크하게 할 수 있음)
         });
+
+        // 일정관리 쓰기 권한은 전역변수로 저장하여 달력 클릭 시 체크
+        const scheduleWritePerm = tabPermissions['tab-schedule_write'] || 'approval_required';
+        let scheduleHasWriteAccess = false;
+        if (scheduleWritePerm === 'public') scheduleHasWriteAccess = true;
+        else if (scheduleWritePerm === 'login_only') scheduleHasWriteAccess = !!currentUser;
+        else if (scheduleWritePerm === 'master_only') scheduleHasWriteAccess = !!(currentUser && currentUserDoc && currentUserDoc.isMaster);
+        else scheduleHasWriteAccess = !!(currentUser && currentUserDoc && (currentUserDoc.isApproved || currentUserDoc.isMaster));
+        window.scheduleHasWriteAccess = scheduleHasWriteAccess;
 
         if (psLock) {
             if (anyLocked) {
@@ -415,15 +464,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 workHeroEditTrigger.classList.remove('hidden');
             } else {
                 workHeroEditTrigger.classList.add('hidden');
-            }
-        }
-        
-        const btnWriteNotice = document.getElementById('btn-write-notice');
-        if (btnWriteNotice) {
-            if (currentUserDoc && currentUserDoc.isMaster) {
-                btnWriteNotice.classList.remove('hidden');
-            } else {
-                btnWriteNotice.classList.add('hidden');
             }
         }
 
@@ -815,23 +855,38 @@ document.addEventListener('DOMContentLoaded', () => {
         listEl.innerHTML = '';
         
         TABS_INFO.forEach(tab => {
-            const currentPerm = tabPermissions[tab.id] || 'approval_required'; // 기본값
+            const currentPerm = tabPermissions[tab.id] || 'approval_required'; // 기본 읽기 권한
+            const currentWritePerm = tabPermissions[tab.id + '_write'] || 'approval_required'; // 기본 쓰기 권한
             
             const item = document.createElement('div');
-            item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e2e8f0;';
+            item.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e2e8f0; flex-wrap: wrap; gap: 10px;';
             
             item.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px; min-width: 120px;">
                     <div style="width: 30px; height: 30px; border-radius: 6px; background: var(--primary-color); color: white; display: flex; align-items: center; justify-content: center;">
                         <i class="fa-solid ${tab.icon}"></i>
                     </div>
                     <span style="font-weight: bold; color: #2d3436;">${tab.name}</span>
                 </div>
-                <select id="perm-select-${tab.id}" style="padding: 8px; border-radius: 6px; border: 1px solid #ced4da; font-family: inherit; font-size: 0.85rem; color: #495057; outline: none; background: #fff;">
-                    <option value="public" ${currentPerm === 'public' ? 'selected' : ''}>전체 공개 (비로그인 가능)</option>
-                    <option value="login_only" ${currentPerm === 'login_only' ? 'selected' : ''}>로그인 필수</option>
-                    <option value="approval_required" ${currentPerm === 'approval_required' ? 'selected' : ''}>마스터 승인 회원 전용 (기본)</option>
-                </select>
+                <div style="display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 250px; align-items: flex-end;">
+                    <div style="display: flex; align-items: center; gap: 10px; width: 100%; justify-content: flex-end;">
+                        <span style="font-size: 0.8rem; color: #636e72; font-weight: bold; width: 60px; text-align: right;">읽기 권한</span>
+                        <select id="perm-select-${tab.id}" style="padding: 6px; border-radius: 6px; border: 1px solid #ced4da; font-family: inherit; font-size: 0.8rem; color: #495057; outline: none; background: #fff; width: 180px;">
+                            <option value="public" ${currentPerm === 'public' ? 'selected' : ''}>전체 공개 (비로그인 가능)</option>
+                            <option value="login_only" ${currentPerm === 'login_only' ? 'selected' : ''}>로그인 필수</option>
+                            <option value="approval_required" ${currentPerm === 'approval_required' ? 'selected' : ''}>마스터 승인 회원 전용</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; width: 100%; justify-content: flex-end;">
+                        <span style="font-size: 0.8rem; color: #ff4757; font-weight: bold; width: 60px; text-align: right;">쓰기 권한</span>
+                        <select id="perm-write-select-${tab.id}" style="padding: 6px; border-radius: 6px; border: 1px solid #ced4da; font-family: inherit; font-size: 0.8rem; color: #495057; outline: none; background: #fff; width: 180px;">
+                            <option value="public" ${currentWritePerm === 'public' ? 'selected' : ''}>전체 공개 (비로그인 가능)</option>
+                            <option value="login_only" ${currentWritePerm === 'login_only' ? 'selected' : ''}>로그인 필수</option>
+                            <option value="approval_required" ${currentWritePerm === 'approval_required' ? 'selected' : ''}>마스터 승인 회원 전용</option>
+                            <option value="master_only" ${currentWritePerm === 'master_only' ? 'selected' : ''}>마스터 전용</option>
+                        </select>
+                    </div>
+                </div>
             `;
             listEl.appendChild(item);
         });
@@ -843,8 +898,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const newPerms = {};
             TABS_INFO.forEach(tab => {
                 const selectEl = document.getElementById(`perm-select-${tab.id}`);
+                const writeSelectEl = document.getElementById(`perm-write-select-${tab.id}`);
+                
                 if (selectEl) {
                     newPerms[tab.id] = selectEl.value;
+                }
+                if (writeSelectEl) {
+                    newPerms[tab.id + '_write'] = writeSelectEl.value;
                 }
             });
             
@@ -1806,6 +1866,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     if(reqModal) reqModal.classList.remove('hidden');
                     return;
                 }
+                
+                const formSchedule = document.getElementById('form-schedule');
+                if (formSchedule) {
+                    if (window.scheduleHasWriteAccess) {
+                        formSchedule.style.display = 'block';
+                    } else {
+                        formSchedule.style.display = 'none';
+                    }
+                }
+                
                 const dateInput = document.getElementById('sch-date');
                 if (dateInput) dateInput.value = dateString;
                 const titleInput = document.getElementById('sch-title');
