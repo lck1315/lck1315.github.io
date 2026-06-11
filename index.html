@@ -732,9 +732,54 @@
                     </div>
                     <!-- 2) 단어 리스트 -->
                     <div class="board-list-container">
-                        <div class="board-list-header-split">
+                        <div class="board-list-header-split" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                             <h3>현재 단어 목록 📚</h3>
+                            <button id="btn-card-mode-toggle" onclick="toggleCardMode()" style="display: none; background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: #fff; border: none; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 3px 10px rgba(108,92,231,0.3);">
+                                <i class="fa-solid fa-clone"></i> 카드 모드
+                            </button>
                         </div>
+
+                        <!-- 카드 모드 UI (기본 숨김) -->
+                        <div id="word-card-mode-container" style="display: none; margin-top: 1rem;">
+                            <!-- 카드 모드 컨트롤 바 -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <button id="btn-card-tts-toggle" onclick="toggleCardTTS()" style="background: rgba(0,206,201,0.15); color: #00cec9; border: 1px solid rgba(0,206,201,0.3); padding: 5px 12px; border-radius: 15px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.3s;">
+                                        <i class="fa-solid fa-volume-high"></i> 음성 ON
+                                    </button>
+                                    <button id="btn-card-auto-toggle" onclick="toggleCardAutoPlay()" style="background: rgba(253,203,110,0.15); color: #fdcb6e; border: 1px solid rgba(253,203,110,0.3); padding: 5px 12px; border-radius: 15px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.3s;">
+                                        <i class="fa-solid fa-play"></i> 자동 재생
+                                    </button>
+                                </div>
+                                <span id="card-mode-counter" style="font-size: 0.82rem; font-weight: 700; color: var(--primary-color);">0 / 0</span>
+                            </div>
+
+                            <!-- 큰 단어 카드 -->
+                            <div id="word-card-display" style="background: linear-gradient(135deg, rgba(108,92,231,0.08), rgba(162,155,254,0.08)); border: 2px solid rgba(108,92,231,0.2); border-radius: 20px; padding: 3rem 2rem; text-align: center; min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; transition: all 0.3s ease; cursor: pointer;" onclick="speakCurrentCardWord()">
+                                <div id="word-card-text" style="font-size: 2rem; font-weight: 800; color: var(--text-color); letter-spacing: 1px; word-break: break-all; transition: all 0.3s ease;">
+                                    단어를 불러오세요
+                                </div>
+                                <div id="word-card-sub" style="font-size: 0.82rem; color: var(--text-muted); margin-top: 12px;">
+                                    <i class="fa-solid fa-hand-pointer"></i> 카드를 터치하면 다시 읽어줍니다
+                                </div>
+                            </div>
+
+                            <!-- 이전/다음 버튼 -->
+                            <div style="display: flex; gap: 12px; margin-top: 15px;">
+                                <button onclick="cardWordPrev()" style="flex: 1; padding: 14px; background: rgba(108,92,231,0.1); border: 1px solid rgba(108,92,231,0.25); border-radius: 14px; color: var(--primary-color); font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                    <i class="fa-solid fa-chevron-left"></i> 이전
+                                </button>
+                                <button onclick="cardWordNext()" style="flex: 1; padding: 14px; background: var(--primary-gradient); border: none; border-radius: 14px; color: #fff; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px rgba(108,92,231,0.3); display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                    다음 <i class="fa-solid fa-chevron-right"></i>
+                                </button>
+                            </div>
+
+                            <!-- 리스트 모드로 돌아가기 -->
+                            <button onclick="toggleCardMode()" style="margin-top: 12px; width: 100%; padding: 10px; background: none; border: 1px dashed var(--card-border); border-radius: 10px; color: var(--text-muted); font-size: 0.82rem; cursor: pointer; transition: all 0.2s;">
+                                <i class="fa-solid fa-list"></i> 리스트 보기로 돌아가기
+                            </button>
+                        </div>
+
                         <!-- 단어 목록이 표시될 공간 -->
                         <div id="word-list-container" style="display: flex; flex-direction: column; gap: 4px; margin-top: 1rem; max-height: 600px; overflow-y: auto; padding-right: 10px;">
                             <div class="no-posts" style="text-align: center; padding: 2rem; background: var(--card-bg); border-radius: 15px; border: 1px solid var(--card-border);">
@@ -1118,6 +1163,7 @@
                     
                     if (!snapshot.exists() || childCount === 0) {
                         container.innerHTML = '<div class="no-posts" style="text-align: center; padding: 2rem; background: var(--card-bg); border-radius: 15px; border: 1px solid var(--card-border);"><p>단어장이 비어있습니다.</p></div>';
+                        if (typeof onCloudWordsLoaded === 'function') onCloudWordsLoaded();
                         return;
                     }
                     
@@ -1146,6 +1192,9 @@
                         `;
                         container.appendChild(div);
                     });
+
+                    // 카드 모드 버튼 표시 및 갱신
+                    if (typeof onCloudWordsLoaded === 'function') onCloudWordsLoaded();
                 });
                 cloudWordbookListener = () => wordbookRef.off('value', wordbookCallback);
                 return;
@@ -1526,6 +1575,271 @@
                 closeWifiScanner();
             }
         }
+
+        // ====================================================================
+        // 📚 카드 모드 + TTS (단어 읽어주기) 기능
+        // ====================================================================
+        let isCardMode = false;
+        let cardWordCurrentIndex = 0;
+        let cardTTSEnabled = true;
+        let cardAutoPlayEnabled = false;
+        let cardAutoPlayTimer = null;
+        let cardAutoPlayInterval = 3000; // 3초 간격
+
+        // 카드 모드에서 사용할 단어 목록 (cloudWordsList 또는 로컬 모드 단어)
+        function getCardWordsList() {
+            return cloudWordsList || [];
+        }
+
+        // 카드 모드 토글
+        function toggleCardMode() {
+            isCardMode = !isCardMode;
+            const cardContainer = document.getElementById('word-card-mode-container');
+            const listContainer = document.getElementById('word-list-container');
+            const toggleBtn = document.getElementById('btn-card-mode-toggle');
+
+            if (isCardMode) {
+                cardContainer.style.display = 'block';
+                listContainer.style.display = 'none';
+                toggleBtn.innerHTML = '<i class="fa-solid fa-list"></i> 리스트 모드';
+                toggleBtn.style.background = 'linear-gradient(135deg, #00cec9, #81ecec)';
+
+                // 현재 단어 표시
+                const words = getCardWordsList();
+                if (words.length > 0) {
+                    if (cardWordCurrentIndex >= words.length) cardWordCurrentIndex = 0;
+                    updateCardDisplay();
+                    if (cardTTSEnabled) speakWord(words[cardWordCurrentIndex].word);
+                } else {
+                    document.getElementById('word-card-text').textContent = '단어가 없습니다';
+                    document.getElementById('card-mode-counter').textContent = '0 / 0';
+                }
+            } else {
+                cardContainer.style.display = 'none';
+                listContainer.style.display = 'flex';
+                toggleBtn.innerHTML = '<i class="fa-solid fa-clone"></i> 카드 모드';
+                toggleBtn.style.background = 'linear-gradient(135deg, #6c5ce7, #a29bfe)';
+
+                // 자동 재생 중지
+                stopCardAutoPlay();
+            }
+        }
+
+        // 카드 표시 업데이트
+        function updateCardDisplay() {
+            const words = getCardWordsList();
+            if (words.length === 0) return;
+
+            const wordText = document.getElementById('word-card-text');
+            const counter = document.getElementById('card-mode-counter');
+            const cardDisplay = document.getElementById('word-card-display');
+
+            // 애니메이션 효과
+            wordText.style.opacity = '0';
+            wordText.style.transform = 'translateY(10px)';
+
+            setTimeout(() => {
+                wordText.textContent = words[cardWordCurrentIndex].word;
+                counter.textContent = `${cardWordCurrentIndex + 1} / ${words.length}`;
+                wordText.style.opacity = '1';
+                wordText.style.transform = 'translateY(0)';
+            }, 100);
+
+            // 카드 펄스 효과
+            cardDisplay.style.borderColor = 'rgba(108,92,231,0.5)';
+            cardDisplay.style.boxShadow = '0 0 20px rgba(108,92,231,0.15)';
+            setTimeout(() => {
+                cardDisplay.style.borderColor = 'rgba(108,92,231,0.2)';
+                cardDisplay.style.boxShadow = 'none';
+            }, 300);
+        }
+
+        // 다음 단어
+        function cardWordNext() {
+            const words = getCardWordsList();
+            if (words.length === 0) return;
+
+            cardWordCurrentIndex++;
+            if (cardWordCurrentIndex >= words.length) cardWordCurrentIndex = 0;
+
+            updateCardDisplay();
+            if (cardTTSEnabled) speakWord(words[cardWordCurrentIndex].word);
+        }
+
+        // 이전 단어
+        function cardWordPrev() {
+            const words = getCardWordsList();
+            if (words.length === 0) return;
+
+            cardWordCurrentIndex--;
+            if (cardWordCurrentIndex < 0) cardWordCurrentIndex = words.length - 1;
+
+            updateCardDisplay();
+            if (cardTTSEnabled) speakWord(words[cardWordCurrentIndex].word);
+        }
+
+        // 현재 카드 단어 읽기 (카드 터치 시)
+        function speakCurrentCardWord() {
+            const words = getCardWordsList();
+            if (words.length === 0) return;
+            speakWord(words[cardWordCurrentIndex].word);
+        }
+
+        // TTS로 단어 읽기 (핵심 함수)
+        // - 이전 발화를 즉시 취소하고 새 단어를 읽음 (연속 넘기기 대응)
+        function speakWord(text) {
+            if (!text || !('speechSynthesis' in window)) return;
+
+            // 이전 발화 즉시 취소
+            window.speechSynthesis.cancel();
+
+            // 단어에 슬래시가 있으면 (예: 사과/apple) 분리해서 각각 읽기
+            const parts = text.split('/').map(p => p.trim()).filter(p => p.length > 0);
+
+            // 브라우저 버그 방지 (cancel 직후 speak 무시되는 현상)를 위해 약간 지연 후 실행
+            setTimeout(() => {
+                speakParts(parts, 0);
+            }, 50);
+        }
+
+        function speakParts(parts, index) {
+            if (index >= parts.length) return;
+
+            const part = parts[index];
+            const utterance = new SpeechSynthesisUtterance(part);
+
+            // 언어 자동 감지: 영어 문자가 주로 포함되면 영어, 아니면 한국어
+            const isEnglish = /^[a-zA-Z0-9\s.,!?'-]+$/.test(part);
+            utterance.lang = isEnglish ? 'en-US' : 'ko-KR';
+            utterance.rate = 0.9;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+
+            // 브라우저가 객체를 가비지 컬렉션 하는 것을 방지하기 위해 전역 변수에 저장 필요할 수도 있음
+            window.currentUtterance = utterance;
+
+            // 다음 파트가 있으면 현재 파트 읽기 끝나면 이어서 읽기
+            if (index < parts.length - 1) {
+                utterance.onend = () => {
+                    setTimeout(() => speakParts(parts, index + 1), 200);
+                };
+            }
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // TTS 토글
+        function toggleCardTTS() {
+            cardTTSEnabled = !cardTTSEnabled;
+            const btn = document.getElementById('btn-card-tts-toggle');
+            if (cardTTSEnabled) {
+                btn.innerHTML = '<i class="fa-solid fa-volume-high"></i> 음성 ON';
+                btn.style.background = 'rgba(0,206,201,0.15)';
+                btn.style.color = '#00cec9';
+                btn.style.borderColor = 'rgba(0,206,201,0.3)';
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i> 음성 OFF';
+                btn.style.background = 'rgba(232,67,147,0.15)';
+                btn.style.color = '#e84393';
+                btn.style.borderColor = 'rgba(232,67,147,0.3)';
+                window.speechSynthesis.cancel();
+            }
+        }
+
+        // 자동 재생 토글
+        function toggleCardAutoPlay() {
+            cardAutoPlayEnabled = !cardAutoPlayEnabled;
+            const btn = document.getElementById('btn-card-auto-toggle');
+
+            if (cardAutoPlayEnabled) {
+                btn.innerHTML = '<i class="fa-solid fa-pause"></i> 자동 정지';
+                btn.style.background = 'rgba(255,118,117,0.15)';
+                btn.style.color = '#ff7675';
+                btn.style.borderColor = 'rgba(255,118,117,0.3)';
+                startCardAutoPlay();
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-play"></i> 자동 재생';
+                btn.style.background = 'rgba(253,203,110,0.15)';
+                btn.style.color = '#fdcb6e';
+                btn.style.borderColor = 'rgba(253,203,110,0.3)';
+                stopCardAutoPlay();
+            }
+        }
+
+        function startCardAutoPlay() {
+            stopCardAutoPlay(); // 기존 타이머 제거
+            cardAutoPlayTimer = setInterval(() => {
+                cardWordNext();
+            }, cardAutoPlayInterval);
+        }
+
+        function stopCardAutoPlay() {
+            if (cardAutoPlayTimer) {
+                clearInterval(cardAutoPlayTimer);
+                cardAutoPlayTimer = null;
+            }
+            // 상태 버튼 업데이트 (토글 외부에서 호출 시)
+            if (!cardAutoPlayEnabled) return;
+            cardAutoPlayEnabled = false;
+            const btn = document.getElementById('btn-card-auto-toggle');
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-play"></i> 자동 재생';
+                btn.style.background = 'rgba(253,203,110,0.15)';
+                btn.style.color = '#fdcb6e';
+                btn.style.borderColor = 'rgba(253,203,110,0.3)';
+            }
+        }
+
+        // 클라우드 모드에서 단어 목록이 로드되면 카드 모드 버튼 표시/갱신
+        function onCloudWordsLoaded() {
+            const toggleBtn = document.getElementById('btn-card-mode-toggle');
+            if (currentConnectionMode === 'cloud' && cloudWordsList.length > 0) {
+                toggleBtn.style.display = 'inline-block';
+            } else {
+                toggleBtn.style.display = 'none';
+            }
+
+            // 카드 모드가 활성화 상태이면 표시 갱신
+            if (isCardMode) {
+                const words = getCardWordsList();
+                if (words.length > 0) {
+                    if (cardWordCurrentIndex >= words.length) cardWordCurrentIndex = words.length - 1;
+                    updateCardDisplay();
+                }
+            }
+        }
+
+        // 터치 스와이프로 단어 넘기기
+        (function setupSwipeEvents() {
+            let touchStartX = 0;
+            let touchStartY = 0;
+
+            document.addEventListener('DOMContentLoaded', () => {
+                const cardDisplay = document.getElementById('word-card-display');
+                if (!cardDisplay) return;
+
+                cardDisplay.addEventListener('touchstart', (e) => {
+                    touchStartX = e.changedTouches[0].screenX;
+                    touchStartY = e.changedTouches[0].screenY;
+                }, { passive: true });
+
+                cardDisplay.addEventListener('touchend', (e) => {
+                    const diffX = e.changedTouches[0].screenX - touchStartX;
+                    const diffY = e.changedTouches[0].screenY - touchStartY;
+
+                    // 수평 스와이프가 수직보다 크고 최소 50px 이상일 때만 반응
+                    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+                        if (diffX < 0) {
+                            // 왼쪽 스와이프 → 다음 단어
+                            cardWordNext();
+                        } else {
+                            // 오른쪽 스와이프 → 이전 단어
+                            cardWordPrev();
+                        }
+                    }
+                }, { passive: true });
+            });
+        })();
     </script>
 </body>
 </html>

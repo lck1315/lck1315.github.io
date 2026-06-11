@@ -4082,6 +4082,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let monthGroups = [];
         let weekGroups = [];
+        let yearGroups = [];
         let dayCells = '';
         let weekdayCells = '';
         const weekdaysKR = ['일', '월', '화', '수', '목', '금', '토'];
@@ -4089,6 +4090,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (dateObjects.length > 0) {
             let currentMonth = dateObjects[0].getMonth();
             let monthColspan = 0;
+            
+            // 년도 그룹 계산용 변수
+            let currentYear = dateObjects[0].getFullYear();
+            let yearColspan = 0;
             
             // 엑셀 주차 계산용 변수
             let weekColspan = 0;
@@ -4112,6 +4117,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const day = d.getDay(); // 0: Sun, 1: Mon
                 const m = d.getMonth();
                 const y = d.getFullYear();
+                
+                // 년도 그룹 계산
+                if (y === currentYear) {
+                    yearColspan++;
+                } else {
+                    yearGroups.push({ text: currentYear + '년', colspan: yearColspan });
+                    currentYear = y;
+                    yearColspan = 1;
+                }
                 
                 if (m === currentMonth) {
                     monthColspan++;
@@ -4138,6 +4152,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 if (isLastDayOfChart) {
                     monthGroups.push({ text: (currentMonth + 1) + '월', colspan: monthColspan });
+                    yearGroups.push({ text: currentYear + '년', colspan: yearColspan });
                 }
                 
                 let color = '#333';
@@ -4166,12 +4181,15 @@ document.addEventListener('DOMContentLoaded', () => {
         <table>
             <thead>
                 <tr>
-                    <th rowspan="4" class="header-cell" style="width: 40px;">No.</th>
-                    <th rowspan="4" class="header-cell" style="width: 250px; text-align:left; padding-left:8px;">Project / Task</th>
-                    <th rowspan="4" class="header-cell" style="width: 80px;">Assignee</th>
-                    <th rowspan="4" class="header-cell" style="width: 80px;">Status</th>
-                    <th rowspan="4" class="header-cell" style="width: 90px;">Start</th>
-                    <th rowspan="4" class="header-cell" style="width: 90px;">End</th>
+                    <th rowspan="5" class="header-cell" style="width: 40px;">No.</th>
+                    <th rowspan="5" class="header-cell" style="width: 250px; text-align:left; padding-left:8px;">Project / Task</th>
+                    <th rowspan="5" class="header-cell" style="width: 80px;">Assignee</th>
+                    <th rowspan="5" class="header-cell" style="width: 80px;">Status</th>
+                    <th rowspan="5" class="header-cell" style="width: 90px;">Start</th>
+                    <th rowspan="5" class="header-cell" style="width: 90px;">End</th>
+                    ${yearGroups.map(yg => `<th colspan="${yg.colspan}" class="header-cell" style="background:#e2e8f0; font-size:10pt;">${yg.text}</th>`).join('')}
+                </tr>
+                <tr>
                     ${weekGroups.map(wg => `<th colspan="${wg.colspan}" class="header-cell">${wg.text}</th>`).join('')}
                 </tr>
                 <tr>
@@ -4246,10 +4264,27 @@ document.addEventListener('DOMContentLoaded', () => {
         URL.revokeObjectURL(url);
     }
 
+    // 트리 순서로 정렬 (프로젝트 → 해당 태스크들 → 다음 프로젝트 → ...)
+    function flattenTreeOrder(dataArr) {
+        const result = [];
+        const roots = dataArr.filter(p => !p.parentId).sort((a, b) => a.order - b.order);
+        
+        function addWithChildren(item) {
+            result.push(item);
+            const children = dataArr.filter(p => p.parentId === item.id).sort((a, b) => a.order - b.order);
+            children.forEach(child => addWithChildren(child));
+        }
+        
+        roots.forEach(root => addWithChildren(root));
+        
+        return result;
+    }
+
     if (psExcelAllBtn) {
         psExcelAllBtn.addEventListener('click', () => {
             if (!currentUser) { alert('로그인이 필요합니다.'); return; }
-            exportToExcelWithStyle(psData, `project_all_${new Date().toISOString().slice(0, 10)}.xls`);
+            const sortedData = flattenTreeOrder(psData);
+            exportToExcelWithStyle(sortedData, `project_all_${new Date().toISOString().slice(0, 10)}.xls`);
         });
     }
 
@@ -4268,7 +4303,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (item && !selectedItems.find(p => p.id === item.id)) {
                     selectedItems.push(item);
                 }
-                const children = psData.filter(p => p.parentId === parentId);
+                const children = psData.filter(p => p.parentId === parentId).sort((a, b) => a.order - b.order);
                 children.forEach(child => findChildren(child.id));
             }
             
