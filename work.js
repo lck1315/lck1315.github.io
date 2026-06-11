@@ -870,7 +870,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 250px; align-items: flex-end;">
                     <div style="display: flex; align-items: center; gap: 10px; width: 100%; justify-content: flex-end;">
-                        <span style="font-size: 0.8rem; color: #636e72; font-weight: bold; width: 60px; text-align: right;">읽기 권한</span>
+                        <span style="font-size: 0.8rem; color: #636e72; font-weight: bold; width: 60px; text-align: right;">보기 권한</span>
                         <select id="perm-select-${tab.id}" style="padding: 6px; border-radius: 6px; border: 1px solid #ced4da; font-family: inherit; font-size: 0.8rem; color: #495057; outline: none; background: #fff; width: 180px;">
                             <option value="public" ${currentPerm === 'public' ? 'selected' : ''}>전체 공개 (비로그인 가능)</option>
                             <option value="login_only" ${currentPerm === 'login_only' ? 'selected' : ''}>로그인 필수</option>
