@@ -522,7 +522,7 @@
 
     <header id="main-header">
         <div class="header-container">
-            <a href="work.html" class="logo" style="display: flex; align-items: flex-end; gap: 4px; text-decoration: none;"><img src="assets/nbias_logo.png?v=3" alt="NBIAS" style="height: 40px; object-fit: contain;"><span style="font-size: 1.4rem; font-weight: 600; color: var(--primary-color); line-height: 1; margin-bottom: 4px;">.work</span></a>
+            <a href="work.html" class="logo header-logo"><img src="assets/nbias_logo.png?v=3" alt="NBIAS" class="logo-img"><span class="logo-text">.work</span></a>
             <nav class="work-tabs" id="work-tabs"
                 style="border: none; margin-bottom: 0; padding-bottom: 0; flex: 1; justify-content: center; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch;">
                 <button class="work-tab" data-tab="schedule"><i class="fa-regular fa-calendar-check"></i> 일정관리</button>
@@ -1663,10 +1663,8 @@
                 options.data = data;
             }
 
-            try {
-                luckysheet.destroy();
-            } catch(e) {}
-
+            // luckysheet.destroy()는 한국어 설정('ko')일 때 전역 functionlist를 파괴하는 심각한 버그가 있습니다.
+            // 따라서 destroy() 없이 create()만 호출하여 기존 시트를 덮어씌웁니다.
             luckysheet.create(options);
             luckysheetReady = true;
 
@@ -1747,25 +1745,39 @@
             const isMaster = !!(window.currentUserDocGlobal && window.currentUserDocGlobal.isMaster);
             if (!isMaster) { alert('마스터만 파일을 업로드할 수 있습니다.'); return; }
 
+            const fi = document.getElementById('eval-excel-upload');
+
             if (file.name.match(/\.(xlsx)$/i)) {
                 showBanner('<i class="fa-solid fa-spinner fa-spin"></i> xlsx 파일 변환 중...', 'info');
-                if (!window.LuckyExcel) { alert('LuckyExcel 라이브러리가 로드되지 않았습니다.'); return; }
+                if (!window.LuckyExcel) {
+                    alert('LuckyExcel 라이브러리가 로드되지 않았습니다.');
+                    showBanner(`<i class="fa-solid fa-crown"></i> 마스터 편집 모드`, 'info');
+                    return;
+                }
                 LuckyExcel.transformExcelToLucky(file, function(exportJson) {
                     if (!exportJson || !exportJson.sheets || exportJson.sheets.length === 0) {
-                        alert('엑셀 파일을 읽는데 실패했습니다.'); return;
+                        alert('엑셀 파일을 읽는데 실패했습니다.');
+                        showBanner(`<i class="fa-solid fa-crown"></i> 마스터 편집 모드`, 'info');
+                        if (fi) fi.value = '';
+                        return;
                     }
                     doInitLuckysheet(exportJson.sheets, exportJson.info?.name || file.name, true);
                     showBanner(`<i class="fa-solid fa-crown"></i> 파일 로드 완료: ${file.name} &nbsp;|&nbsp; "저장(공유)" 버튼을 누르세요`, 'warning');
-                    const fi = document.getElementById('eval-excel-upload');
                     if (fi) fi.value = '';
                 }, function(err) {
                     console.error('LuckyExcel 오류:', err);
                     alert('xlsx 변환 중 오류가 발생했습니다.');
+                    showBanner(`<i class="fa-solid fa-crown"></i> 마스터 편집 모드`, 'info');
+                    if (fi) fi.value = '';
                 });
 
             } else if (file.name.match(/\.(xls|csv)$/i)) {
                 showBanner('<i class="fa-solid fa-spinner fa-spin"></i> xls 파일 처리 중...', 'info');
-                if (!window.XLSX) { alert('SheetJS 라이브러리가 로드되지 않았습니다.'); return; }
+                if (!window.XLSX) {
+                    alert('SheetJS 라이브러리가 로드되지 않았습니다.');
+                    showBanner(`<i class="fa-solid fa-crown"></i> 마스터 편집 모드`, 'info');
+                    return;
+                }
 
                 const reader = new FileReader();
                 reader.onload = function(ev) {
@@ -1776,23 +1788,39 @@
                         const xlsxArrayBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
                         const newFile = new File([xlsxArrayBuffer], file.name.replace(/\.(xls|csv)$/i, '.xlsx'), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                         
-                        if (!window.LuckyExcel) { alert('LuckyExcel 라이브러리가 없습니다.'); return; }
+                        if (!window.LuckyExcel) {
+                            alert('LuckyExcel 라이브러리가 없습니다.');
+                            showBanner(`<i class="fa-solid fa-crown"></i> 마스터 편집 모드`, 'info');
+                            if (fi) fi.value = '';
+                            return;
+                        }
                         LuckyExcel.transformExcelToLucky(newFile, function(exportJson) {
                             if (exportJson.sheets == null || exportJson.sheets.length === 0) {
                                 alert('엑셀 데이터 변환에 실패했습니다.');
+                                showBanner(`<i class="fa-solid fa-crown"></i> 마스터 편집 모드`, 'info');
+                                if (fi) fi.value = '';
                                 return;
                             }
                             doInitLuckysheet(exportJson.sheets, file.name, true);
                             showBanner(`<i class="fa-solid fa-crown"></i> 파일 로드 완료: ${file.name} &nbsp;|&nbsp; "저장(공유)" 버튼을 누르세요`, 'warning');
-                            const fi = document.getElementById('eval-excel-upload');
                             if (fi) fi.value = '';
                         }, function(err) {
-                            throw new Error('LuckyExcel 변환 에러: ' + err);
+                            console.error('LuckyExcel 변환 오류:', err);
+                            alert('Excel 변환 중 오류: ' + (err.message || err));
+                            showBanner(`<i class="fa-solid fa-crown"></i> 마스터 편집 모드`, 'info');
+                            if (fi) fi.value = '';
                         });
                     } catch(err) {
                         console.error('[평가시트] xls 파싱 오류:', err);
                         alert('파일 처리 중 오류: ' + err.message);
+                        showBanner(`<i class="fa-solid fa-crown"></i> 마스터 편집 모드`, 'info');
+                        if (fi) fi.value = '';
                     }
+                };
+                reader.onerror = function() {
+                    alert('파일을 읽는 데 실패했습니다.');
+                    showBanner(`<i class="fa-solid fa-crown"></i> 마스터 편집 모드`, 'info');
+                    if (fi) fi.value = '';
                 };
                 reader.readAsArrayBuffer(file);
 

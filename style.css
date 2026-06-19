@@ -212,6 +212,27 @@ main {
     font-weight: 400;
 }
 
+/* Work Header Logo Style */
+.header-logo {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    text-decoration: none;
+}
+.header-logo .logo-img {
+    height: 40px;
+    object-fit: contain;
+    transition: var(--transition-quick);
+}
+.header-logo .logo-text {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    line-height: 1;
+    margin-bottom: 4px;
+    transition: var(--transition-quick);
+}
+
 .nav-links {
     display: flex;
     gap: 1.2rem;
@@ -2979,6 +3000,34 @@ main:has(#tab-projects.active) {
     
     #work-tabs {
         display: none !important;
+    }
+
+    /* 로고 축소 */
+    .header-logo .logo-img {
+        height: 32px;
+    }
+    .header-logo .logo-text {
+        font-size: 1.2rem;
+        margin-bottom: 2px;
+    }
+
+    /* 초소형 화면 대응: 로고 이미지 N만 표기 및 텍스트 숨김 */
+    @media (max-width: 600px) {
+        .header-logo .logo-img {
+            width: 25px;
+            height: 30px;
+            object-fit: cover;
+            object-position: left;
+        }
+        .header-logo .logo-text {
+            display: none !important;
+        }
+        .header-container {
+            padding: 0.8rem 1rem !important;
+        }
+        .header-actions {
+            gap: 6px !important;
+        }
     }
 
     /* ps-desktop-app layout for Project Tab */
