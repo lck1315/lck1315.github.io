@@ -1721,34 +1721,36 @@
                                 const sheet = workbook.Sheets[sheetName];
                                 const json = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: ""});
                                 
-                                const celldata = [];
-                                for (let r = 0; r < json.length; r++) {
-                                    if (!json[r]) continue;
-                                    for (let c = 0; c < json[r].length; c++) {
-                                        let val = json[r][c];
-                                        if (val !== undefined && val !== null && val !== "") {
-                                            celldata.push({
-                                                r: r,
-                                                c: c,
-                                                v: {
-                                                    v: val,
-                                                    m: val + "",
-                                                    ct: { fa: "General", t: "g" }
-                                                }
-                                            });
+                                const maxRow = Math.max(84, json.length + 10);
+                                const maxCol = Math.max(60, (json[0] ? json[0].length : 0) + 10);
+                                
+                                const dataArray = [];
+                                for (let r = 0; r < maxRow; r++) {
+                                    let rowData = [];
+                                    for (let c = 0; c < maxCol; c++) {
+                                        if (r < json.length && c < (json[r] ? json[r].length : 0)) {
+                                            let val = json[r][c];
+                                            if (val !== undefined && val !== null && val !== "") {
+                                                rowData.push({ v: val, m: val + "" });
+                                            } else {
+                                                rowData.push(null);
+                                            }
+                                        } else {
+                                            rowData.push(null);
                                         }
                                     }
+                                    dataArray.push(rowData);
                                 }
                                 
                                 luckyData.push({
                                     name: sheetName,
                                     color: "",
-                                    index: (index + 1).toString(),
+                                    index: index,
                                     status: index === 0 ? 1 : 0,
                                     order: index,
-                                    celldata: celldata,
-                                    row: Math.max(84, json.length + 10),
-                                    column: Math.max(60, (json[0] ? json[0].length : 0) + 10),
+                                    data: dataArray,
+                                    row: maxRow,
+                                    column: maxCol,
                                     config: {},
                                     calcChain: []
                                 });
