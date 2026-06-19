@@ -21,6 +21,9 @@
     <script src="https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/js/plugin.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luckysheet/dist/luckysheet.umd.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luckyexcel/dist/luckyexcel.umd.js"></script>
+    
+    <!-- SheetJS for fallback (.xls, .csv) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <link rel="stylesheet" href="style.css?v=1.0.88">
     <style>
@@ -1690,25 +1693,73 @@
             }
 
             function handleExcelFile(file) {
-                if (!file.name.match(/\.(xlsx)$/i)) {
-                    alert('현재 버전의 스프레드시트는 .xlsx 파일만 지원합니다.');
-                    return;
+                if (file.name.match(/\.(xlsx)$/i)) {
+                    // .xlsx 파일은 LuckyExcel을 통해 완벽하게(서식 포함) 가져옵니다.
+                    LuckyExcel.transformExcelToLucky(file, function(exportJson, luckysheetfile) {
+                        if (exportJson.sheets == null || exportJson.sheets.length == 0) {
+                            alert("엑셀 파일 내용을 읽는데 실패했습니다.");
+                            return;
+                        }
+                        
+                        initLuckysheet(exportJson.sheets, exportJson.info.name);
+                        
+                        if (fileInput) fileInput.value = '';
+                    }, function(err) {
+                        console.error('Import Error:', err);
+                        alert("엑셀 파일 가져오기 중 오류가 발생했습니다.");
+                    });
+                } else if (file.name.match(/\.(xls|csv)$/i)) {
+                    // .xls, .csv 등 구버전 파일은 SheetJS를 통해 데이터만 가져와서 렌더링합니다.
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            
+                            const luckyData = [];
+                            workbook.SheetNames.forEach((sheetName, index) => {
+                                const sheet = workbook.Sheets[sheetName];
+                                const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
+                                
+                                const celldata = [];
+                                for (let r = 0; r < json.length; r++) {
+                                    if(!json[r]) continue;
+                                    for (let c = 0; c < json[r].length; c++) {
+                                        if (json[r][c] !== undefined && json[r][c] !== null) {
+                                            celldata.push({
+                                                r: r,
+                                                c: c,
+                                                v: {
+                                                    v: json[r][c],
+                                                    m: json[r][c] + ""
+                                                }
+                                            });
+                                        }
+                                    }
+                                }
+                                
+                                luckyData.push({
+                                    name: sheetName,
+                                    color: "",
+                                    index: index,
+                                    status: index === 0 ? 1 : 0,
+                                    order: index,
+                                    celldata: celldata,
+                                    config: {}
+                                });
+                            });
+                            
+                            initLuckysheet(luckyData, file.name);
+                            if (fileInput) fileInput.value = '';
+                        } catch (err) {
+                            console.error('Excel parse error:', err);
+                            alert("파일을 읽는 중 오류가 발생했습니다.");
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    alert('지원하지 않는 파일 형식입니다. (.xlsx, .xls, .csv 지원)');
                 }
-
-                LuckyExcel.transformExcelToLucky(file, function(exportJson, luckysheetfile) {
-                    if (exportJson.sheets == null || exportJson.sheets.length == 0) {
-                        alert("엑셀 파일 내용을 읽는데 실패했습니다.");
-                        return;
-                    }
-                    
-                    initLuckysheet(exportJson.sheets, exportJson.info.name);
-                    
-                    // Reset file input
-                    if (fileInput) fileInput.value = '';
-                }, function(err) {
-                    console.error('Import Error:', err);
-                    alert("엑셀 파일 가져오기 중 오류가 발생했습니다.");
-                });
             }
         });
     </script>
