@@ -1721,25 +1721,22 @@
                                 const sheet = workbook.Sheets[sheetName];
                                 const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
                                 
-                                let maxCols = 0;
+                                const celldata = [];
                                 for (let r = 0; r < json.length; r++) {
-                                    if (json[r] && json[r].length > maxCols) maxCols = json[r].length;
-                                }
-                                
-                                const rowData = [];
-                                for (let r = 0; r < json.length; r++) {
-                                    const colData = [];
-                                    for (let c = 0; c < maxCols; c++) {
-                                        if (json[r] && json[r][c] !== undefined && json[r][c] !== null) {
-                                            colData.push({
-                                                v: json[r][c],
-                                                m: json[r][c] + ""
+                                    if (!json[r]) continue;
+                                    for (let c = 0; c < json[r].length; c++) {
+                                        if (json[r][c] !== undefined && json[r][c] !== null) {
+                                            celldata.push({
+                                                r: r,
+                                                c: c,
+                                                v: {
+                                                    v: json[r][c],
+                                                    m: json[r][c] + "",
+                                                    ct: {fa: "General", t: "n"}
+                                                }
                                             });
-                                        } else {
-                                            colData.push(null);
                                         }
                                     }
-                                    rowData.push(colData);
                                 }
                                 
                                 luckyData.push({
@@ -1748,7 +1745,7 @@
                                     index: index.toString(),
                                     status: index === 0 ? 1 : 0,
                                     order: index,
-                                    data: rowData,
+                                    celldata: celldata,
                                     config: {}
                                 });
                             });
