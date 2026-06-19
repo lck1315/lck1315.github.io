@@ -1659,7 +1659,9 @@
                 enableAddBackTop: true,
                 allowEdit: editable,
             };
-            options.data = data || [{ name:'Sheet1', color:'', index:"0", status:1, order:0, celldata:[], config:{} }];
+            if (data && data.length > 0) {
+                options.data = data;
+            }
 
             try {
                 luckysheet.destroy();
@@ -1770,36 +1772,23 @@
                     try {
                         const data = new Uint8Array(ev.target.result);
                         const workbook = XLSX.read(data, { type: 'array' });
-                        const luckyData = [];
-
-                        workbook.SheetNames.forEach((sheetName, index) => {
-                            const sheet = workbook.Sheets[sheetName];
-                            const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-                            const maxRow = Math.max(100, json.length + 20);
-                            const maxCol = Math.max(26, (json[0] ? json[0].length : 0) + 10);
-
-                            const celldata = [];
-                            for (let r = 0; r < json.length; r++) {
-                                for (let c = 0; c < (json[r] ? json[r].length : 0); c++) {
-                                    const val = json[r][c];
-                                    if (val !== undefined && val !== null && val !== '') {
-                                        celldata.push({ r: r, c: c, v: { v: val, m: String(val) } });
-                                    }
-                                }
+                        // xls/csv -> xlsx 메모리 변환
+                        const xlsxArrayBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+                        const newFile = new File([xlsxArrayBuffer], file.name.replace(/\.(xls|csv)$/i, '.xlsx'), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                        
+                        if (!window.LuckyExcel) { alert('LuckyExcel 라이브러리가 없습니다.'); return; }
+                        LuckyExcel.transformExcelToLucky(newFile, function(exportJson) {
+                            if (exportJson.sheets == null || exportJson.sheets.length === 0) {
+                                alert('엑셀 데이터 변환에 실패했습니다.');
+                                return;
                             }
-
-                            luckyData.push({
-                                name: sheetName, color: '',
-                                index: String(index), status: index === 0 ? 1 : 0, order: index,
-                                celldata: celldata, row: maxRow, column: maxCol,
-                                config: {}, calcChain: []
-                            });
+                            doInitLuckysheet(exportJson.sheets, file.name, true);
+                            showBanner(`<i class="fa-solid fa-crown"></i> 파일 로드 완료: ${file.name} &nbsp;|&nbsp; "저장(공유)" 버튼을 누르세요`, 'warning');
+                            const fi = document.getElementById('eval-excel-upload');
+                            if (fi) fi.value = '';
+                        }, function(err) {
+                            throw new Error('LuckyExcel 변환 에러: ' + err);
                         });
-
-                        doInitLuckysheet(luckyData, file.name, true);
-                        showBanner(`<i class="fa-solid fa-crown"></i> 파일 로드 완료: ${file.name} &nbsp;|&nbsp; "저장(공유)" 버튼을 누르세요`, 'warning');
-                        const fi = document.getElementById('eval-excel-upload');
-                        if (fi) fi.value = '';
                     } catch(err) {
                         console.error('[평가시트] xls 파싱 오류:', err);
                         alert('파일 처리 중 오류: ' + err.message);
