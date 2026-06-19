@@ -221,20 +221,20 @@ main {
     line-height: 1;
 }
 .header-logo .logo-n {
-    font-size: 1.9rem;
+    font-size: 2.2rem;
     font-weight: 900;
     color: #ff3838; /* 로고 N의 빨간색 */
     transition: var(--transition-quick);
 }
 .header-logo .logo-bias {
-    font-size: 1.9rem;
+    font-size: 2.2rem;
     font-weight: 800;
     color: #7f8c8d; /* 회색 BIAS */
     letter-spacing: -0.5px;
     transition: var(--transition-quick);
 }
 .header-logo .logo-text {
-    font-size: 1.4rem;
+    font-size: 1.6rem;
     font-weight: 600;
     color: var(--primary-color);
     margin-left: 2px;
@@ -3012,13 +3012,13 @@ main:has(#tab-projects.active) {
 
     /* 로고 축소 */
     .header-logo .logo-n {
-        font-size: 1.6rem;
+        font-size: 1.9rem;
     }
     .header-logo .logo-bias {
-        font-size: 1.6rem;
+        font-size: 1.9rem;
     }
     .header-logo .logo-text {
-        font-size: 1.2rem;
+        font-size: 1.4rem;
     }
 
     /* 초소형 화면 대응: BIAS 감추고 N.work로 표시 */
@@ -3027,10 +3027,10 @@ main:has(#tab-projects.active) {
             display: none !important;
         }
         .header-logo .logo-n {
-            font-size: 1.7rem;
+            font-size: 2.0rem;
         }
         .header-logo .logo-text {
-            font-size: 1.3rem;
+            font-size: 1.5rem;
             display: inline-block !important;
         }
         .header-container {
