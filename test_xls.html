@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        console.log("Starting test...");
+        try {
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet([["Hello", "World"]]);
+            XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+            const arr = XLSX.write(wb, {bookType: 'xlsx', type: 'array'});
+            console.log("XLSX write success, length: ", arr.byteLength);
+        } catch(e) {
+            console.log("Error: " + e.message);
+        }
+    </script>
+</head>
+<body></body>
+</html>
