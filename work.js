@@ -1400,6 +1400,35 @@ document.addEventListener('DOMContentLoaded', () => {
     let userGoogleCalendarListener = null;
 
 
+    function parseICalDateString(dStr) {
+        if (!dStr.includes('T')) {
+            if (dStr.length >= 8) {
+                return `${dStr.substring(0,4)}-${dStr.substring(4,6)}-${dStr.substring(6,8)}`;
+            }
+            return null;
+        }
+        if (dStr.length >= 15) {
+            const y = dStr.substring(0,4);
+            const m = dStr.substring(4,6);
+            const d = dStr.substring(6,8);
+            const h = dStr.substring(9,11);
+            const min = dStr.substring(11,13);
+            const s = dStr.substring(13,15);
+            const isZ = dStr.endsWith('Z');
+            
+            const isoStr = `${y}-${m}-${d}T${h}:${min}:${s}${isZ ? 'Z' : ''}`;
+            const dateObj = new Date(isoStr);
+            
+            if (!isNaN(dateObj.getTime())) {
+                const localY = dateObj.getFullYear();
+                const localM = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const localD = String(dateObj.getDate()).padStart(2, '0');
+                return `${localY}-${localM}-${localD}`;
+            }
+        }
+        return null;
+    }
+
     // iCal 텍스트를 파싱하여 이벤트 객체 배열 반환
     function parseICalText(text) {
         const events = [];
@@ -1417,11 +1446,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         events.push(currentEvent);
                     } else {
                         let isAllDay = !currentEvent.hasTime;
-                        let loopEnd = new Date(currentEvent.endDateStr);
-                        let current = new Date(currentEvent.dateStr);
+                        
+                        let endParts = currentEvent.endDateStr.split('-');
+                        let loopEnd = new Date(endParts[0], endParts[1]-1, endParts[2]);
+                        
+                        let startParts = currentEvent.dateStr.split('-');
+                        let startObj = new Date(startParts[0], startParts[1]-1, startParts[2]);
+                        let current = new Date(startParts[0], startParts[1]-1, startParts[2]);
                         
                         while (current <= loopEnd) {
-                            if (isAllDay && current.getTime() === loopEnd.getTime() && current.getTime() > new Date(currentEvent.dateStr).getTime()) {
+                            if (isAllDay && current.getTime() === loopEnd.getTime() && current.getTime() > startObj.getTime()) {
                                 break;
                             }
                             
@@ -1447,17 +1481,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (colonIdx !== -1) {
                         const dStr = line.substring(colonIdx + 1).trim();
                         currentEvent.hasTime = dStr.includes('T');
-                        if (dStr.length >= 8) {
-                            currentEvent.dateStr = `${dStr.substring(0,4)}-${dStr.substring(4,6)}-${dStr.substring(6,8)}`;
-                        }
+                        const parsedDate = parseICalDateString(dStr);
+                        if (parsedDate) currentEvent.dateStr = parsedDate;
                     }
                 } else if (line.startsWith('DTEND')) {
                     const colonIdx = line.indexOf(':');
                     if (colonIdx !== -1) {
                         const dStr = line.substring(colonIdx + 1).trim();
-                        if (dStr.length >= 8) {
-                            currentEvent.endDateStr = `${dStr.substring(0,4)}-${dStr.substring(4,6)}-${dStr.substring(6,8)}`;
-                        }
+                        const parsedDate = parseICalDateString(dStr);
+                        if (parsedDate) currentEvent.endDateStr = parsedDate;
                     }
                 }
             }
