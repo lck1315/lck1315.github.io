@@ -1413,7 +1413,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentEvent = {};
             } else if (line.startsWith('END:VEVENT')) {
                 if (currentEvent && currentEvent.title && currentEvent.dateStr) {
-                    events.push(currentEvent);
+                    if (!currentEvent.endDateStr || currentEvent.endDateStr === currentEvent.dateStr) {
+                        events.push(currentEvent);
+                    } else {
+                        let isAllDay = !currentEvent.hasTime;
+                        let loopEnd = new Date(currentEvent.endDateStr);
+                        let current = new Date(currentEvent.dateStr);
+                        
+                        while (current <= loopEnd) {
+                            if (isAllDay && current.getTime() === loopEnd.getTime() && current.getTime() > new Date(currentEvent.dateStr).getTime()) {
+                                break;
+                            }
+                            
+                            const y = current.getFullYear();
+                            const m = String(current.getMonth() + 1).padStart(2, '0');
+                            const d = String(current.getDate()).padStart(2, '0');
+                            
+                            events.push({
+                                title: currentEvent.title,
+                                dateStr: `${y}-${m}-${d}`
+                            });
+                            
+                            current.setDate(current.getDate() + 1);
+                        }
+                    }
                 }
                 currentEvent = null;
             } else if (currentEvent) {
@@ -1423,8 +1446,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     const colonIdx = line.indexOf(':');
                     if (colonIdx !== -1) {
                         const dStr = line.substring(colonIdx + 1).trim();
+                        currentEvent.hasTime = dStr.includes('T');
                         if (dStr.length >= 8) {
                             currentEvent.dateStr = `${dStr.substring(0,4)}-${dStr.substring(4,6)}-${dStr.substring(6,8)}`;
+                        }
+                    }
+                } else if (line.startsWith('DTEND')) {
+                    const colonIdx = line.indexOf(':');
+                    if (colonIdx !== -1) {
+                        const dStr = line.substring(colonIdx + 1).trim();
+                        if (dStr.length >= 8) {
+                            currentEvent.endDateStr = `${dStr.substring(0,4)}-${dStr.substring(4,6)}-${dStr.substring(6,8)}`;
                         }
                     }
                 }
