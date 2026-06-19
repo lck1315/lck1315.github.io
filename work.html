@@ -937,22 +937,35 @@
             <!-- 탭 내용: 평가시트 -->
             <div id="tab-evaluation" class="tab-content" style="width: 100%; max-width: 100%; padding: 0 20px; box-sizing: border-box;">
                 <div style="max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; height: calc(100vh - 120px);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                         <h2 style="font-size: 1.5rem; font-weight: bold; color: var(--text-color); margin: 0;">
                             <i class="fa-solid fa-file-excel" style="color: #27ae60; margin-right: 8px;"></i> 평가시트
                         </h2>
-                        <div style="display: flex; gap: 10px;">
+                        <!-- 마스터만 보이는 업로드 영역 -->
+                        <div id="eval-master-controls" style="display: none; gap: 10px; align-items: center;">
                             <input type="file" id="eval-excel-upload" accept=".xlsx, .xls, .csv" style="display: none;">
                             <button class="btn btn-primary" style="font-size: 0.85rem;" onclick="document.getElementById('eval-excel-upload').click();"><i class="fa-solid fa-folder-open"></i> 파일 불러오기</button>
-                            <button id="btn-eval-clear" class="btn btn-secondary" style="font-size: 0.85rem;" onclick="document.getElementById('evaluation-excel-container').innerHTML='<p style=\'color: #999; text-align: center; margin-top: 200px; pointer-events: none;\'>엑셀 파일을 이곳으로 드래그 앤 드롭하거나<br>파일 불러오기 버튼을 이용하세요.</p>';"><i class="fa-solid fa-eraser"></i> 시트 초기화</button>
+                            <button id="btn-eval-save" class="btn btn-primary" style="font-size: 0.85rem; background: linear-gradient(135deg, #27ae60, #2ecc71); border: none;"><i class="fa-solid fa-cloud-arrow-up"></i> 저장 (공유)</button>
+                            <button id="btn-eval-clear" class="btn btn-secondary" style="font-size: 0.85rem;"><i class="fa-solid fa-eraser"></i> 시트 초기화</button>
                         </div>
                     </div>
-                    
+
+                    <!-- 상태 배너 -->
+                    <div id="eval-status-banner" style="display: none; padding: 8px 16px; border-radius: 8px; font-size: 0.82rem; font-weight: 600; margin-bottom: 12px; align-items: center; gap: 8px;"></div>
+
                     <!-- 엑셀 스프레드시트 영역 -->
                     <div class="glass-card" style="flex: 1; min-height: 400px; border-radius: 12px; border: 1px solid var(--card-border); background: var(--card-bg); display: flex; flex-direction: column; padding: 0; overflow: hidden; position: relative;">
                         <div id="evaluation-excel-container" style="margin: 0; padding: 0; position: absolute; width: 100%; height: 100%; left: 0; top: 0;"></div>
+                        <!-- 드래그 오버레이 -->
                         <div id="eval-drop-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(108, 92, 231, 0.8); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.2s;">
                             엑셀 파일을 여기에 놓으세요
+                        </div>
+                        <!-- 읽기 전용 오버레이 (일반 회원) -->
+                        <div id="eval-readonly-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 50; cursor: not-allowed;"></div>
+                        <!-- 로그인 필요 / 비어있음 안내 -->
+                        <div id="eval-empty-msg" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; color: var(--text-muted); pointer-events: none; display: none;">
+                            <i class="fa-solid fa-file-excel" style="font-size: 3rem; color: #27ae60; opacity: 0.4; margin-bottom: 12px;"></i>
+                            <p id="eval-empty-text" style="font-size: 1rem;">저장된 평가시트가 없습니다.</p>
                         </div>
                     </div>
                 </div>
@@ -1604,86 +1617,157 @@
             const dropOverlay = document.getElementById('eval-drop-overlay');
             const fileInput = document.getElementById('eval-excel-upload');
             const clearBtn = document.getElementById('btn-eval-clear');
+            const saveBtn = document.getElementById('btn-eval-save');
+            const masterControls = document.getElementById('eval-master-controls');
+            const statusBanner = document.getElementById('eval-status-banner');
+            const readonlyOverlay = document.getElementById('eval-readonly-overlay');
+            const emptyMsg = document.getElementById('eval-empty-msg');
+            const emptyText = document.getElementById('eval-empty-text');
 
             if (!document.getElementById('evaluation-excel-container')) return;
 
-            // Initialize Luckysheet
-            function initLuckysheet(data = null, title = "새 스프레드시트") {
+            // --- UI 상태 배너 ---
+            function showBanner(msg, type = 'info') {
+                if (!statusBanner) return;
+                const colors = {
+                    info:    { bg: 'rgba(108,92,231,0.12)', color: '#6c5ce7', border: '1px solid rgba(108,92,231,0.3)' },
+                    success: { bg: 'rgba(39,174,96,0.12)',  color: '#27ae60', border: '1px solid rgba(39,174,96,0.3)' },
+                    warning: { bg: 'rgba(253,203,110,0.18)', color: '#e67e22', border: '1px solid rgba(253,203,110,0.4)' },
+                    readonly:{ bg: 'rgba(116,185,255,0.13)', color: '#2980b9', border: '1px solid rgba(116,185,255,0.3)' },
+                };
+                const c = colors[type] || colors.info;
+                statusBanner.style.display = 'flex';
+                statusBanner.style.background = c.bg;
+                statusBanner.style.color = c.color;
+                statusBanner.style.border = c.border;
+                statusBanner.innerHTML = msg;
+            }
+
+            // --- Luckysheet 초기화 ---
+            function initLuckysheet(data = null, title = "새 스프레드시트", editable = true) {
                 const options = {
                     container: 'evaluation-excel-container',
                     title: title,
                     lang: 'ko',
                     showinfobar: false,
-                    showtoolbar: true,
+                    showtoolbar: editable,
                     showsheetbar: true,
-                    showstatisticBar: true,
-                    enableAddRow: true,
+                    showstatisticBar: false,
+                    enableAddRow: editable,
                     enableAddBackTop: true,
+                    allowEdit: editable,
                 };
-                
+
                 if (data) {
                     options.data = data;
                 } else {
                     options.data = [{
-                        "name": "Sheet1",
-                        "color": "",
-                        "index": 0,
-                        "status": 1,
-                        "order": 0,
-                        "celldata": [],
-                        "config": {}
+                        name: "Sheet1", color: "", index: 0,
+                        status: 1, order: 0, celldata: [], config: {}
                     }];
                 }
-                
+
                 if (window.luckysheet) {
                     luckysheet.destroy();
                     luckysheet.create(options);
                 }
+
+                if (readonlyOverlay) readonlyOverlay.style.display = editable ? 'none' : 'block';
+                if (emptyMsg) emptyMsg.style.display = 'none';
             }
 
-            // 평가시트 탭 클릭 시에 렌더링하도록 지연 초기화
+            // --- Firebase에서 평가시트 로드 ---
+            function loadEvalSheetFromFirebase() {
+                if (!window.db) return;
+                window.db.collection('workEvalSheet').doc('current').get().then(doc => {
+                    const isMaster = window.currentUserDocGlobal && window.currentUserDocGlobal.isMaster === true;
+                    if (doc.exists && doc.data() && doc.data().sheets) {
+                        const sheets = doc.data().sheets;
+                        const title = doc.data().title || '평가시트';
+                        initLuckysheet(sheets, title, isMaster);
+                        const savedAt = doc.data().savedAt ? new Date(doc.data().savedAt).toLocaleString('ko-KR') : '';
+                        const savedBy = doc.data().savedBy || '';
+                        if (isMaster) {
+                            showBanner(`<i class="fa-solid fa-crown" style="margin-right:6px;"></i> 마스터 편집 모드 &nbsp;|&nbsp; 최근 저장: ${savedAt} (${savedBy})`, 'success');
+                        } else {
+                            showBanner(`<i class="fa-solid fa-eye" style="margin-right:6px;"></i> 읽기 전용 모드 (마스터만 편집 가능) &nbsp;|&nbsp; 최근 저장: ${savedAt}`, 'readonly');
+                        }
+                    } else {
+                        if (isMaster) {
+                            initLuckysheet(null, '새 스프레드시트', true);
+                            showBanner(`<i class="fa-solid fa-crown" style="margin-right:6px;"></i> 마스터 편집 모드 &nbsp;|&nbsp; 엑셀 업로드 또는 직접 입력 후 "저장(공유)" 하세요.`, 'info');
+                        } else {
+                            if (emptyMsg) emptyMsg.style.display = 'block';
+                            if (emptyText) emptyText.textContent = '아직 마스터가 저장한 평가시트가 없습니다.';
+                            showBanner(`<i class="fa-solid fa-eye" style="margin-right:6px;"></i> 읽기 전용 모드`, 'readonly');
+                        }
+                    }
+                }).catch(err => console.error('평가시트 로드 오류:', err));
+            }
+
+            // --- Firebase에 평가시트 저장 ---
+            function saveEvalSheetToFirebase() {
+                if (!window.db || !window.luckysheet) return;
+                const sheets = luckysheet.getAllSheets();
+                if (!sheets || sheets.length === 0) { alert('저장할 시트 데이터가 없습니다.'); return; }
+
+                if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...'; }
+
+                window.db.collection('workEvalSheet').doc('current').set({
+                    sheets: sheets,
+                    title: '평가시트',
+                    savedAt: Date.now(),
+                    savedBy: window.currentUserDocGlobal ? (window.currentUserDocGlobal.nickname || window.currentUserDocGlobal.email || '마스터') : '마스터',
+                }).then(() => {
+                    const now = new Date().toLocaleString('ko-KR');
+                    showBanner(`<i class="fa-solid fa-crown" style="margin-right:6px;"></i> 마스터 편집 모드 &nbsp;|&nbsp; ✅ 저장 완료: ${now}`, 'success');
+                    alert('평가시트가 저장되었습니다! 모든 회원이 볼 수 있습니다. ✅');
+                }).catch(err => {
+                    console.error('저장 오류:', err);
+                    alert('저장 중 오류: ' + err.message);
+                }).finally(() => {
+                    if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 저장 (공유)'; }
+                });
+            }
+
+            // --- 권한에 따른 UI 초기화 ---
+            function initEvalUI() {
+                const isMaster = window.currentUserDocGlobal && window.currentUserDocGlobal.isMaster === true;
+                if (masterControls) masterControls.style.display = isMaster ? 'flex' : 'none';
+
+                // 드래그 앤 드롭 - 마스터만
+                if (dropContainer) {
+                    dropContainer.ondragover = isMaster ? (e) => { e.preventDefault(); if(dropOverlay) dropOverlay.style.opacity='1'; } : null;
+                    dropContainer.ondragleave = isMaster ? (e) => { e.preventDefault(); if(dropOverlay) dropOverlay.style.opacity='0'; } : null;
+                    dropContainer.ondrop = isMaster ? (e) => {
+                        e.preventDefault();
+                        if(dropOverlay) dropOverlay.style.opacity='0';
+                        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) handleExcelFile(e.dataTransfer.files[0]);
+                    } : null;
+                }
+                loadEvalSheetFromFirebase();
+            }
+
+            // --- 평가시트 탭 클릭 이벤트 ---
             setTimeout(() => {
                 const evalTabBtn = document.querySelector('[data-tab="evaluation"]');
-                if(evalTabBtn) {
-                    evalTabBtn.addEventListener('click', () => {
-                        setTimeout(() => {
-                            if(!document.querySelector('.luckysheet-work-area')) {
-                                initLuckysheet();
-                            }
-                        }, 100);
-                    });
+                if (evalTabBtn) {
+                    evalTabBtn.addEventListener('click', () => setTimeout(initEvalUI, 150));
                 }
-            }, 500);
+            }, 600);
 
-            // Handle clear button
+            if (saveBtn) saveBtn.addEventListener('click', saveEvalSheetToFirebase);
+
             if (clearBtn) {
-                clearBtn.removeAttribute('onclick');
-                clearBtn.addEventListener('click', () => initLuckysheet());
+                clearBtn.addEventListener('click', () => {
+                    const isMaster = window.currentUserDocGlobal && window.currentUserDocGlobal.isMaster === true;
+                    if (!isMaster) return;
+                    if (confirm('평가시트를 초기화하시겠습니까?\n(Firebase에 저장된 데이터는 삭제되지 않습니다)')) {
+                        initLuckysheet(null, '새 스프레드시트', true);
+                    }
+                });
             }
 
-            // Handle drag over
-            dropContainer.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropOverlay.style.opacity = '1';
-            });
-
-            // Handle drag leave
-            dropContainer.addEventListener('dragleave', (e) => {
-                e.preventDefault();
-                dropOverlay.style.opacity = '0';
-            });
-
-            // Handle file drop
-            dropContainer.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropOverlay.style.opacity = '0';
-                
-                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                    handleExcelFile(e.dataTransfer.files[0]);
-                }
-            });
-
-            // Handle file selection
             if (fileInput) {
                 fileInput.addEventListener('change', (e) => {
                     if (e.target.files && e.target.files.length > 0) {

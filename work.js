@@ -517,6 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 currentUserDoc = doc.data();
+                window.currentUserDocGlobal = currentUserDoc; // 평가시트 스크립트에서 접근용
                 checkMasterAvailability();
                 
                 // 공통: 로그인 사용자 이름 헤더 표시
@@ -566,6 +567,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             // 로그아웃 됨
             currentUserDoc = null;
+            window.currentUserDocGlobal = null;
             authStatusHeader.style.display = 'none';
             btnWorkLogin.style.display = 'inline-block';
             btnClaimMaster.style.display = 'none';
@@ -705,7 +707,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const backupCollections = [
         'workSettings', 'workUsers', 'workSchedules', 'workProjects', 'workLinks',
         'workNotices', 'workMembers', 'workSiteSettings', 'workMemberChats',
-        'workEvaluations', 'workIdeas'
+        'workEvaluations', 'workIdeas', 'workEvalSheet'
     ];
 
     if (btnBackupData) {
@@ -841,6 +843,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'tab-schedule', name: '일정관리', icon: 'fa-calendar-check' },
         { id: 'tab-performance', name: '개인성과', icon: 'fa-trophy' },
         { id: 'tab-projects', name: '프로젝트', icon: 'fa-bars-progress' },
+        { id: 'tab-evaluation', name: '평가시트', icon: 'fa-file-excel' },
         { id: 'tab-ideas', name: '아이디어', icon: 'fa-lightbulb' },
         { id: 'tab-members', name: '구성원', icon: 'fa-users' },
         { id: 'tab-info', name: '정보마당', icon: 'fa-newspaper' },
