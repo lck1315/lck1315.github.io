@@ -1616,230 +1616,272 @@
     <script src="work.js?v=1.2.3"></script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+    (function() {
+        'use strict';
+
+        let luckysheetReady = false;
+
+        // ─── 상태 배너 ────────────────────────────────
+        function showBanner(msg, type) {
+            const banner = document.getElementById('eval-status-banner');
+            if (!banner) return;
+            const styles = {
+                info:     'background:rgba(108,92,231,0.12);color:#6c5ce7;border:1px solid rgba(108,92,231,0.3)',
+                success:  'background:rgba(39,174,96,0.12);color:#27ae60;border:1px solid rgba(39,174,96,0.3)',
+                warning:  'background:rgba(253,203,110,0.18);color:#e67e22;border:1px solid rgba(253,203,110,0.4)',
+                readonly: 'background:rgba(116,185,255,0.13);color:#2980b9;border:1px solid rgba(116,185,255,0.3)',
+            };
+            banner.style.cssText = `display:flex;align-items:center;gap:6px;padding:4px 14px;border-radius:6px;font-size:0.8rem;font-weight:600;${styles[type]||styles.info}`;
+            banner.innerHTML = msg;
+        }
+
+        // ─── Luckysheet 초기화 ─────────────────────────
+        function doInitLuckysheet(data, title, editable) {
+            if (!window.luckysheet) { console.error('[평가시트] luckysheet 라이브러리 없음'); return; }
+            const container = document.getElementById('evaluation-excel-container');
+            if (!container) return;
+
+            // 컨테이너 높이가 0이면 초기화 불가 → requestAnimationFrame으로 재시도
+            if (container.offsetHeight === 0) {
+                requestAnimationFrame(() => doInitLuckysheet(data, title, editable));
+                return;
+            }
+
+            const options = {
+                container: 'evaluation-excel-container',
+                title: title || '평가시트',
+                lang: 'ko',
+                showinfobar: false,
+                showtoolbar: true,          // 항상 툴바 표시 (편집 여부와 무관)
+                showsheetbar: true,
+                showstatisticBar: true,
+                enableAddRow: editable,
+                enableAddBackTop: true,
+                allowEdit: editable,
+            };
+            options.data = data || [{ name:'Sheet1', color:'', index:0, status:1, order:0, celldata:[], config:{} }];
+
+            try {
+                luckysheet.destroy();
+            } catch(e) {}
+
+            luckysheet.create(options);
+            luckysheetReady = true;
+
+            // 읽기 전용 오버레이
+            const ro = document.getElementById('eval-readonly-overlay');
+            if (ro) ro.style.display = editable ? 'none' : 'block';
+            const em = document.getElementById('eval-empty-msg');
+            if (em) em.style.display = 'none';
+        }
+
+        // ─── Firebase 저장된 시트 로드 ─────────────────
+        function loadFromFirebase() {
+            if (!window.db) {
+                // db가 아직 없으면 500ms 후 재시도
+                setTimeout(loadFromFirebase, 500);
+                return;
+            }
+            const isMaster = !!(window.currentUserDocGlobal && window.currentUserDocGlobal.isMaster);
+            window.db.collection('workEvalSheet').doc('current').get().then(doc => {
+                if (doc.exists && doc.data() && doc.data().sheets) {
+                    const d = doc.data();
+                    doInitLuckysheet(d.sheets, d.title || '평가시트', isMaster);
+                    const savedAt = d.savedAt ? new Date(d.savedAt).toLocaleString('ko-KR') : '';
+                    if (isMaster) {
+                        showBanner(`<i class="fa-solid fa-crown"></i> 마스터 편집 모드 &nbsp;|&nbsp; 최근 저장: ${savedAt}`, 'success');
+                    } else {
+                        showBanner(`<i class="fa-solid fa-eye"></i> 읽기 전용 모드 &nbsp;|&nbsp; 최근 저장: ${savedAt}`, 'readonly');
+                    }
+                } else {
+                    // 저장된 데이터 없음
+                    if (isMaster) {
+                        doInitLuckysheet(null, '새 스프레드시트', true);
+                        showBanner(`<i class="fa-solid fa-crown"></i> 마스터 편집 모드 &nbsp;|&nbsp; 엑셀 파일을 업로드하거나 직접 편집하세요`, 'info');
+                    } else {
+                        doInitLuckysheet(null, '평가시트', false);
+                        const em = document.getElementById('eval-empty-msg');
+                        if (em) em.style.display = 'block';
+                        const et = document.getElementById('eval-empty-text');
+                        if (et) et.textContent = '마스터가 아직 평가시트를 저장하지 않았습니다.';
+                        showBanner(`<i class="fa-solid fa-eye"></i> 읽기 전용 모드`, 'readonly');
+                    }
+                }
+            }).catch(err => {
+                console.error('[평가시트] Firebase 로드 오류:', err);
+                // 에러 시에도 기본 시트 표시
+                const isMasterF = !!(window.currentUserDocGlobal && window.currentUserDocGlobal.isMaster);
+                doInitLuckysheet(null, '평가시트', isMasterF);
+            });
+        }
+
+        // ─── Firebase 저장 ─────────────────────────────
+        function saveToFirebase() {
+            if (!window.db) { alert('Firebase 연결 오류'); return; }
+            if (!window.luckysheet || !luckysheetReady) { alert('시트가 아직 준비되지 않았습니다.'); return; }
+            const sheets = luckysheet.getAllSheets();
+            if (!sheets || sheets.length === 0) { alert('저장할 데이터가 없습니다.'); return; }
+
+            const saveBtn = document.getElementById('btn-eval-save');
+            if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...'; }
+
+            window.db.collection('workEvalSheet').doc('current').set({
+                sheets,
+                title: '평가시트',
+                savedAt: Date.now(),
+                savedBy: window.currentUserDocGlobal ? (window.currentUserDocGlobal.nickname || window.currentUserDocGlobal.email || '마스터') : '마스터',
+            }).then(() => {
+                showBanner(`<i class="fa-solid fa-crown"></i> 저장 완료: ${new Date().toLocaleString('ko-KR')}`, 'success');
+                alert('평가시트가 저장되었습니다! ✅ 모든 회원이 볼 수 있습니다.');
+            }).catch(err => {
+                alert('저장 오류: ' + err.message);
+            }).finally(() => {
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 저장 (공유)'; }
+            });
+        }
+
+        // ─── 엑셀 파일 처리 ────────────────────────────
+        function handleExcelFile(file) {
+            const isMaster = !!(window.currentUserDocGlobal && window.currentUserDocGlobal.isMaster);
+            if (!isMaster) { alert('마스터만 파일을 업로드할 수 있습니다.'); return; }
+
+            if (file.name.match(/\.(xlsx)$/i)) {
+                showBanner('<i class="fa-solid fa-spinner fa-spin"></i> xlsx 파일 변환 중...', 'info');
+                if (!window.LuckyExcel) { alert('LuckyExcel 라이브러리가 로드되지 않았습니다.'); return; }
+                LuckyExcel.transformExcelToLucky(file, function(exportJson) {
+                    if (!exportJson || !exportJson.sheets || exportJson.sheets.length === 0) {
+                        alert('엑셀 파일을 읽는데 실패했습니다.'); return;
+                    }
+                    doInitLuckysheet(exportJson.sheets, exportJson.info?.name || file.name, true);
+                    showBanner(`<i class="fa-solid fa-crown"></i> 파일 로드 완료: ${file.name} &nbsp;|&nbsp; "저장(공유)" 버튼을 누르세요`, 'warning');
+                    const fi = document.getElementById('eval-excel-upload');
+                    if (fi) fi.value = '';
+                }, function(err) {
+                    console.error('LuckyExcel 오류:', err);
+                    alert('xlsx 변환 중 오류가 발생했습니다.');
+                });
+
+            } else if (file.name.match(/\.(xls|csv)$/i)) {
+                showBanner('<i class="fa-solid fa-spinner fa-spin"></i> xls 파일 처리 중...', 'info');
+                if (!window.XLSX) { alert('SheetJS 라이브러리가 로드되지 않았습니다.'); return; }
+
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    try {
+                        const data = new Uint8Array(ev.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const luckyData = [];
+
+                        workbook.SheetNames.forEach((sheetName, index) => {
+                            const sheet = workbook.Sheets[sheetName];
+                            const json = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                            const maxRow = Math.max(100, json.length + 20);
+                            const maxCol = Math.max(26, (json[0] ? json[0].length : 0) + 10);
+
+                            const dataArray = [];
+                            for (let r = 0; r < maxRow; r++) {
+                                const rowData = [];
+                                for (let c = 0; c < maxCol; c++) {
+                                    const val = (json[r] && json[r][c] !== undefined) ? json[r][c] : null;
+                                    rowData.push(val !== null && val !== '' ? { v: val, m: String(val) } : null);
+                                }
+                                dataArray.push(rowData);
+                            }
+
+                            luckyData.push({
+                                name: sheetName, color: '',
+                                index, status: index === 0 ? 1 : 0, order: index,
+                                data: dataArray, row: maxRow, column: maxCol,
+                                config: {}, calcChain: []
+                            });
+                        });
+
+                        doInitLuckysheet(luckyData, file.name, true);
+                        showBanner(`<i class="fa-solid fa-crown"></i> 파일 로드 완료: ${file.name} &nbsp;|&nbsp; "저장(공유)" 버튼을 누르세요`, 'warning');
+                        const fi = document.getElementById('eval-excel-upload');
+                        if (fi) fi.value = '';
+                    } catch(err) {
+                        console.error('[평가시트] xls 파싱 오류:', err);
+                        alert('파일 처리 중 오류: ' + err.message);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+
+            } else {
+                alert('.xlsx, .xls, .csv 파일만 지원합니다.');
+            }
+        }
+
+        // ─── 평가시트 UI 초기화 (탭 클릭 시) ──────────
+        function initEvalUI() {
+            const isMaster = !!(window.currentUserDocGlobal && window.currentUserDocGlobal.isMaster);
+
+            // 마스터 전용 컨트롤
+            const mc = document.getElementById('eval-master-controls');
+            if (mc) mc.style.display = isMaster ? 'flex' : 'none';
+
+            // 드래그 앤 드롭 (마스터만)
             const dropContainer = document.querySelector('#tab-evaluation .glass-card');
             const dropOverlay = document.getElementById('eval-drop-overlay');
+            if (dropContainer) {
+                dropContainer.ondragover  = isMaster ? (e) => { e.preventDefault(); if(dropOverlay) dropOverlay.style.opacity='1'; } : null;
+                dropContainer.ondragleave = isMaster ? (e) => { e.preventDefault(); if(dropOverlay) dropOverlay.style.opacity='0'; } : null;
+                dropContainer.ondrop      = isMaster ? (e) => {
+                    e.preventDefault();
+                    if(dropOverlay) dropOverlay.style.opacity='0';
+                    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) handleExcelFile(e.dataTransfer.files[0]);
+                } : null;
+            }
+
+            // Firebase에서 데이터 로드 (luckysheet는 loadFromFirebase 내부에서 초기화)
+            loadFromFirebase();
+        }
+
+        // ─── 이벤트 바인딩 ────────────────────────────
+        document.addEventListener('DOMContentLoaded', function() {
+            // 파일 선택 버튼
             const fileInput = document.getElementById('eval-excel-upload');
-            const clearBtn = document.getElementById('btn-eval-clear');
-            const saveBtn = document.getElementById('btn-eval-save');
-            const masterControls = document.getElementById('eval-master-controls');
-            const statusBanner = document.getElementById('eval-status-banner');
-            const readonlyOverlay = document.getElementById('eval-readonly-overlay');
-            const emptyMsg = document.getElementById('eval-empty-msg');
-            const emptyText = document.getElementById('eval-empty-text');
-
-            if (!document.getElementById('evaluation-excel-container')) return;
-
-            // --- UI 상태 배너 ---
-            function showBanner(msg, type = 'info') {
-                if (!statusBanner) return;
-                const colors = {
-                    info:    { bg: 'rgba(108,92,231,0.12)', color: '#6c5ce7', border: '1px solid rgba(108,92,231,0.3)' },
-                    success: { bg: 'rgba(39,174,96,0.12)',  color: '#27ae60', border: '1px solid rgba(39,174,96,0.3)' },
-                    warning: { bg: 'rgba(253,203,110,0.18)', color: '#e67e22', border: '1px solid rgba(253,203,110,0.4)' },
-                    readonly:{ bg: 'rgba(116,185,255,0.13)', color: '#2980b9', border: '1px solid rgba(116,185,255,0.3)' },
-                };
-                const c = colors[type] || colors.info;
-                statusBanner.style.display = 'flex';
-                statusBanner.style.background = c.bg;
-                statusBanner.style.color = c.color;
-                statusBanner.style.border = c.border;
-                statusBanner.innerHTML = msg;
-            }
-
-            // --- Luckysheet 초기화 ---
-            function initLuckysheet(data = null, title = "새 스프레드시트", editable = true) {
-                const options = {
-                    container: 'evaluation-excel-container',
-                    title: title,
-                    lang: 'ko',
-                    showinfobar: false,
-                    showtoolbar: editable,
-                    showsheetbar: true,
-                    showstatisticBar: false,
-                    enableAddRow: editable,
-                    enableAddBackTop: true,
-                    allowEdit: editable,
-                };
-
-                if (data) {
-                    options.data = data;
-                } else {
-                    options.data = [{
-                        name: "Sheet1", color: "", index: 0,
-                        status: 1, order: 0, celldata: [], config: {}
-                    }];
-                }
-
-                if (window.luckysheet) {
-                    luckysheet.destroy();
-                    luckysheet.create(options);
-                }
-
-                if (readonlyOverlay) readonlyOverlay.style.display = editable ? 'none' : 'block';
-                if (emptyMsg) emptyMsg.style.display = 'none';
-            }
-
-            // --- Firebase에서 평가시트 로드 ---
-            function loadEvalSheetFromFirebase() {
-                if (!window.db) return;
-                window.db.collection('workEvalSheet').doc('current').get().then(doc => {
-                    const isMaster = window.currentUserDocGlobal && window.currentUserDocGlobal.isMaster === true;
-                    if (doc.exists && doc.data() && doc.data().sheets) {
-                        const sheets = doc.data().sheets;
-                        const title = doc.data().title || '평가시트';
-                        initLuckysheet(sheets, title, isMaster);
-                        const savedAt = doc.data().savedAt ? new Date(doc.data().savedAt).toLocaleString('ko-KR') : '';
-                        const savedBy = doc.data().savedBy || '';
-                        if (isMaster) {
-                            showBanner(`<i class="fa-solid fa-crown" style="margin-right:6px;"></i> 마스터 편집 모드 &nbsp;|&nbsp; 최근 저장: ${savedAt} (${savedBy})`, 'success');
-                        } else {
-                            showBanner(`<i class="fa-solid fa-eye" style="margin-right:6px;"></i> 읽기 전용 모드 (마스터만 편집 가능) &nbsp;|&nbsp; 최근 저장: ${savedAt}`, 'readonly');
-                        }
-                    } else {
-                        if (isMaster) {
-                            initLuckysheet(null, '새 스프레드시트', true);
-                            showBanner(`<i class="fa-solid fa-crown" style="margin-right:6px;"></i> 마스터 편집 모드 &nbsp;|&nbsp; 엑셀 업로드 또는 직접 입력 후 "저장(공유)" 하세요.`, 'info');
-                        } else {
-                            if (emptyMsg) emptyMsg.style.display = 'block';
-                            if (emptyText) emptyText.textContent = '아직 마스터가 저장한 평가시트가 없습니다.';
-                            showBanner(`<i class="fa-solid fa-eye" style="margin-right:6px;"></i> 읽기 전용 모드`, 'readonly');
-                        }
-                    }
-                }).catch(err => console.error('평가시트 로드 오류:', err));
-            }
-
-            // --- Firebase에 평가시트 저장 ---
-            function saveEvalSheetToFirebase() {
-                if (!window.db || !window.luckysheet) return;
-                const sheets = luckysheet.getAllSheets();
-                if (!sheets || sheets.length === 0) { alert('저장할 시트 데이터가 없습니다.'); return; }
-
-                if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...'; }
-
-                window.db.collection('workEvalSheet').doc('current').set({
-                    sheets: sheets,
-                    title: '평가시트',
-                    savedAt: Date.now(),
-                    savedBy: window.currentUserDocGlobal ? (window.currentUserDocGlobal.nickname || window.currentUserDocGlobal.email || '마스터') : '마스터',
-                }).then(() => {
-                    const now = new Date().toLocaleString('ko-KR');
-                    showBanner(`<i class="fa-solid fa-crown" style="margin-right:6px;"></i> 마스터 편집 모드 &nbsp;|&nbsp; ✅ 저장 완료: ${now}`, 'success');
-                    alert('평가시트가 저장되었습니다! 모든 회원이 볼 수 있습니다. ✅');
-                }).catch(err => {
-                    console.error('저장 오류:', err);
-                    alert('저장 중 오류: ' + err.message);
-                }).finally(() => {
-                    if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 저장 (공유)'; }
-                });
-            }
-
-            // --- 평가시트 탭 클릭 이벤트 ---
-            setTimeout(() => {
-                const evalTabBtn = document.querySelector('[data-tab="evaluation"]');
-                if (evalTabBtn) {
-                    evalTabBtn.addEventListener('click', () => setTimeout(initEvalUI, 150));
-                }
-            }, 600);
-
-            if (saveBtn) saveBtn.addEventListener('click', saveEvalSheetToFirebase);
-
-            if (clearBtn) {
-                clearBtn.addEventListener('click', () => {
-                    const isMaster = window.currentUserDocGlobal && window.currentUserDocGlobal.isMaster === true;
-                    if (!isMaster) return;
-                    if (confirm('평가시트를 초기화하시겠습니까?\n(Firebase에 저장된 데이터는 삭제되지 않습니다)')) {
-                        initLuckysheet(null, '새 스프레드시트', true);
-                    }
-                });
-            }
-
             if (fileInput) {
                 fileInput.addEventListener('change', (e) => {
-                    if (e.target.files && e.target.files.length > 0) {
-                        handleExcelFile(e.target.files[0]);
+                    if (e.target.files && e.target.files.length > 0) handleExcelFile(e.target.files[0]);
+                });
+            }
+
+            // 저장 버튼
+            const saveBtn = document.getElementById('btn-eval-save');
+            if (saveBtn) saveBtn.addEventListener('click', saveToFirebase);
+
+            // 초기화 버튼
+            const clearBtn = document.getElementById('btn-eval-clear');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', () => {
+                    const isMaster = !!(window.currentUserDocGlobal && window.currentUserDocGlobal.isMaster);
+                    if (!isMaster) return;
+                    if (confirm('평가시트를 초기화하시겠습니까?')) {
+                        luckysheetReady = false;
+                        doInitLuckysheet(null, '새 스프레드시트', true);
                     }
                 });
             }
 
-            function handleExcelFile(file) {
-                const isMaster = window.currentUserDocGlobal && window.currentUserDocGlobal.isMaster === true;
-                if (!isMaster) { alert('마스터만 파일을 업로드할 수 있습니다.'); return; }
-
-                if (file.name.match(/\.(xlsx)$/i)) {
-                    LuckyExcel.transformExcelToLucky(file, function(exportJson) {
-                        if (!exportJson.sheets || exportJson.sheets.length === 0) {
-                            alert("엑셀 파일 내용을 읽는데 실패했습니다.");
-                            return;
-                        }
-                        initLuckysheet(exportJson.sheets, exportJson.info?.name || file.name, true);
-                        showBanner(`<i class="fa-solid fa-crown" style="margin-right:6px;"></i> 파일 로드 완료 &nbsp;|&nbsp; "저장 (공유)" 버튼을 눌러야 회원들이 볼 수 있습니다.`, 'warning');
-                        if (fileInput) fileInput.value = '';
-                    }, function(err) {
-                        console.error('Import Error:', err);
-                        alert("엑셀 파일 가져오기 중 오류가 발생했습니다.");
+            // 탭 클릭 이벤트
+            setTimeout(() => {
+                const evalTabBtns = document.querySelectorAll('[data-tab="evaluation"]');
+                evalTabBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        // 탭이 활성화될 때까지 충분히 기다린 후 초기화
+                        setTimeout(initEvalUI, 300);
                     });
-                } else if (file.name.match(/\.(xls|csv)$/i)) {
-                    // .xls, .csv 등 구버전 파일은 SheetJS를 통해 데이터만 가져와서 렌더링합니다.
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        try {
-                            const data = new Uint8Array(e.target.result);
-                            const workbook = XLSX.read(data, { type: 'array' });
-                            const luckyData = [];
-                            
-                            workbook.SheetNames.forEach((sheetName, index) => {
-                                const sheet = workbook.Sheets[sheetName];
-                                const json = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: ""});
-                                
-                                const maxRow = Math.max(84, json.length + 10);
-                                const maxCol = Math.max(60, (json[0] ? json[0].length : 0) + 10);
-                                
-                                const dataArray = [];
-                                for (let r = 0; r < maxRow; r++) {
-                                    let rowData = [];
-                                    for (let c = 0; c < maxCol; c++) {
-                                        if (r < json.length && c < (json[r] ? json[r].length : 0)) {
-                                            let val = json[r][c];
-                                            if (val !== undefined && val !== null && val !== "") {
-                                                rowData.push({ v: val, m: val + "" });
-                                            } else {
-                                                rowData.push(null);
-                                            }
-                                        } else {
-                                            rowData.push(null);
-                                        }
-                                    }
-                                    dataArray.push(rowData);
-                                }
-                                
-                                luckyData.push({
-                                    name: sheetName,
-                                    color: "",
-                                    index: index,
-                                    status: index === 0 ? 1 : 0,
-                                    order: index,
-                                    data: dataArray,
-                                    row: maxRow,
-                                    column: maxCol,
-                                    config: {},
-                                    calcChain: []
-                                });
-                            });
-                            
-                            initLuckysheet(luckyData, file.name);
-                            if (fileInput) fileInput.value = '';
-                        } catch (err) {
-                            console.error('Excel parse error:', err);
-                            alert("파일을 읽는 중 오류가 발생했습니다:\n" + err.message);
-                        }
-                    };
-                    reader.readAsArrayBuffer(file);
-                } else {
-                    alert('지원하지 않는 파일 형식입니다. (.xlsx, .xls, .csv 지원)');
-                }
-            }
+                });
+            }, 800);
         });
+
+        // 전역 노출 (work.js 탭 전환에서도 호출 가능하도록)
+        window.initEvalUI = initEvalUI;
+
+    })();
     </script>
+
+
 </body>
 </html>
