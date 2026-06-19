@@ -13,8 +13,14 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- SheetJS for Excel Parsing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Luckysheet for Google Sheets-like Excel functionality -->
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/css/pluginsCss.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/plugins.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet/dist/css/luckysheet.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet/dist/assets/iconfont/iconfont.css' />
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/js/plugin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet/dist/luckysheet.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckyexcel/dist/luckyexcel.umd.js"></script>
 
     <link rel="stylesheet" href="style.css?v=1.0.88">
     <style>
@@ -939,10 +945,11 @@
                         </div>
                     </div>
                     
-                    <!-- 엑셀 내용 붙여넣기 영역 -->
-                    <div class="glass-card" style="flex: 1; min-height: 400px; overflow: auto; border-radius: 12px; border: 1px solid var(--card-border); background: var(--card-bg); display: flex; flex-direction: column; padding: 0;">
-                        <div id="evaluation-excel-container" contenteditable="true" style="flex: 1; padding: 20px; outline: none; color: var(--text-color); overflow: auto;">
-                            <p style="color: #999; text-align: center; margin-top: 200px; pointer-events: none;">엑셀 파일을 이곳으로 드래그 앤 드롭하거나<br>파일 불러오기 버튼을 이용하세요.</p>
+                    <!-- 엑셀 스프레드시트 영역 -->
+                    <div class="glass-card" style="flex: 1; min-height: 400px; border-radius: 12px; border: 1px solid var(--card-border); background: var(--card-bg); display: flex; flex-direction: column; padding: 0; overflow: hidden; position: relative;">
+                        <div id="evaluation-excel-container" style="margin: 0; padding: 0; position: absolute; width: 100%; height: 100%; left: 0; top: 0;"></div>
+                        <div id="eval-drop-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(108, 92, 231, 0.8); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.2s;">
+                            엑셀 파일을 여기에 놓으세요
                         </div>
                     </div>
                 </div>
@@ -1590,30 +1597,83 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const dropZone = document.getElementById('evaluation-excel-container');
+            const dropContainer = document.querySelector('#tab-evaluation .glass-card');
+            const dropOverlay = document.getElementById('eval-drop-overlay');
             const fileInput = document.getElementById('eval-excel-upload');
+            const clearBtn = document.getElementById('btn-eval-clear');
 
-            if (!dropZone) return;
+            if (!document.getElementById('evaluation-excel-container')) return;
+
+            // Initialize Luckysheet
+            function initLuckysheet(data = null, title = "새 스프레드시트") {
+                const options = {
+                    container: 'evaluation-excel-container',
+                    title: title,
+                    lang: 'ko',
+                    showinfobar: false,
+                    showtoolbar: true,
+                    showsheetbar: true,
+                    showstatisticBar: true,
+                    enableAddRow: true,
+                    enableAddBackTop: true,
+                };
+                
+                if (data) {
+                    options.data = data;
+                } else {
+                    options.data = [{
+                        "name": "Sheet1",
+                        "color": "",
+                        "index": 0,
+                        "status": 1,
+                        "order": 0,
+                        "celldata": [],
+                        "config": {}
+                    }];
+                }
+                
+                if (window.luckysheet) {
+                    luckysheet.destroy();
+                    luckysheet.create(options);
+                }
+            }
+
+            // 평가시트 탭 클릭 시에 렌더링하도록 지연 초기화
+            setTimeout(() => {
+                const evalTabBtn = document.querySelector('[data-tab="evaluation"]');
+                if(evalTabBtn) {
+                    evalTabBtn.addEventListener('click', () => {
+                        setTimeout(() => {
+                            if(!document.querySelector('.luckysheet-work-area')) {
+                                initLuckysheet();
+                            }
+                        }, 100);
+                    });
+                }
+            }, 500);
+
+            // Handle clear button
+            if (clearBtn) {
+                clearBtn.removeAttribute('onclick');
+                clearBtn.addEventListener('click', () => initLuckysheet());
+            }
 
             // Handle drag over
-            dropZone.addEventListener('dragover', (e) => {
+            dropContainer.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                dropZone.style.backgroundColor = 'rgba(108, 92, 231, 0.05)';
-                dropZone.style.border = '2px dashed var(--primary-color)';
+                dropOverlay.style.opacity = '1';
             });
 
             // Handle drag leave
-            dropZone.addEventListener('dragleave', (e) => {
+            dropContainer.addEventListener('dragleave', (e) => {
                 e.preventDefault();
-                dropZone.style.backgroundColor = '';
-                dropZone.style.border = '';
+                dropOverlay.style.opacity = '0';
             });
 
             // Handle file drop
-            dropZone.addEventListener('drop', (e) => {
+            dropContainer.addEventListener('drop', (e) => {
                 e.preventDefault();
-                dropZone.style.backgroundColor = '';
-                dropZone.style.border = '';
+                dropOverlay.style.opacity = '0';
                 
                 if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                     handleExcelFile(e.dataTransfer.files[0]);
@@ -1630,38 +1690,25 @@
             }
 
             function handleExcelFile(file) {
-                if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
-                    alert('엑셀 파일(.xlsx, .xls, .csv)만 지원됩니다.');
+                if (!file.name.match(/\.(xlsx)$/i)) {
+                    alert('현재 버전의 스프레드시트는 .xlsx 파일만 지원합니다.');
                     return;
                 }
 
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, { type: 'array' });
-                        
-                        // 첫 번째 시트 가져오기
-                        const firstSheetName = workbook.SheetNames[0];
-                        const worksheet = workbook.Sheets[firstSheetName];
-                        
-                        // HTML 테이블로 변환
-                        let htmlString = XLSX.utils.sheet_to_html(worksheet, { id: 'parsed-excel-table', editable: true });
-                        
-                        // 스타일 입히기
-                        htmlString = htmlString.replace('<table', '<table style="width:100%; border-collapse:collapse; min-width:800px;"');
-                        
-                        // 화면에 표시
-                        dropZone.innerHTML = htmlString;
-                        
-                        // 파일 입력 초기화
-                        if (fileInput) fileInput.value = '';
-                    } catch (error) {
-                        console.error('Excel parse error:', error);
-                        alert('엑셀 파일을 읽는 중 오류가 발생했습니다.');
+                LuckyExcel.transformExcelToLucky(file, function(exportJson, luckysheetfile) {
+                    if (exportJson.sheets == null || exportJson.sheets.length == 0) {
+                        alert("엑셀 파일 내용을 읽는데 실패했습니다.");
+                        return;
                     }
-                };
-                reader.readAsArrayBuffer(file);
+                    
+                    initLuckysheet(exportJson.sheets, exportJson.info.name);
+                    
+                    // Reset file input
+                    if (fileInput) fileInput.value = '';
+                }, function(err) {
+                    console.error('Import Error:', err);
+                    alert("엑셀 파일 가져오기 중 오류가 발생했습니다.");
+                });
             }
         });
     </script>
