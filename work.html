@@ -12,6 +12,9 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+KR:wght@300;400;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- SheetJS for Excel Parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <link rel="stylesheet" href="style.css?v=1.0.88">
     <style>
@@ -924,20 +927,22 @@
 
             <!-- 탭 내용: 평가시트 -->
             <div id="tab-evaluation" class="tab-content" style="width: 100%; max-width: 100%; padding: 0 20px; box-sizing: border-box;">
-                <div style="max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; height: 100%;">
+                <div style="max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; height: calc(100vh - 120px);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h2 style="font-size: 1.5rem; font-weight: bold; color: var(--text-color); margin: 0;">
                             <i class="fa-solid fa-file-excel" style="color: #27ae60; margin-right: 8px;"></i> 평가시트
                         </h2>
                         <div style="display: flex; gap: 10px;">
-                            <button id="btn-eval-clear" class="btn btn-secondary" style="font-size: 0.85rem;" onclick="document.getElementById('evaluation-excel-container').innerHTML='<p style=\'color: #999; text-align: center; margin-top: 100px; pointer-events: none;\'>엑셀 파일에서 내용을 복사한 뒤, 여기에 붙여넣기 (Ctrl+V) 하세요.</p>';"><i class="fa-solid fa-eraser"></i> 시트 초기화</button>
+                            <input type="file" id="eval-excel-upload" accept=".xlsx, .xls, .csv" style="display: none;">
+                            <button class="btn btn-primary" style="font-size: 0.85rem;" onclick="document.getElementById('eval-excel-upload').click();"><i class="fa-solid fa-folder-open"></i> 파일 불러오기</button>
+                            <button id="btn-eval-clear" class="btn btn-secondary" style="font-size: 0.85rem;" onclick="document.getElementById('evaluation-excel-container').innerHTML='<p style=\'color: #999; text-align: center; margin-top: 200px; pointer-events: none;\'>엑셀 파일을 이곳으로 드래그 앤 드롭하거나<br>파일 불러오기 버튼을 이용하세요.</p>';"><i class="fa-solid fa-eraser"></i> 시트 초기화</button>
                         </div>
                     </div>
                     
                     <!-- 엑셀 내용 붙여넣기 영역 -->
-                    <div class="glass-card" style="flex: 1; min-height: 600px; overflow: auto; border-radius: 12px; border: 1px solid var(--card-border); background: var(--card-bg);">
-                        <div id="evaluation-excel-container" contenteditable="true" style="min-height: 100%; padding: 20px; outline: none; color: var(--text-color); overflow: auto;">
-                            <p style="color: #999; text-align: center; margin-top: 100px; pointer-events: none;">엑셀 파일에서 셀 내용들을 복사한 뒤, 여기에 붙여넣기 (Ctrl+V) 하세요.</p>
+                    <div class="glass-card" style="flex: 1; min-height: 400px; overflow: auto; border-radius: 12px; border: 1px solid var(--card-border); background: var(--card-bg); display: flex; flex-direction: column; padding: 0;">
+                        <div id="evaluation-excel-container" contenteditable="true" style="flex: 1; padding: 20px; outline: none; color: var(--text-color); overflow: auto;">
+                            <p style="color: #999; text-align: center; margin-top: 200px; pointer-events: none;">엑셀 파일을 이곳으로 드래그 앤 드롭하거나<br>파일 불러오기 버튼을 이용하세요.</p>
                         </div>
                     </div>
                 </div>
@@ -1582,6 +1587,83 @@
 
     <!-- Work JavaScript -->
     <script src="work.js?v=1.2.3"></script>
-</body>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dropZone = document.getElementById('evaluation-excel-container');
+            const fileInput = document.getElementById('eval-excel-upload');
+
+            if (!dropZone) return;
+
+            // Handle drag over
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.style.backgroundColor = 'rgba(108, 92, 231, 0.05)';
+                dropZone.style.border = '2px dashed var(--primary-color)';
+            });
+
+            // Handle drag leave
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropZone.style.backgroundColor = '';
+                dropZone.style.border = '';
+            });
+
+            // Handle file drop
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.style.backgroundColor = '';
+                dropZone.style.border = '';
+                
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    handleExcelFile(e.dataTransfer.files[0]);
+                }
+            });
+
+            // Handle file selection
+            if (fileInput) {
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                        handleExcelFile(e.target.files[0]);
+                    }
+                });
+            }
+
+            function handleExcelFile(file) {
+                if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
+                    alert('엑셀 파일(.xlsx, .xls, .csv)만 지원됩니다.');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        // 첫 번째 시트 가져오기
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        
+                        // HTML 테이블로 변환
+                        let htmlString = XLSX.utils.sheet_to_html(worksheet, { id: 'parsed-excel-table', editable: true });
+                        
+                        // 스타일 입히기
+                        htmlString = htmlString.replace('<table', '<table style="width:100%; border-collapse:collapse; min-width:800px;"');
+                        
+                        // 화면에 표시
+                        dropZone.innerHTML = htmlString;
+                        
+                        // 파일 입력 초기화
+                        if (fileInput) fileInput.value = '';
+                    } catch (error) {
+                        console.error('Excel parse error:', error);
+                        alert('엑셀 파일을 읽는 중 오류가 발생했습니다.');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+    </script>
+</body>
 </html>
