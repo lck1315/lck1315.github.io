@@ -2155,6 +2155,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let psDisplayEndYear = psYear;
     let psDisplayEndMonth = 11;
     let psSearchFilter = '';
+    let psFirstRender = true; // 처음 진입 시 오늘 날짜로 스크롤하기 위한 플래그
 
     db.collection('workProjects').orderBy('order', 'asc').onSnapshot((snapshot) => {
         psData = [];
@@ -2906,8 +2907,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             ganttContainer.scrollTop = savedScrollTop;
-            ganttContainer.scrollLeft = savedScrollLeft;
             treeBody.scrollTop = savedScrollTop;
+
+            if (psFirstRender) {
+                // 처음 진입 시: 오늘 날짜 위치로 자동 스크롤
+                psFirstRender = false;
+                const todayObj = new Date();
+                const displayStart = new Date(psDisplayStartYear, psDisplayStartMonth, 1);
+                const diffMs = todayObj.getTime() - displayStart.getTime();
+                const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                if (diffDays > 0) {
+                    // 오늘 날짜 위치에서 약간 왼쪽(여유 2주)부터 보이도록 조정
+                    const scrollToX = Math.max(0, (diffDays - 14) * psDayWidth);
+                    requestAnimationFrame(() => {
+                        ganttContainer.scrollLeft = scrollToX;
+                    });
+                }
+            } else {
+                ganttContainer.scrollLeft = savedScrollLeft;
+            }
         }
 
         // 스크롤 동기화 핸들러 (onscroll = 매번 덮어쓰므로 누적 안됨)
