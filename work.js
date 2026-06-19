@@ -2415,27 +2415,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!treeBody || !ganttHeader || !ganttBody) return;
 
         // --- 0. Calculate date range from tasks ---
-        let minDate = null;
-        let maxDate = null;
-        
-        if (psData.length > 0) {
-            const validDates = psData
-                .filter(task => task.startDate && task.endDate)
-                .map(task => ({
-                    start: new Date(task.startDate),
-                    end: new Date(task.endDate)
-                }));
-            
-            if (validDates.length > 0) {
-                minDate = new Date(Math.min(...validDates.map(d => d.start.getTime())));
-                maxDate = new Date(Math.max(...validDates.map(d => d.end.getTime())));
-                
-                psDisplayStartYear = minDate.getFullYear();
-                psDisplayStartMonth = minDate.getMonth();
-                psDisplayEndYear = maxDate.getFullYear();
-                psDisplayEndMonth = maxDate.getMonth();
-            }
-        }
+        // 사용자의 요청으로: 왼쪽 상단 연도(psYear)의 1월 1일부터 12월 31일까지만 표시하도록 고정
+        psDisplayStartYear = psYear || new Date().getFullYear();
+        psDisplayStartMonth = 0;
+        psDisplayEndYear = psDisplayStartYear;
+        psDisplayEndMonth = 11;
         
         const displayStartYear = psDisplayStartYear;
         const displayStartMonth = psDisplayStartMonth;
