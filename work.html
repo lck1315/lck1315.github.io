@@ -1721,30 +1721,34 @@
                                 const sheet = workbook.Sheets[sheetName];
                                 const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
                                 
-                                const celldata = [];
+                                let maxCols = 0;
                                 for (let r = 0; r < json.length; r++) {
-                                    if(!json[r]) continue;
-                                    for (let c = 0; c < json[r].length; c++) {
-                                        if (json[r][c] !== undefined && json[r][c] !== null) {
-                                            celldata.push({
-                                                r: r,
-                                                c: c,
-                                                v: {
-                                                    v: json[r][c],
-                                                    m: json[r][c] + ""
-                                                }
+                                    if (json[r] && json[r].length > maxCols) maxCols = json[r].length;
+                                }
+                                
+                                const rowData = [];
+                                for (let r = 0; r < json.length; r++) {
+                                    const colData = [];
+                                    for (let c = 0; c < maxCols; c++) {
+                                        if (json[r] && json[r][c] !== undefined && json[r][c] !== null) {
+                                            colData.push({
+                                                v: json[r][c],
+                                                m: json[r][c] + ""
                                             });
+                                        } else {
+                                            colData.push(null);
                                         }
                                     }
+                                    rowData.push(colData);
                                 }
                                 
                                 luckyData.push({
                                     name: sheetName,
                                     color: "",
-                                    index: index,
+                                    index: index.toString(),
                                     status: index === 0 ? 1 : 0,
                                     order: index,
-                                    celldata: celldata,
+                                    data: rowData,
                                     config: {}
                                 });
                             });
@@ -1753,7 +1757,7 @@
                             if (fileInput) fileInput.value = '';
                         } catch (err) {
                             console.error('Excel parse error:', err);
-                            alert("파일을 읽는 중 오류가 발생했습니다.");
+                            alert("파일을 읽는 중 오류가 발생했습니다:\n" + err.message);
                         }
                     };
                     reader.readAsArrayBuffer(file);
