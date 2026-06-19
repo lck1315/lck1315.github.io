@@ -22,6 +22,8 @@ if (!firebase.apps.some(app => app.name === "work")) {
 }
 const db = workApp.firestore();
 const auth = workApp.auth();
+window.db = db; // 평가시트 등 외부 스크립트에서 접근용
+window.auth = auth;
 
 document.addEventListener('DOMContentLoaded', () => {
     // ----------------------------------------------------

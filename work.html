@@ -1730,24 +1730,6 @@
                 });
             }
 
-            // --- 권한에 따른 UI 초기화 ---
-            function initEvalUI() {
-                const isMaster = window.currentUserDocGlobal && window.currentUserDocGlobal.isMaster === true;
-                if (masterControls) masterControls.style.display = isMaster ? 'flex' : 'none';
-
-                // 드래그 앤 드롭 - 마스터만
-                if (dropContainer) {
-                    dropContainer.ondragover = isMaster ? (e) => { e.preventDefault(); if(dropOverlay) dropOverlay.style.opacity='1'; } : null;
-                    dropContainer.ondragleave = isMaster ? (e) => { e.preventDefault(); if(dropOverlay) dropOverlay.style.opacity='0'; } : null;
-                    dropContainer.ondrop = isMaster ? (e) => {
-                        e.preventDefault();
-                        if(dropOverlay) dropOverlay.style.opacity='0';
-                        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) handleExcelFile(e.dataTransfer.files[0]);
-                    } : null;
-                }
-                loadEvalSheetFromFirebase();
-            }
-
             // --- 평가시트 탭 클릭 이벤트 ---
             setTimeout(() => {
                 const evalTabBtn = document.querySelector('[data-tab="evaluation"]');
@@ -1777,16 +1759,17 @@
             }
 
             function handleExcelFile(file) {
+                const isMaster = window.currentUserDocGlobal && window.currentUserDocGlobal.isMaster === true;
+                if (!isMaster) { alert('마스터만 파일을 업로드할 수 있습니다.'); return; }
+
                 if (file.name.match(/\.(xlsx)$/i)) {
-                    // .xlsx 파일은 LuckyExcel을 통해 완벽하게(서식 포함) 가져옵니다.
-                    LuckyExcel.transformExcelToLucky(file, function(exportJson, luckysheetfile) {
-                        if (exportJson.sheets == null || exportJson.sheets.length == 0) {
+                    LuckyExcel.transformExcelToLucky(file, function(exportJson) {
+                        if (!exportJson.sheets || exportJson.sheets.length === 0) {
                             alert("엑셀 파일 내용을 읽는데 실패했습니다.");
                             return;
                         }
-                        
-                        initLuckysheet(exportJson.sheets, exportJson.info.name);
-                        
+                        initLuckysheet(exportJson.sheets, exportJson.info?.name || file.name, true);
+                        showBanner(`<i class="fa-solid fa-crown" style="margin-right:6px;"></i> 파일 로드 완료 &nbsp;|&nbsp; "저장 (공유)" 버튼을 눌러야 회원들이 볼 수 있습니다.`, 'warning');
                         if (fileInput) fileInput.value = '';
                     }, function(err) {
                         console.error('Import Error:', err);
