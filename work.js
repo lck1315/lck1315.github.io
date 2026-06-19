@@ -1059,7 +1059,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tabs.forEach(t => t.classList.remove('active'));
             tabContents.forEach(c => {
                 c.classList.remove('active');
-                c.style.display = 'none';
+                c.style.display = ''; // CSS가 제어하도록 빈 문자열 할당
             });
             
             tab.classList.add('active');
@@ -1067,7 +1067,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetContent = document.getElementById(`tab-${currentTab}`);
             if (targetContent) {
                 targetContent.classList.add('active');
-                targetContent.style.display = 'block';
+                targetContent.style.display = ''; // CSS가 제어하도록 빈 문자열 할당
             }
             
             // 프로젝트 탭일 경우 브라우저 스크롤 제거 및 전체 화면 사용

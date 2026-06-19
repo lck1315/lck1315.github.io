@@ -940,7 +940,7 @@
             </div>
 
             <!-- 탭 내용: 평가시트 -->
-            <div id="tab-evaluation" class="tab-content" style="width: 100%; max-width: 100%; padding: 0; box-sizing: border-box; display: flex; flex-direction: column; height: calc(100vh - 70px);">
+            <div id="tab-evaluation" class="tab-content" style="width: 100%; max-width: 100%; padding: 0; box-sizing: border-box; flex-direction: column; height: calc(100vh - 70px);">
                 <!-- 상단 툴바 -->
                 <div class="ps-top-toolbar" style="padding: 8px 16px; border-bottom: 1px solid var(--card-border);">
                     <div style="display:flex; align-items:center; gap:8px;">
@@ -1659,7 +1659,7 @@
                 enableAddBackTop: true,
                 allowEdit: editable,
             };
-            options.data = data || [{ name:'Sheet1', color:'', index:0, status:1, order:0, celldata:[], config:{} }];
+            options.data = data || [{ name:'Sheet1', color:'', index:"0", status:1, order:0, celldata:[], config:{} }];
 
             try {
                 luckysheet.destroy();
@@ -1790,7 +1790,7 @@
 
                             luckyData.push({
                                 name: sheetName, color: '',
-                                index, status: index === 0 ? 1 : 0, order: index,
+                                index: String(index), status: index === 0 ? 1 : 0, order: index,
                                 data: dataArray, row: maxRow, column: maxCol,
                                 config: {}, calcChain: []
                             });
