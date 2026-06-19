@@ -438,6 +438,28 @@
                 min-width: 100%;
             }
         }
+
+        /* 평가시트 엑셀 붙여넣기 영역 스타일 */
+        #evaluation-excel-container table {
+            border-collapse: collapse;
+            min-width: 100%;
+            font-size: 0.9rem;
+            color: var(--text-color);
+        }
+        #evaluation-excel-container th,
+        #evaluation-excel-container td {
+            border: 1px solid var(--card-border);
+            padding: 8px 12px;
+            white-space: nowrap;
+        }
+        #evaluation-excel-container th {
+            background: rgba(0, 0, 0, 0.1);
+            font-weight: bold;
+            color: var(--text-color);
+        }
+        body.light-theme #evaluation-excel-container th {
+            background: rgba(0, 0, 0, 0.05);
+        }
     </style>
 </head>
 
@@ -489,6 +511,7 @@
                 <button class="work-tab" data-tab="schedule"><i class="fa-regular fa-calendar-check"></i> 일정관리</button>
                 <button class="work-tab" data-tab="performance"><i class="fa-solid fa-trophy"></i> 개인성과</button>
                 <button class="work-tab" data-tab="projects"><i class="fa-solid fa-bars-progress"></i> 프로젝트</button>
+                <button class="work-tab" data-tab="evaluation"><i class="fa-solid fa-file-excel"></i> 평가시트</button>
                 <button class="work-tab" data-tab="ideas"><i class="fa-solid fa-lightbulb"></i> 아이디어</button>
                 <button class="work-tab" data-tab="members"><i class="fa-solid fa-users"></i> 구성원</button>
                 <button class="work-tab" data-tab="info"><i class="fa-solid fa-newspaper"></i> 정보마당</button>
@@ -529,6 +552,7 @@
         <button class="mobile-dropdown-item work-tab" data-tab="schedule"><i class="fa-regular fa-calendar-check"></i> 일정관리</button>
         <button class="mobile-dropdown-item work-tab" data-tab="performance"><i class="fa-solid fa-trophy"></i> 개인성과</button>
         <button class="mobile-dropdown-item work-tab" data-tab="projects"><i class="fa-solid fa-bars-progress"></i> 프로젝트</button>
+        <button class="mobile-dropdown-item work-tab" data-tab="evaluation"><i class="fa-solid fa-file-excel"></i> 평가시트</button>
         <button class="mobile-dropdown-item work-tab" data-tab="ideas"><i class="fa-solid fa-lightbulb"></i> 아이디어</button>
         <button class="mobile-dropdown-item work-tab" data-tab="members"><i class="fa-solid fa-users"></i> 구성원</button>
         <button class="mobile-dropdown-item work-tab" data-tab="info"><i class="fa-solid fa-newspaper"></i> 정보마당</button>
@@ -897,6 +921,28 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 탭 내용: 평가시트 -->
+            <div id="tab-evaluation" class="tab-content" style="width: 100%; max-width: 100%; padding: 0 20px; box-sizing: border-box;">
+                <div style="max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; height: 100%;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="font-size: 1.5rem; font-weight: bold; color: var(--text-color); margin: 0;">
+                            <i class="fa-solid fa-file-excel" style="color: #27ae60; margin-right: 8px;"></i> 평가시트
+                        </h2>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="btn-eval-clear" class="btn btn-secondary" style="font-size: 0.85rem;" onclick="document.getElementById('evaluation-excel-container').innerHTML='<p style=\'color: #999; text-align: center; margin-top: 100px; pointer-events: none;\'>엑셀 파일에서 내용을 복사한 뒤, 여기에 붙여넣기 (Ctrl+V) 하세요.</p>';"><i class="fa-solid fa-eraser"></i> 시트 초기화</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 엑셀 내용 붙여넣기 영역 -->
+                    <div class="glass-card" style="flex: 1; min-height: 600px; overflow: auto; border-radius: 12px; border: 1px solid var(--card-border); background: var(--card-bg);">
+                        <div id="evaluation-excel-container" contenteditable="true" style="min-height: 100%; padding: 20px; outline: none; color: var(--text-color); overflow: auto;">
+                            <p style="color: #999; text-align: center; margin-top: 100px; pointer-events: none;">엑셀 파일에서 셀 내용들을 복사한 뒤, 여기에 붙여넣기 (Ctrl+V) 하세요.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div id="tab-projects" class="tab-content"
                 style="width: 100%; max-width: 100%; padding: 0 20px; box-sizing: border-box;">
                 <div id="ps-auth-lock" class="hidden"></div>
