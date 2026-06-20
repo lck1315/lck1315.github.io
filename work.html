@@ -1657,15 +1657,18 @@
             const container = document.getElementById('evaluation-excel-container');
             if (!container) return;
 
-            // 컨테이너 높이가 0이면(다른 탭에 가려져 있으면) 0.1초마다 체크하며 대기 (무한루프 방지)
-            if (container.offsetHeight === 0) {
-                if (window._initLuckysheetTimer) clearTimeout(window._initLuckysheetTimer);
-                window._initLuckysheetTimer = setTimeout(() => doInitLuckysheet(data, title, editable), 100);
+            // 이미 초기화된 상태라면 중복 렌더링 생략 (성능 최적화 및 엑셀 엔진 붕괴 방지)
+            // 단, 데이터가 명시적으로 전달된 경우(파일 로드 등)는 덮어씀
+            if (luckysheetReady && !data) {
+                if (window.luckysheet && typeof window.luckysheet.resize === 'function') {
+                    window.luckysheet.resize(); // 크기만 재조정
+                }
                 return;
             }
 
-            const options = {
-                container: 'evaluation-excel-container',
+            try {
+                const options = {
+                    container: 'evaluation-excel-container',
                 title: title || '평가시트',
                 lang: 'ko',                 // 한국어 UI 적용
                 showinfobar: false,
@@ -1769,6 +1772,11 @@
             
             const em = document.getElementById('eval-empty-msg');
             if (em) em.style.display = 'none';
+            
+            } catch (err) {
+                console.error('[평가시트] 초기화 중 치명적 오류 발생:', err);
+                luckysheetReady = false;
+            }
         }
 
         // ─── Firebase 저장된 시트 로드 ─────────────────
@@ -1999,14 +2007,25 @@
                 });
             }
 
-            // 탭 클릭 이벤트 - 럭키시트 스크롤 덜컹거림 완벽 차단을 위한 전역 스크롤 잠금 적용
+            // 탭 클릭 이벤트 - 전역 스크롤 잠금 및 초기화 관리
             setTimeout(() => {
                 const allTabBtns = document.querySelectorAll('.work-tab[data-tab]');
                 allTabBtns.forEach(btn => {
                     btn.addEventListener('click', () => {
                         if (btn.getAttribute('data-tab') === 'evaluation') {
                             document.body.style.overflow = 'hidden';
-                            setTimeout(initEvalUI, 300);
+                            
+                            // 최초 1회만 initEvalUI 실행 (이후에는 탭 display 변경만으로 엑셀이 나타남)
+                            if (!window._evalUiInitialized) {
+                                window._evalUiInitialized = true;
+                                // 탭 전환 애니메이션이 끝난 후 여유있게 초기화
+                                setTimeout(initEvalUI, 400);
+                            } else {
+                                // 이미 초기화된 경우 엑셀 화면 크기만 바로잡아줌
+                                if (window.luckysheet && typeof window.luckysheet.resize === 'function') {
+                                    setTimeout(() => window.luckysheet.resize(), 100);
+                                }
+                            }
                         } else {
                             document.body.style.overflow = '';
                         }
