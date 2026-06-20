@@ -3488,7 +3488,11 @@ document.addEventListener('DOMContentLoaded', () => {
             slide.style.width = '100%';
             slide.style.height = '100%';
             slide.style.flexShrink = '0';
-            slide.innerHTML = `<img src="${imgUrl}" style="width:100%; height:100%; object-fit:cover; display:block;">`;
+            slide.style.display = 'flex';
+            slide.style.alignItems = 'center';
+            slide.style.justifyContent = 'center';
+            slide.style.overflow = 'hidden';
+            slide.innerHTML = `<img src="${imgUrl}" style="width:100%; height:100%; object-fit:cover; display:block; vertical-align:middle;">`;
             workHeroSliderTrack.appendChild(slide);
 
             if (workHeroSliderDots) {

@@ -787,15 +787,16 @@
 
                 <!-- 메인 화면 (기본 표시) -->
                 <div id="tab-main" class="tab-content active">
-                    <!-- Work 페이지 상단 배경 (Hero Slider) -->
-                    <section id="work-hero" style="width: 100vw; min-height: 100vh; margin-left: calc(-50vw + 50%); margin-top: -75px; margin-bottom: 2rem; position: relative; display: flex; align-items: center; justify-content: center; overflow-x: auto; overflow-y: hidden; padding: 0;">
-                        
-                        <!-- 배경 슬라이더 (풀와이드) -->
-                        <div id="work-hero-img-frame" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;">
-                            <div class="hero-slider-container" style="width: 100%; height: 100%; position: relative;">
-                                <div class="hero-slider-track" id="work-hero-slider-track" style="display: flex; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);">
-                                    <!-- 동적으로 여러 이미지 슬라이드가 추가됨 -->
-                                </div>
+                    <!-- 메인 히어로 (로그인 상태와 무관하게 모든 사용자에게 표시) -->
+                    <section class="section" id="hero" style="position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; min-height: 500px; height: 50vh; border-radius: 20px; margin-bottom: 30px; padding: 0;">
+                        <!-- 슬라이더 컨테이너 -->
+                        <div class="hero-slider-container" style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:1;">
+                            <div class="hero-slider-track" id="work-hero-slider-track">
+                                <!-- 슬라이드 아이템들이 동적으로 들어갈 자리 -->
+                            </div>
+                            
+                            <!-- 슬라이더 컨트롤 -->
+                            <div class="hero-slider-controls">
                                 <button id="work-hero-prev-btn" class="hero-slider-btn prev" aria-label="이전 배경 사진"><i class="fa-solid fa-chevron-left"></i></button>
                                 <button id="work-hero-next-btn" class="hero-slider-btn next" aria-label="다음 배경 사진"><i class="fa-solid fa-chevron-right"></i></button>
                                 <div class="hero-slider-dots" id="work-hero-slider-dots"></div>
@@ -814,7 +815,7 @@
                                             }
                                         }
                                         var trackEl = document.getElementById('work-hero-slider-track');
-                                        var slideHtml = '<div class="hero-slide" style="width:100%; height:100%; flex-shrink:0;"><img src="' + initialImg + '" style="width:100%; height:100%; object-fit:cover; display:block;"></div>';
+                                        var slideHtml = '<div class="hero-slide" style="width:100%; height:100%; flex-shrink:0; display:flex; align-items:center; justify-content:center; overflow:hidden;"><img src="' + initialImg + '" style="width:100%; height:100%; object-fit:cover; display:block; vertical-align:middle;"></div>';
                                         trackEl.innerHTML = slideHtml;
                                     } catch (e) {
                                         console.error(e);
@@ -834,7 +835,7 @@
 
                         <!-- 텍스트 내용 -->
                         <div class="container" style="position: relative; z-index: 3; text-align: center;">
-                            <div class="hero-text-content" style="width: 100%; display: flex; flex-direction: column; align-items: center; margin-top: 250px;">
+                            <div class="hero-text-content" style="width: 100%; display: flex; flex-direction: column; align-items: center; margin-top: 0;">
                                 <span class="hero-badge" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(5px); color: #fff; border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 2px 10px rgba(0,0,0,0.1);"><i class="fa-solid fa-briefcase"></i> Work & Projects</span>
                                 <h1 class="hero-title" style="color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">효율적인 협업의 시작<br>NBIAS.work 프로젝트 관리</h1>
                                 <p class="hero-desc" style="color: rgba(255,255,255,0.9); text-shadow: 0 1px 5px rgba(0,0,0,0.5);">일정을 기획하고 구성원들과 공유하며 목표를 달성하세요. 간트 차트와 칸반 보드를 활용하여 팀의 생산성을 극대화합니다.</p>
@@ -974,6 +975,7 @@
                         <input type="file" id="eval-excel-upload" accept=".xlsx, .xls, .csv" style="display: none;">
                         <button class="ps-left-tool-btn" onclick="document.getElementById('eval-excel-upload').click();"><i class="fa-solid fa-folder-open"></i> 파일 불러오기</button>
                         <button id="btn-eval-save" class="ps-left-tool-btn" style="background: linear-gradient(135deg, #27ae60, #2ecc71); color:#fff; border:none;"><i class="fa-solid fa-cloud-arrow-up"></i> 저장 (공유)</button>
+                        <button id="btn-eval-export" class="ps-left-tool-btn" style="background: #3498db; color:#fff; border:none;"><i class="fa-solid fa-file-export"></i> 엑셀로 내보내기</button>
                         <button id="btn-eval-clear" class="ps-left-tool-btn"><i class="fa-solid fa-eraser"></i> 시트 초기화</button>
                     </div>
                     <!-- 상태 배너 -->
@@ -1971,6 +1973,34 @@
             if (fileInput) {
                 fileInput.addEventListener('change', (e) => {
                     if (e.target.files && e.target.files.length > 0) handleExcelFile(e.target.files[0]);
+                });
+            }
+
+            // 내보내기 버튼
+            const exportBtn = document.getElementById('btn-eval-export');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', () => {
+                    if (!window.luckysheet) return;
+                    const allSheets = luckysheet.getAllSheets();
+                    
+                    const wb = XLSX.utils.book_new();
+                    allSheets.forEach(sheet => {
+                        let ws_data = [];
+                        if (sheet.data && sheet.data.length > 0) {
+                            sheet.data.forEach(row => {
+                                let rowData = [];
+                                if (row) {
+                                    row.forEach(cell => {
+                                        rowData.push(cell ? cell.v : null);
+                                    });
+                                }
+                                ws_data.push(rowData);
+                            });
+                        }
+                        const ws = XLSX.utils.aoa_to_sheet(ws_data);
+                        XLSX.utils.book_append_sheet(wb, ws, sheet.name || "Sheet1");
+                    });
+                    XLSX.writeFile(wb, "NBIAS_Work_Evaluation.xlsx");
                 });
             }
 
