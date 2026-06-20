@@ -1692,18 +1692,44 @@
                         fxInput.style.background = '';
                     }
                 }
-                // 본문 셀 클릭 시 나타나는 에디터도 원천 봉쇄 (이중 안전장치)
-                const editor = document.getElementById('luckysheet-rich-text-editor');
-                if (editor && !editable) {
-                    editor.addEventListener('keydown', (e) => {
-                        // 방향키, 복사(Ctrl+C) 등은 허용하되 실제 글자 입력은 막음
-                        if (!e.ctrlKey && !e.metaKey && e.key.length === 1) {
+            }, 1000);
+
+            // 럭키시트는 document 최상단에서 keydown을 잡아 편집기를 띄우므로, 
+            // 캡처 페이즈(Capture Phase)에서 먼저 가로채서 완전히 차단해야 합니다.
+            if (!window._luckysheetKeyBlockerInited) {
+                window._luckysheetKeyBlockerInited = true;
+                document.addEventListener('keydown', function(e) {
+                    // 마스터(편집 가능 상태)면 키보드 입력 허용
+                    if (window._currentLuckysheetEditable) return;
+
+                    const container = document.getElementById('evaluation-excel-container');
+                    // 이벤트 대상이 럭키시트 내부이거나, body에서 발생했을 때 (셀 선택 후 타이핑 시 body로 들어옴)
+                    if (container && (container.contains(e.target) || e.target === document.body)) {
+                        // 방향키, 컨트롤키, 복사(Ctrl+C) 등은 허용
+                        const allowedKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 
+                                             'PageUp', 'PageDown', 'Home', 'End', 'Tab', 'Escape', 
+                                             'Shift', 'Control', 'Alt', 'Meta'];
+                        
+                        // 복사(Ctrl+C / Cmd+C) 및 전체선택(Ctrl+A) 허용
+                        if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'c' || e.key.toLowerCase() === 'a')) {
+                            return;
+                        }
+
+                        // F1 ~ F12 허용
+                        if (e.key.startsWith('F') && e.key.length <= 3) {
+                            return;
+                        }
+
+                        // 그 외의 문자열, Backspace, Delete, Enter 등 모든 키는 차단
+                        if (!allowedKeys.includes(e.key)) {
+                            e.stopPropagation();
                             e.preventDefault();
                             return false;
                         }
-                    }, { capture: true });
-                }
-            }, 1000);
+                    }
+                }, { capture: true });
+            }
+            window._currentLuckysheetEditable = editable;
             
             const em = document.getElementById('eval-empty-msg');
             if (em) em.style.display = 'none';
