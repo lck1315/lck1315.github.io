@@ -975,8 +975,8 @@
                     <div id="eval-drop-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(108, 92, 231, 0.8); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.2s;">
                         엑셀 파일을 여기에 놓으세요
                     </div>
-                    <!-- 읽기 전용 오버레이 (일반 회원, 클릭 허용) -->
-                    <div id="eval-readonly-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 50; pointer-events: none;"></div>
+                    <!-- 읽기 전용 오버레이 (일반 회원, 본문 편집 차단 및 하단 시트 탭 클릭 허용) -->
+                    <div id="eval-readonly-overlay" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: calc(100% - 36px); z-index: 50; cursor: not-allowed; background: rgba(255,255,255,0.01);"></div>
                     <!-- 비어있음 안내 -->
                     <div id="eval-empty-msg" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; color: var(--text-muted); pointer-events: none; display: none;">
                         <i class="fa-solid fa-file-excel" style="font-size: 3rem; color: #27ae60; opacity: 0.4; margin-bottom: 12px;"></i>
@@ -1677,6 +1677,33 @@
             // 따라서 destroy() 없이 create()만 호출하여 기존 시트를 덮어씌웁니다.
             luckysheet.create(options);
             luckysheetReady = true;
+            
+            // 럭키시트 셀 클릭 시 화면이 맨 위로 튀는(점프하는) 브라우저 기본 포커스 스크롤 동작 완벽 차단
+            setTimeout(() => {
+                const lsInput = document.querySelector('.luckysheet-input-box');
+                const lsEditor = document.getElementById('luckysheet-rich-text-editor');
+                if (lsInput) {
+                    lsInput.addEventListener('focus', () => {
+                        const currentScrollY = window.scrollY;
+                        // 포커스가 가면서 브라우저가 위로 올려버린 스크롤을 즉시 원래 위치로 강제 복구
+                        requestAnimationFrame(() => {
+                            if (window.scrollY !== currentScrollY) {
+                                window.scrollTo(0, currentScrollY);
+                            }
+                        });
+                    }, { capture: true });
+                }
+                if (lsEditor) {
+                    lsEditor.addEventListener('focus', () => {
+                        const currentScrollY = window.scrollY;
+                        requestAnimationFrame(() => {
+                            if (window.scrollY !== currentScrollY) {
+                                window.scrollTo(0, currentScrollY);
+                            }
+                        });
+                    }, { capture: true });
+                }
+            }, 1000);
 
             // 읽기 전용 오버레이
             const ro = document.getElementById('eval-readonly-overlay');

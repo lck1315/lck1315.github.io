@@ -3354,12 +3354,3 @@ main:has(#tab-projects.active) {
 body.dark-theme .btn-blog-back:hover {
     background: rgba(255,255,255,0.05);
 }
-
-/* ==========================================================================
-   럭키시트 포커스 스크롤 점프(덜컹거림) 방지
-   ========================================================================== */
-#luckysheet-rich-text-editor, .luckysheet-input-box {
-    position: fixed !important;
-    top: -1000px !important;
-    left: -1000px !important;
-}
