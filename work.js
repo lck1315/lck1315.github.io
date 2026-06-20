@@ -5949,6 +5949,201 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        let currentInfoPage = 1;
+        const INFO_ITEMS_PER_PAGE = 10;
+        let allInfoDocs = [];
+
+        function renderInfoBoard() {
+            const tbody = document.getElementById('info-board-tbody');
+            const pagination = document.getElementById('info-pagination');
+            const totalCountSpan = document.getElementById('info-total-count');
+            
+            if(!tbody || !pagination) return;
+            tbody.innerHTML = '';
+            
+            if(totalCountSpan) totalCountSpan.innerText = `전체보기 ${allInfoDocs.length}개의 글`;
+            
+            if (allInfoDocs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="padding: 50px; color: #888;">등록된 정보가 없습니다. 첫 글을 남겨보세요!</td></tr>';
+                pagination.innerHTML = '';
+                return;
+            }
+            
+            const totalPages = Math.ceil(allInfoDocs.length / INFO_ITEMS_PER_PAGE);
+            if(currentInfoPage > totalPages) currentInfoPage = totalPages;
+            if(currentInfoPage < 1) currentInfoPage = 1;
+            
+            const startIndex = (currentInfoPage - 1) * INFO_ITEMS_PER_PAGE;
+            const endIndex = Math.min(startIndex + INFO_ITEMS_PER_PAGE, allInfoDocs.length);
+            
+            const pageDocs = allInfoDocs.slice(startIndex, endIndex);
+            const nowTime = Date.now();
+            
+            pageDocs.forEach(item => {
+                const data = item.data;
+                const docId = item.id;
+                
+                const tr = document.createElement('tr');
+                
+                // N 마크 계산 (3일 이내)
+                const docTime = data.createdAt ? data.createdAt.toMillis() : Date.now();
+                const isNew = (nowTime - docTime) < (3 * 24 * 60 * 60 * 1000);
+                const newBadgeHtml = isNew ? '<span class="board-title-new">N</span>' : '';
+                
+                // 날짜 포맷
+                const dateObj = new Date(docTime);
+                const dateStr = `${dateObj.getFullYear()}. ${dateObj.getMonth()+1}. ${dateObj.getDate()}.`;
+                
+                const views = data.views || 0;
+                
+                tr.innerHTML = `
+                    <td class="col-title"><span class="board-title-text">${data.title}</span>${newBadgeHtml}</td>
+                    <td class="col-author">${data.authorName || '익명'}</td>
+                    <td class="col-views">${views}</td>
+                    <td class="col-date">${dateStr}</td>
+                `;
+                
+                tr.addEventListener('click', () => {
+                    showInfoDetailBoard(docId, data);
+                });
+                
+                tbody.appendChild(tr);
+            });
+            
+            renderInfoPagination(totalPages);
+        }
+
+        function renderInfoPagination(totalPages) {
+            const pagination = document.getElementById('info-pagination');
+            pagination.innerHTML = '';
+            for(let i=1; i<=totalPages; i++) {
+                const btn = document.createElement('button');
+                btn.className = `board-page-btn ${i === currentInfoPage ? 'active' : ''}`;
+                btn.innerText = i;
+                btn.addEventListener('click', () => {
+                    currentInfoPage = i;
+                    renderInfoBoard();
+                });
+                pagination.appendChild(btn);
+            }
+        }
+
+        async function showInfoDetailBoard(docId, data) {
+            const boardContainer = document.getElementById('info-board-container');
+            const detailContainer = document.getElementById('info-detail-container');
+            
+            if(!boardContainer || !detailContainer) return;
+            
+            if(auth.currentUser && auth.currentUser.uid !== data.authorId) {
+                try {
+                    await db.collection('workInfo').doc(docId).update({
+                        views: firebase.firestore.FieldValue.increment(1)
+                    });
+                } catch(e) {}
+            }
+            
+            boardContainer.style.display = 'none';
+            detailContainer.style.display = 'block';
+            
+            const docTime = data.createdAt ? data.createdAt.toMillis() : Date.now();
+            const dateObj = new Date(docTime);
+            const dateStr = `${dateObj.getFullYear()}. ${dateObj.getMonth()+1}. ${dateObj.getDate()}. ${String(dateObj.getHours()).padStart(2,'0')}:${String(dateObj.getMinutes()).padStart(2,'0')}`;
+            
+            const firstChar = (data.authorName || '?').charAt(0);
+            const contentHtml = (data.content || '').replace(/\n/g, '<br>');
+            const imageHtml = data.image ? `<img src="${data.image}" alt="첨부 이미지">` : '';
+            
+            let editDeleteHtml = '';
+            if (auth.currentUser && (auth.currentUser.uid === data.authorId || (currentUserDoc && currentUserDoc.isMaster === true))) {
+                editDeleteHtml = `
+                    <div style="display:flex; gap: 10px; align-items:center;">
+                        <button id="btn-info-detail-edit" data-id="${docId}" style="background:none; border:none; color:#4a69bd; cursor:pointer; font-size:0.95rem; font-weight:600;"><i class="fa-solid fa-pen"></i> 수정</button>
+                        <button id="btn-info-detail-delete" data-id="${docId}" style="background:none; border:none; color:#e55039; cursor:pointer; font-size:0.95rem; font-weight:600;"><i class="fa-solid fa-trash-can"></i> 삭제</button>
+                    </div>
+                `;
+            }
+
+            detailContainer.innerHTML = `
+                <div class="blog-detail-wrapper">
+                    <div class="blog-detail-category">정보마당</div>
+                    <div class="blog-detail-title">${data.title}</div>
+                    
+                    <div class="blog-detail-meta">
+                        <div class="blog-meta-left">
+                            <div class="blog-author-avatar">${firstChar}</div>
+                            <div class="blog-meta-info">
+                                <div class="blog-author-name">${data.authorName || '익명'}</div>
+                                <div class="blog-post-date">${dateStr}</div>
+                            </div>
+                        </div>
+                        <div class="blog-meta-right">
+                            <div style="display:flex; align-items:center; gap:5px;"><i class="fa-regular fa-eye"></i> ${(data.views || 0) + (auth.currentUser && auth.currentUser.uid !== data.authorId ? 1 : 0)}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="blog-content-body">
+                        ${contentHtml}
+                        ${imageHtml}
+                    </div>
+                    
+                    <div class="blog-actions">
+                        ${editDeleteHtml}
+                        <button class="btn-blog-back" id="btn-info-back-list"><i class="fa-solid fa-list"></i> 목록으로</button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('btn-info-back-list')?.addEventListener('click', () => {
+                detailContainer.style.display = 'none';
+                detailContainer.innerHTML = '';
+                boardContainer.style.display = 'block';
+            });
+            
+            document.getElementById('btn-info-detail-edit')?.addEventListener('click', (e) => {
+                const btn = e.currentTarget;
+                const id = btn.dataset.id;
+                db.collection('workInfo').doc(id).get().then(doc => {
+                    if (doc.exists) {
+                        const d = doc.data();
+                        const infoTitle = document.getElementById('info-title');
+                        const infoContent = document.getElementById('info-content');
+                        if(infoTitle) infoTitle.value = d.title || '';
+                        if(infoContent) infoContent.value = d.content || '';
+                        if(d.image) {
+                            currentImageBase64 = d.image;
+                            const imagePreview = document.getElementById('info-image-preview');
+                            if(imagePreview) imagePreview.src = d.image;
+                            const imagePreviewContainer = document.getElementById('info-image-preview-container');
+                            if(imagePreviewContainer) imagePreviewContainer.style.display = 'block';
+                            const btnSelectImage = document.getElementById('btn-select-info-image');
+                            if(btnSelectImage) btnSelectImage.style.display = 'none';
+                        }
+                        const infoModal = document.getElementById('info-write-modal');
+                        infoModal?.setAttribute('data-edit-id', id);
+                        const modalTitle = infoModal?.querySelector('.modal-title') || infoModal?.querySelector('h2');
+                        if(modalTitle) modalTitle.innerText = '📰 정보 수정';
+                        const btnSubmitInfo = document.getElementById('btn-submit-info');
+                        if(btnSubmitInfo) btnSubmitInfo.innerHTML = '수정 완료 🚀';
+                        if (typeof closeAllWriteModals === 'function') closeAllWriteModals();
+                        infoModal?.classList.remove('hidden');
+                    }
+                });
+            });
+            
+            document.getElementById('btn-info-detail-delete')?.addEventListener('click', async (e) => {
+                const btn = e.currentTarget;
+                const id = btn.dataset.id;
+                if(confirm('이 정보를 삭제하시겠습니까?')) {
+                    try {
+                        await db.collection('workInfo').doc(id).delete();
+                        detailContainer.style.display = 'none';
+                        detailContainer.innerHTML = '';
+                        boardContainer.style.display = 'block';
+                    } catch(err) { alert('삭제 실패: ' + err.message); }
+                }
+            });
+        }
+
         function subscribeInfo() {
             if (infoUnsubscribe) {
                 infoUnsubscribe();
@@ -5960,14 +6155,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             infoUnsubscribe = db.collection('workInfo')
                 .onSnapshot(snapshot => {
-                    if (!infoGrid) return;
-                    infoGrid.innerHTML = '';
-                    
-                    if (snapshot.empty) {
-                        infoGrid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 50px; color: #888;">아직 등록된 정보가 없습니다. 첫 정보를 올려보세요!</div>';
-                        return;
-                    }
-                    
                     let validDocs = [];
                     snapshot.forEach(doc => {
                         validDocs.push({ id: doc.id, data: doc.data() });
@@ -5979,103 +6166,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         return t2 - t1;
                     });
                     
-                    validDocs.forEach(item => {
-                        const data = item.data;
-                        const docId = item.id;
-                        const card = document.createElement('div');
-                        card.style.cssText = 'background: #fff; border: 1px solid var(--card-border); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s ease, box-shadow 0.2s ease;';
-                        card.onmouseover = () => { card.style.transform = 'translateY(-5px)'; card.style.boxShadow = '0 8px 15px rgba(0,0,0,0.1)'; };
-                        card.onmouseout = () => { card.style.transform = 'none'; card.style.boxShadow = '0 4px 6px rgba(0,0,0,0.05)'; };
-                        
-                        let imgHtml = '';
-                        if (data.image) {
-                            imgHtml = `<img src="${data.image}" style="width: 100%; height: 200px; object-fit: cover; border-bottom: 1px solid #eee;">`;
-                        } else {
-                            imgHtml = `<div style="width: 100%; height: 120px; background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #eee;"><i class="fa-solid fa-newspaper" style="font-size: 3rem; color: #e2e8f0;"></i></div>`;
-                        }
-                        
-                        const date = data.createdAt ? new Date(data.createdAt.toDate()).toLocaleDateString('ko-KR') : '방금 전';
-                        
-                        let editBtnHtml = '';
-                        let deleteBtnHtml = '';
-                        if (auth.currentUser && (auth.currentUser.uid === data.authorId || (currentUserDoc && currentUserDoc.isMaster === true))) {
-                            if (auth.currentUser.uid === data.authorId) {
-                                editBtnHtml = `<button class="btn-edit-info" data-id="${docId}" style="background: none; border: none; color: #4a69bd; cursor: pointer; padding: 5px;" title="수정"><i class="fa-solid fa-pen"></i></button>`;
-                            }
-                            deleteBtnHtml = `<button class="btn-delete-info" data-id="${docId}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 5px;" title="삭제"><i class="fa-solid fa-trash-can"></i></button>`;
-                        }
-                        
-                        card.innerHTML = `
-                            ${imgHtml}
-                            <div style="padding: 15px;">
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-                                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: bold; color: var(--text-color); line-height: 1.3;">${data.title}</h3>
-                                    <div style="display: flex; gap: 5px;">
-                                        ${editBtnHtml}
-                                        ${deleteBtnHtml}
-                                    </div>
-                                </div>
-                                ${data.content ? `<p style="margin: 0 0 15px 0; font-size: 0.9rem; color: #555; white-space: pre-wrap; word-break: break-all; max-height: 80px; overflow-y: auto;">${data.content}</p>` : ''}
-                                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f0f0f0; padding-top: 10px;">
-                                    <div style="display: flex; align-items: center; gap: 6px;">
-                                        <div style="width: 24px; height: 24px; border-radius: 50%; background: #4a69bd; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold;">
-                                            ${(data.authorName || '?').charAt(0)}
-                                        </div>
-                                        <span style="font-size: 0.8rem; color: #666; font-weight: 500;">${data.authorName}</span>
-                                    </div>
-                                    <span style="font-size: 0.75rem; color: #999;">${date}</span>
-                                </div>
-                            </div>
-                        `;
-                        card.style.cursor = 'pointer';
-                        card.addEventListener('click', () => {
-                            showPostDetail(data, '정보마당');
-                        });
-                        infoGrid.appendChild(card);
-                    });
+                    allInfoDocs = validDocs;
+                    renderInfoBoard();
                     
-                    document.querySelectorAll('.btn-edit-info').forEach(btn => {
-                        btn.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            const docId = btn.dataset.id;
-                            db.collection('workInfo').doc(docId).get().then(doc => {
-                                if (doc.exists) {
-                                    const d = doc.data();
-                                    resetInfoForm();
-                                    infoModal?.setAttribute('data-edit-id', docId);
-                                    
-                                    const modalTitle = infoModal?.querySelector('.modal-title') || infoModal?.querySelector('h2');
-                                    if(modalTitle) modalTitle.innerText = '📰 정보 수정';
-                                    if(btnSubmitInfo) btnSubmitInfo.innerHTML = '수정 완료 🚀';
-                                    
-                                    if(infoTitle) infoTitle.value = d.title || '';
-                                    if(infoContent) infoContent.value = d.content || '';
-                                    if(d.image) {
-                                        currentImageBase64 = d.image;
-                                        if(imagePreview) imagePreview.src = d.image;
-                                        if(imagePreviewContainer) imagePreviewContainer.style.display = 'block';
-                                        if(btnSelectImage) btnSelectImage.style.display = 'none';
-                                    }
-                                    
-                                    if (typeof closeAllWriteModals === 'function') closeAllWriteModals();
-                                    infoModal?.classList.remove('hidden');
-                                }
-                            });
-                        });
-                    });
-
-                    document.querySelectorAll('.btn-delete-info').forEach(btn => {
-                        btn.addEventListener('click', async (e) => {
-                            e.stopPropagation();
-                            if (confirm('이 정보를 삭제하시겠습니까?')) {
-                                try {
-                                    await db.collection('workInfo').doc(btn.dataset.id).delete();
-                                } catch (err) {
-                                    alert('삭제 실패: ' + err.message);
-                                }
-                            }
-                        });
-                    });
                 }, error => {
                     console.error("Error fetching info:", error);
                 });

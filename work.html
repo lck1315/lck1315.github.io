@@ -700,15 +700,40 @@
                 <!-- 탭 내용: 정보마당 -->
                 <div id="tab-info" class="tab-content">
                     <div style="max-width: 1200px; margin: 0 auto;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <h2 style="font-size: 1.5rem; font-weight: bold; color: var(--text-color); margin: 0;"><i class="fa-solid fa-newspaper" style="color:#4a69bd; margin-right:8px;"></i> 정보마당</h2>
-                            <button id="btn-add-info" class="btn btn-primary" style="font-size: 0.9rem; padding: 0.5rem 1rem; border-radius: 8px;">
-                                <i class="fa-solid fa-plus"></i> 정보 올리기
-                            </button>
+                        <!-- 정보마당 목록 컨테이너 -->
+                        <div id="info-board-container">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px;">
+                                <h2 style="font-size: 1.5rem; font-weight: bold; color: var(--text-color); margin: 0;">
+                                    <i class="fa-solid fa-newspaper" style="color:#4a69bd; margin-right:8px;"></i> 정보마당
+                                    <span id="info-total-count" style="font-size:0.9rem; color:#888; font-weight:normal; margin-left:10px;">전체보기 0개의 글</span>
+                                </h2>
+                                <button id="btn-add-info" class="btn btn-primary" style="font-size: 0.9rem; padding: 0.5rem 1rem; border-radius: 8px;">
+                                    <i class="fa-solid fa-pen"></i> 글쓰기
+                                </button>
+                            </div>
+                            
+                            <!-- 정보마당 게시판 테이블 -->
+                            <div class="board-table-wrapper">
+                                <table class="board-table" id="info-board-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="col-title">글 제목</th>
+                                            <th class="col-author">작성자</th>
+                                            <th class="col-views">조회수</th>
+                                            <th class="col-date">작성일</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="info-board-tbody">
+                                        <!-- 동적 렌더링 영역 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- 페이징 영역 -->
+                            <div id="info-pagination" class="board-pagination"></div>
                         </div>
-                        
-                        <!-- 정보마당 그리드 -->
-                        <div id="info-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; align-items: start;">
+
+                        <!-- 정보마당 글 상세 컨테이너 (기본 숨김) -->
+                        <div id="info-detail-container" style="display: none;">
                             <!-- 동적 렌더링 영역 -->
                         </div>
                     </div>
