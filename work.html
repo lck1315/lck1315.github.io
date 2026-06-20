@@ -456,35 +456,12 @@
             }
         }
 
-        /* 평가시트 엑셀 붙여넣기 영역 스타일 (Luckysheet box-sizing 리셋) */
-        .luckysheet-container *,
-        .luckysheet-container *::before,
-        .luckysheet-container *::after,
-        #evaluation-excel-container *,
-        #evaluation-excel-container *::before,
-        #evaluation-excel-container *::after {
-            box-sizing: content-box !important;
+        /* Luckysheet는 box-sizing: content-box 기반으로 동작하므로 전역 리셋과 충돌을 막기 위해 복원합니다. */
+        #evaluation-excel-container,
+        #evaluation-excel-container * {
+            box-sizing: content-box;
         }
-        #evaluation-excel-container table {
-            border-collapse: collapse;
-            min-width: 100%;
-            font-size: 0.9rem;
-            color: var(--text-color);
-        }
-        #evaluation-excel-container th,
-        #evaluation-excel-container td {
-            border: 1px solid var(--card-border);
-            padding: 8px 12px;
-            white-space: nowrap;
-        }
-        #evaluation-excel-container th {
-            background: rgba(0, 0, 0, 0.1);
-            font-weight: bold;
-            color: var(--text-color);
-        }
-        body.light-theme #evaluation-excel-container th {
-            background: rgba(0, 0, 0, 0.05);
-        }
+
     </style>
 </head>
 
