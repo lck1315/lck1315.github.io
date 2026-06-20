@@ -1677,33 +1677,6 @@
             // 따라서 destroy() 없이 create()만 호출하여 기존 시트를 덮어씌웁니다.
             luckysheet.create(options);
             luckysheetReady = true;
-            
-            // 럭키시트 셀 클릭 시 화면이 맨 위로 튀는(점프하는) 브라우저 기본 포커스 스크롤 동작 완벽 차단
-            setTimeout(() => {
-                const lsInput = document.querySelector('.luckysheet-input-box');
-                const lsEditor = document.getElementById('luckysheet-rich-text-editor');
-                if (lsInput) {
-                    lsInput.addEventListener('focus', () => {
-                        const currentScrollY = window.scrollY;
-                        // 포커스가 가면서 브라우저가 위로 올려버린 스크롤을 즉시 원래 위치로 강제 복구
-                        requestAnimationFrame(() => {
-                            if (window.scrollY !== currentScrollY) {
-                                window.scrollTo(0, currentScrollY);
-                            }
-                        });
-                    }, { capture: true });
-                }
-                if (lsEditor) {
-                    lsEditor.addEventListener('focus', () => {
-                        const currentScrollY = window.scrollY;
-                        requestAnimationFrame(() => {
-                            if (window.scrollY !== currentScrollY) {
-                                window.scrollTo(0, currentScrollY);
-                            }
-                        });
-                    }, { capture: true });
-                }
-            }, 1000);
 
             // 읽기 전용 오버레이
             const ro = document.getElementById('eval-readonly-overlay');
@@ -1940,13 +1913,17 @@
                 });
             }
 
-            // 탭 클릭 이벤트
+            // 탭 클릭 이벤트 - 럭키시트 스크롤 덜컹거림 완벽 차단을 위한 전역 스크롤 잠금 적용
             setTimeout(() => {
-                const evalTabBtns = document.querySelectorAll('[data-tab="evaluation"]');
-                evalTabBtns.forEach(btn => {
+                const allTabBtns = document.querySelectorAll('.nav-item[data-tab]');
+                allTabBtns.forEach(btn => {
                     btn.addEventListener('click', () => {
-                        // 탭이 활성화될 때까지 충분히 기다린 후 초기화
-                        setTimeout(initEvalUI, 300);
+                        if (btn.getAttribute('data-tab') === 'evaluation') {
+                            document.body.style.overflow = 'hidden';
+                            setTimeout(initEvalUI, 300);
+                        } else {
+                            document.body.style.overflow = '';
+                        }
                     });
                 });
             }, 800);
