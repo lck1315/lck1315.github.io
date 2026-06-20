@@ -1915,7 +1915,7 @@
 
             // 탭 클릭 이벤트 - 럭키시트 스크롤 덜컹거림 완벽 차단을 위한 전역 스크롤 잠금 적용
             setTimeout(() => {
-                const allTabBtns = document.querySelectorAll('.nav-item[data-tab]');
+                const allTabBtns = document.querySelectorAll('.work-tab[data-tab]');
                 allTabBtns.forEach(btn => {
                     btn.addEventListener('click', () => {
                         if (btn.getAttribute('data-tab') === 'evaluation') {
