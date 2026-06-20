@@ -350,7 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const btnAddIdea = document.getElementById('btn-add-idea');
         const btnAddInfo = document.getElementById('btn-add-info');
 
-        const allTabs = ['tab-schedule', 'tab-performance', 'tab-members', 'tab-ideas', 'tab-info', 'tab-notice', 'tab-bookmarks', 'tab-projects'];
+        const allTabs = ['tab-schedule', 'tab-performance', 'tab-members', 'tab-ideas', 'tab-info', 'tab-notice', 'tab-bookmarks', 'tab-projects', 'tab-evaluation'];
 
         // 항상 먼저 모든 오버레이를 제거
         allTabs.forEach(tabId => hideTabLockOverlay(tabId));
@@ -436,6 +436,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (projectToolbox) {
                     projectToolbox.style.pointerEvents = hasWriteAccess ? 'auto' : 'none';
                     projectToolbox.style.opacity = hasWriteAccess ? '1' : '0.4';
+                }
+            }
+            if (tabId === 'tab-evaluation') {
+                const btnEvalSave = document.getElementById('btn-eval-save');
+                if (btnEvalSave) {
+                    btnEvalSave.style.display = hasWriteAccess ? '' : 'none';
                 }
             }
             // (일정관리는 캘린더 빈칸 클릭 시 이벤트 추가가 동작하므로 별도로 hasWriteAccess 변수를 전역적으로 체크하게 할 수 있음)
