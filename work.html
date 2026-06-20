@@ -1704,14 +1704,24 @@
         function saveToFirebase() {
             if (!window.db) { alert('Firebase 연결 오류'); return; }
             if (!window.luckysheet || !luckysheetReady) { alert('시트가 아직 준비되지 않았습니다.'); return; }
-            const sheets = luckysheet.getAllSheets();
+            let sheets = luckysheet.getAllSheets();
             if (!sheets || sheets.length === 0) { alert('저장할 데이터가 없습니다.'); return; }
 
             const saveBtn = document.getElementById('btn-eval-save');
             if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...'; }
 
+            try {
+                // Firestore는 커스텀 객체나 순환 참조를 허용하지 않으므로 순수 JSON 객체로 변환
+                sheets = JSON.parse(JSON.stringify(sheets));
+            } catch (e) {
+                console.error('시트 데이터 직렬화 오류:', e);
+                alert('데이터 변환 중 오류가 발생했습니다.');
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 저장 (공유)'; }
+                return;
+            }
+
             window.db.collection('workEvalSheet').doc('current').set({
-                sheets,
+                sheets: sheets,
                 title: '평가시트',
                 savedAt: Date.now(),
                 savedBy: window.currentUserDocGlobal ? (window.currentUserDocGlobal.nickname || window.currentUserDocGlobal.email || '마스터') : '마스터',
@@ -1719,7 +1729,8 @@
                 showBanner(`<i class="fa-solid fa-crown"></i> 저장 완료: ${new Date().toLocaleString('ko-KR')}`, 'success');
                 alert('평가시트가 저장되었습니다! ✅ 모든 회원이 볼 수 있습니다.');
             }).catch(err => {
-                alert('저장 오류: ' + err.message);
+                console.error('Firebase 저장 오류:', err);
+                alert('저장 오류: ' + err.message + '\n(데이터가 너무 크거나 구조가 복잡할 수 있습니다)');
             }).finally(() => {
                 if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 저장 (공유)'; }
             });
