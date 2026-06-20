@@ -1657,6 +1657,14 @@
             const container = document.getElementById('evaluation-excel-container');
             if (!container) return;
 
+            // 컨테이너가 화면에 보이지 않거나 높이가 0일 때는 엑셀 엔진이 그릴 수 없습니다.
+            // 탭이 열릴 때까지 0.1초 간격으로 대기합니다. (무한루프 방지를 위해 setTimeout 사용)
+            if (container.offsetHeight === 0) {
+                if (window._initLuckysheetTimer) clearTimeout(window._initLuckysheetTimer);
+                window._initLuckysheetTimer = setTimeout(() => doInitLuckysheet(data, title, editable), 100);
+                return;
+            }
+
             // 이미 초기화된 상태라면 중복 렌더링 생략 (성능 최적화 및 엑셀 엔진 붕괴 방지)
             // 단, 데이터가 명시적으로 전달된 경우(파일 로드 등)는 덮어씀
             if (luckysheetReady && !data) {
