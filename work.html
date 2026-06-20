@@ -456,7 +456,15 @@
             }
         }
 
-        /* 평가시트 엑셀 붙여넣기 영역 스타일 */
+        /* 평가시트 엑셀 붙여넣기 영역 스타일 (Luckysheet box-sizing 리셋) */
+        .luckysheet-container *,
+        .luckysheet-container *::before,
+        .luckysheet-container *::after,
+        #evaluation-excel-container *,
+        #evaluation-excel-container *::before,
+        #evaluation-excel-container *::after {
+            box-sizing: content-box !important;
+        }
         #evaluation-excel-container table {
             border-collapse: collapse;
             min-width: 100%;
