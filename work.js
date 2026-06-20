@@ -5835,6 +5835,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             if (typeof closeAllWriteModals === 'function') closeAllWriteModals();
+            resetInfoForm();
             infoModal?.classList.remove('hidden');
         });
         
@@ -5851,6 +5852,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (imagePreviewContainer) imagePreviewContainer.style.display = 'none';
             if (imagePreview) imagePreview.src = '';
             if (btnSelectImage) btnSelectImage.style.display = 'flex';
+            
+            infoModal?.removeAttribute('data-edit-id');
+            const modalTitle = infoModal?.querySelector('.modal-title') || infoModal?.querySelector('h2');
+            if(modalTitle) modalTitle.innerText = '📰 정보마당 글쓰기';
+            if(btnSubmitInfo) {
+                btnSubmitInfo.innerHTML = '등록하기 🚀';
+                btnSubmitInfo.disabled = false;
+            }
         }
 
         btnSelectImage?.addEventListener('click', () => {
