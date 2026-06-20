@@ -208,6 +208,18 @@
             display: flex;
         }
 
+        /* 평가시트 셀 클릭 시 화면 덜컹거림 원천 차단 */
+        #tab-evaluation.active ~ *, #tab-evaluation * {
+            scroll-behavior: auto !important;
+        }
+        body.eval-active, html.eval-active {
+            overflow: hidden !important;
+            height: 100vh !important;
+            position: fixed !important;
+            width: 100% !important;
+            overscroll-behavior: none !important;
+        }
+
         /* 일정관리 (Schedule) */
         .schedule-list {
             list-style: none;
@@ -1647,58 +1659,57 @@
         window._initLuckysheetTimer = null;
         function doInitLuckysheet(data, title, editable) {
             // 라이브러리가 아직 로드 안 되었으면 잠시 후 재시도
-            if (!window.luckysheet) { 
-                console.warn('[평가시트] luckysheet 로드 대기 중...'); 
+            if (!window.luckysheet) {
+                console.warn('[평가시트] luckysheet 로드 대기 중...');
                 if (window._initLuckysheetTimer) clearTimeout(window._initLuckysheetTimer);
-                window._initLuckysheetTimer = setTimeout(() => doInitLuckysheet(data, title, editable), 200);
-                return; 
-            }
-            
-            const container = document.getElementById('evaluation-excel-container');
-            if (!container) return;
-
-            // 컨테이너가 화면에 보이지 않거나 높이가 0일 때는 엑셀 엔진이 그릴 수 없습니다.
-            // 탭이 열릴 때까지 0.1초 간격으로 대기합니다. (무한루프 방지를 위해 setTimeout 사용)
-            if (container.offsetHeight === 0) {
-                if (window._initLuckysheetTimer) clearTimeout(window._initLuckysheetTimer);
-                window._initLuckysheetTimer = setTimeout(() => doInitLuckysheet(data, title, editable), 100);
+                window._initLuckysheetTimer = setTimeout(() => doInitLuckysheet(data, title, editable), 300);
                 return;
             }
 
-            // 이미 초기화된 상태라면 중복 렌더링 생략 (성능 최적화 및 엑셀 엔진 붕괴 방지)
-            // 단, 데이터가 명시적으로 전달된 경우(파일 로드 등)는 덮어씀
+            const container = document.getElementById('evaluation-excel-container');
+            if (!container) return;
+
+            // 컨테이너 높이가 0이면 아직 탭이 보이지 않는 상태 → 대기
+            if (container.offsetHeight === 0) {
+                if (window._initLuckysheetTimer) clearTimeout(window._initLuckysheetTimer);
+                window._initLuckysheetTimer = setTimeout(() => doInitLuckysheet(data, title, editable), 150);
+                return;
+            }
+
+            // 이미 초기화 완료 + 새 데이터 없으면 → 크기만 재조정
             if (luckysheetReady && !data) {
-                if (window.luckysheet && typeof window.luckysheet.resize === 'function') {
-                    window.luckysheet.resize(); // 크기만 재조정
+                if (typeof window.luckysheet.resize === 'function') {
+                    window.luckysheet.resize();
                 }
                 return;
             }
 
-            try {
-                const options = {
-                    container: 'evaluation-excel-container',
+            console.log('[평가시트] luckysheet.create() 호출 시작, 컨테이너 높이:', container.offsetHeight);
+
+            const options = {
+                container: 'evaluation-excel-container',
                 title: title || '평가시트',
                 lang: 'en',
                 showinfobar: false,
-                showtoolbar: editable,      // 마스터에게만 툴바 표시
+                showtoolbar: editable,
                 showsheetbar: true,
                 showstatisticBar: true,
                 enableAddRow: editable,
                 enableAddBackTop: editable,
-                allowEdit: editable,        // 편집 차단
-                allowUpdate: editable,      // 값 업데이트 차단
-                allowCopy: true             // 복사 허용
+                allowEdit: editable,
+                allowUpdate: editable,
+                allowCopy: true
             };
             if (data && data.length > 0) {
                 options.data = data;
             }
 
-            // luckysheet.destroy()는 한국어 설정('ko')일 때 전역 functionlist를 파괴하는 심각한 버그가 있습니다.
-            // 따라서 destroy() 없이 create()만 호출하여 기존 시트를 덮어씌웁니다.
+            // destroy() 없이 create()만 호출 (destroy는 내부 버그 유발)
             luckysheet.create(options);
             luckysheetReady = true;
-            
-            // 팀원(읽기전용)일 경우, 상단 fx(함수) 입력줄을 통한 우회 입력 완벽 차단
+            console.log('[평가시트] luckysheet.create() 완료!');
+
+            // 팀원(읽기전용): fx 입력줄 차단
             setTimeout(() => {
                 const fxInput = document.getElementById('luckysheet-functionbox-cell');
                 if (fxInput) {
@@ -1714,23 +1725,20 @@
                 }
             }, 1000);
 
-            // 럭키시트는 document 최상단에서 keydown을 잡아 편집기를 띄우므로, 
-            // 캡처 페이즈(Capture Phase)에서 먼저 가로채서 완전히 차단해야 합니다.
+            // 읽기 전용 키보드/IME 차단 (최초 1회만 등록)
             if (!window._luckysheetKeyBlockerInited) {
                 window._luckysheetKeyBlockerInited = true;
-                
-                // 공통 차단 함수 (한글 조합, 붙여넣기 등 텍스트 입력 자체를 봉쇄)
+
                 function preventTextIfReadonly(e) {
                     if (window._currentLuckysheetEditable) return;
-                    const container = document.getElementById('evaluation-excel-container');
-                    if (container && (container.contains(e.target) || e.target === document.body || e.target.id === 'luckysheet-rich-text-editor' || e.target.id === 'luckysheet-functionbox-cell')) {
+                    const c = document.getElementById('evaluation-excel-container');
+                    if (c && (c.contains(e.target) || e.target === document.body || e.target.id === 'luckysheet-rich-text-editor' || e.target.id === 'luckysheet-functionbox-cell')) {
                         e.stopPropagation();
                         e.preventDefault();
                         return false;
                     }
                 }
 
-                // 한글 등 다국어 입력 조합 시작을 원천 차단 (맥/윈도우 IME 대응)
                 document.addEventListener('compositionstart', preventTextIfReadonly, { capture: true });
                 document.addEventListener('compositionupdate', preventTextIfReadonly, { capture: true });
                 document.addEventListener('compositionend', preventTextIfReadonly, { capture: true });
@@ -1738,53 +1746,21 @@
                 document.addEventListener('input', preventTextIfReadonly, { capture: true });
 
                 document.addEventListener('keydown', function(e) {
-                    // 마스터(편집 가능 상태)면 키보드 입력 허용
                     if (window._currentLuckysheetEditable) return;
-
-                    const container = document.getElementById('evaluation-excel-container');
-                    // 이벤트 대상이 럭키시트 내부이거나, body에서 발생했을 때 (셀 선택 후 타이핑 시 body로 들어옴)
-                    if (container && (container.contains(e.target) || e.target === document.body || e.target.id === 'luckysheet-rich-text-editor')) {
-                        
-                        // 한글 조합 중 발생하는 keydown (keyCode 229) 무조건 차단
-                        if (e.keyCode === 229 || e.isComposing) {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            return false;
-                        }
-
-                        // 방향키, 컨트롤키, 복사(Ctrl+C) 등은 허용
-                        const allowedKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 
-                                             'PageUp', 'PageDown', 'Home', 'End', 'Tab', 'Escape', 
-                                             'Shift', 'Control', 'Alt', 'Meta'];
-                        
-                        // 복사(Ctrl+C / Cmd+C) 및 전체선택(Ctrl+A) 허용
-                        if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'c' || e.key.toLowerCase() === 'a')) {
-                            return;
-                        }
-
-                        // F1 ~ F12 허용
-                        if (e.key.startsWith('F') && e.key.length <= 3) {
-                            return;
-                        }
-
-                        // 그 외의 문자열, Backspace, Delete, Enter 등 모든 키는 차단
-                        if (!allowedKeys.includes(e.key)) {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            return false;
-                        }
+                    const c = document.getElementById('evaluation-excel-container');
+                    if (c && (c.contains(e.target) || e.target === document.body || e.target.id === 'luckysheet-rich-text-editor')) {
+                        if (e.keyCode === 229 || e.isComposing) { e.stopPropagation(); e.preventDefault(); return false; }
+                        const allowed = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','PageUp','PageDown','Home','End','Tab','Escape','Shift','Control','Alt','Meta'];
+                        if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'c' || e.key.toLowerCase() === 'a')) return;
+                        if (e.key.startsWith('F') && e.key.length <= 3) return;
+                        if (!allowed.includes(e.key)) { e.stopPropagation(); e.preventDefault(); return false; }
                     }
                 }, { capture: true });
             }
             window._currentLuckysheetEditable = editable;
-            
+
             const em = document.getElementById('eval-empty-msg');
             if (em) em.style.display = 'none';
-            
-            } catch (err) {
-                console.error('[평가시트] 초기화 중 치명적 오류 발생:', err);
-                luckysheetReady = false;
-            }
         }
 
         // ─── Firebase 저장된 시트 로드 ─────────────────
@@ -2015,30 +1991,40 @@
                 });
             }
 
-            // 탭 클릭 이벤트 - 전역 스크롤 잠금 및 초기화 관리
+            // 탭 클릭 이벤트 - 초기화 관리 및 스크롤 덜컹거림 완벽 차단
             setTimeout(() => {
                 const allTabBtns = document.querySelectorAll('.work-tab[data-tab]');
                 allTabBtns.forEach(btn => {
                     btn.addEventListener('click', () => {
                         if (btn.getAttribute('data-tab') === 'evaluation') {
-                            document.body.style.overflow = 'hidden';
-                            
-                            // 최초 1회만 initEvalUI 실행 (이후에는 탭 display 변경만으로 엑셀이 나타남)
-                            if (!window._evalUiInitialized) {
-                                window._evalUiInitialized = true;
-                                // 탭 전환 애니메이션이 끝난 후 여유있게 초기화
-                                setTimeout(initEvalUI, 400);
+                            // 화면 덜컹거림 원천 차단: body/html을 fixed로 고정
+                            document.body.classList.add('eval-active');
+                            document.documentElement.classList.add('eval-active');
+
+                            // 엑셀이 아직 초기화 안 되었으면 (재)초기화
+                            if (!luckysheetReady) {
+                                initEvalUI();
                             } else {
-                                // 이미 초기화된 경우 엑셀 화면 크기만 바로잡아줌
                                 if (window.luckysheet && typeof window.luckysheet.resize === 'function') {
                                     setTimeout(() => window.luckysheet.resize(), 100);
                                 }
                             }
                         } else {
-                            document.body.style.overflow = '';
+                            document.body.classList.remove('eval-active');
+                            document.documentElement.classList.remove('eval-active');
                         }
                     });
                 });
+
+                // 셀 클릭 시 브라우저가 자동으로 스크롤하는 현상 원천 차단
+                document.addEventListener('focusin', function() {
+                    const evalTab = document.getElementById('tab-evaluation');
+                    if (evalTab && evalTab.classList.contains('active')) {
+                        window.scrollTo(0, 0);
+                        document.documentElement.scrollTop = 0;
+                        document.body.scrollTop = 0;
+                    }
+                }, true);
             }, 800);
         });
 

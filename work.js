@@ -1084,6 +1084,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.style.overflow = '';
                 document.documentElement.style.overflow = '';
             }
+            // 평가시트 전용: position: fixed로 완전 잠금 (셀 클릭 덜컹거림 방지)
+            if (currentTab === 'evaluation') {
+                document.body.classList.add('eval-active');
+                document.documentElement.classList.add('eval-active');
+            } else {
+                document.body.classList.remove('eval-active');
+                document.documentElement.classList.remove('eval-active');
+            }
             
             const btnOpenModal = document.getElementById('btn-open-modal');
             if (btnOpenModal) {
