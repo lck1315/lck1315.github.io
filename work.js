@@ -1076,8 +1076,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 targetContent.style.display = ''; // CSS가 제어하도록 빈 문자열 할당
             }
             
-            // 프로젝트 탭일 경우 브라우저 스크롤 제거 및 전체 화면 사용
-            if (currentTab === 'projects') {
+            // 프로젝트 탭 또는 평가시트 탭일 경우 브라우저 덜컹거림 방지 및 전체 화면 사용을 위해 전역 스크롤 제거
+            if (currentTab === 'projects' || currentTab === 'evaluation') {
                 document.body.style.overflow = 'hidden';
                 document.documentElement.style.overflow = 'hidden';
             } else {

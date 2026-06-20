@@ -1667,7 +1667,7 @@
                 enableAddBackTop: editable,
                 allowEdit: editable,        // 편집 차단
                 allowUpdate: editable,      // 값 업데이트 차단
-                allowCopy: true             // 읽기 전용이어도 텍스트 복사는 허용
+                allowCopy: true             // 복사 허용
             };
             if (data && data.length > 0) {
                 options.data = data;
@@ -1677,6 +1677,33 @@
             // 따라서 destroy() 없이 create()만 호출하여 기존 시트를 덮어씌웁니다.
             luckysheet.create(options);
             luckysheetReady = true;
+            
+            // 팀원(읽기전용)일 경우, 상단 fx(함수) 입력줄을 통한 우회 입력 완벽 차단
+            setTimeout(() => {
+                const fxInput = document.getElementById('luckysheet-functionbox-cell');
+                if (fxInput) {
+                    if (!editable) {
+                        fxInput.setAttribute('contenteditable', 'false');
+                        fxInput.style.pointerEvents = 'none';
+                        fxInput.style.background = 'rgba(0,0,0,0.02)';
+                    } else {
+                        fxInput.setAttribute('contenteditable', 'true');
+                        fxInput.style.pointerEvents = 'auto';
+                        fxInput.style.background = '';
+                    }
+                }
+                // 본문 셀 클릭 시 나타나는 에디터도 원천 봉쇄 (이중 안전장치)
+                const editor = document.getElementById('luckysheet-rich-text-editor');
+                if (editor && !editable) {
+                    editor.addEventListener('keydown', (e) => {
+                        // 방향키, 복사(Ctrl+C) 등은 허용하되 실제 글자 입력은 막음
+                        if (!e.ctrlKey && !e.metaKey && e.key.length === 1) {
+                            e.preventDefault();
+                            return false;
+                        }
+                    }, { capture: true });
+                }
+            }, 1000);
             
             const em = document.getElementById('eval-empty-msg');
             if (em) em.style.display = 'none';
