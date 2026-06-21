@@ -1676,7 +1676,7 @@
     <!-- Evaluation Sheet Manager -->
     <script src="eval-sheet-manager.js?v=1.0.6"></script>
     <!-- Work JavaScript -->
-    <script src="work.js?v=1.2.4"></script>
+    <script src="work.js?v=1.2.5"></script>
 
     <script>
     (function() {
@@ -1727,15 +1727,9 @@
                 return;
             }
 
-            // 강제 재초기화인 경우 이전 시트 소멸
-            if (luckysheetReady || forceReinit) {
-                if (typeof window.luckysheet.destroy === 'function') {
-                    window.luckysheet.destroy();
-                }
-                container.innerHTML = ''; // 확실히 비워줌
-            }
+            console.log('[평가시트] luckysheet 초기화 시작, 컨테이너 높이:', container.offsetHeight, 'forceReinit:', forceReinit);
 
-            console.log('[평가시트] luckysheet.create() 호출 시작, 컨테이너 높이:', container.offsetHeight);
+            const needsDestroy = luckysheetReady || forceReinit;
 
             const options = {
                 container: 'evaluation-excel-container',
@@ -1749,16 +1743,38 @@
                 enableAddBackTop: editable,
                 allowEdit: editable,
                 allowUpdate: editable,
-                allowCopy: true
+                allowCopy: true,
+                hook: {
+                    workbookCreateAfter: function() {
+                        console.log('[평가시트] luckysheet workbookCreateAfter 콜백 실행!');
+                        luckysheetReady = true;
+                    }
+                }
             };
             if (data && data.length > 0) {
                 options.data = data;
             }
 
-            // destroy() 없이 create()만 호출 (destroy는 내부 버그 유발)
-            luckysheet.create(options);
-            luckysheetReady = true;
-            console.log('[평가시트] luckysheet.create() 완료!');
+            function doCreate() {
+                luckysheet.create(options);
+                luckysheetReady = true;
+                console.log('[평가시트] luckysheet.create() 호출 완료!');
+            }
+
+            if (needsDestroy) {
+                // 기존 시트 파괴 후 DOM 정리 시간을 준 뒤 create() 호출
+                if (typeof window.luckysheet.destroy === 'function') {
+                    window.luckysheet.destroy();
+                }
+                container.innerHTML = '';
+                luckysheetReady = false;
+                // requestAnimationFrame + setTimeout으로 DOM 정리 완료 보장
+                requestAnimationFrame(() => {
+                    setTimeout(doCreate, 150);
+                });
+            } else {
+                doCreate();
+            }
 
             // 팀원(읽기전용): fx 입력줄 차단
             setTimeout(() => {
