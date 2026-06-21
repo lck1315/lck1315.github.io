@@ -109,14 +109,45 @@
                 `;
                 
                 if (isMaster) {
+                    const btnContainer = document.createElement('div');
+                    btnContainer.style.display = 'flex';
+
                     const btnEdit = document.createElement('button');
                     btnEdit.innerHTML = '<i class="fa-solid fa-pen"></i>';
                     btnEdit.style.cssText = `background: none; border: none; color: ${this.currentSheetId === meta.id ? '#fff' : 'var(--text-muted)'}; cursor: pointer; padding: 5px;`;
+                    btnEdit.title = '수정';
                     btnEdit.addEventListener('click', (e) => {
                         e.stopPropagation();
                         this.openModal(meta);
                     });
-                    item.appendChild(btnEdit);
+                    
+                    const btnDelete = document.createElement('button');
+                    btnDelete.innerHTML = '<i class="fa-solid fa-trash"></i>';
+                    btnDelete.style.cssText = `background: none; border: none; color: ${this.currentSheetId === meta.id ? '#fff' : 'var(--text-muted)'}; cursor: pointer; padding: 5px; margin-left: 2px;`;
+                    btnDelete.title = '삭제';
+                    btnDelete.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        if (confirm(`'${meta.name}' 시트를 정말 삭제하시겠습니까?\n복구할 수 없습니다.`)) {
+                            try {
+                                await window.db.collection('workEvalSheetsMeta').doc(meta.id).delete();
+                                await window.db.collection('workEvalSheetsData').doc(meta.id).delete();
+                                if (this.currentSheetId === meta.id) {
+                                    this.currentSheetId = null;
+                                    const container = document.getElementById('evaluation-excel-container');
+                                    if(container) container.innerHTML = '';
+                                    document.getElementById('eval-current-sheet-title').innerText = '시트를 선택하세요';
+                                    document.getElementById('eval-master-controls').style.display = 'none';
+                                }
+                            } catch(err) {
+                                console.error('삭제 오류:', err);
+                                alert('삭제 중 오류가 발생했습니다.');
+                            }
+                        }
+                    });
+
+                    btnContainer.appendChild(btnEdit);
+                    btnContainer.appendChild(btnDelete);
+                    item.appendChild(btnContainer);
                 }
 
                 item.addEventListener('click', () => {
