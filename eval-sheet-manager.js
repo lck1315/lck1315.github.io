@@ -3,6 +3,7 @@
         sheetsMeta: [],
         currentSheetId: null,
         unsubscribeMeta: null,
+        draggedMetaId: null,
         inited: false,
         workUsersCache: {},
 
@@ -59,8 +60,13 @@
                 snapshot.forEach(doc => {
                     this.sheetsMeta.push({ id: doc.id, ...doc.data() });
                 });
-                // 최신순 정렬
-                this.sheetsMeta.sort((a, b) => b.createdAt - a.createdAt);
+                // 정렬: order 오름차순, 없으면 createdAt 내림차순
+                this.sheetsMeta.sort((a, b) => {
+                    const orderA = a.order !== undefined ? a.order : 999999;
+                    const orderB = b.order !== undefined ? b.order : 999999;
+                    if (orderA !== orderB) return orderA - orderB;
+                    return b.createdAt - a.createdAt;
+                });
                 this.renderList();
             }, err => {
                 console.error("Eval sheets meta load error:", err);
@@ -148,6 +154,67 @@
                     btnContainer.appendChild(btnEdit);
                     btnContainer.appendChild(btnDelete);
                     item.appendChild(btnContainer);
+
+                    // 드래그 앤 드롭 정렬 이벤트
+                    item.draggable = true;
+                    item.addEventListener('dragstart', (e) => {
+                        this.draggedMetaId = meta.id;
+                        e.dataTransfer.effectAllowed = 'move';
+                        item.style.opacity = '0.4';
+                    });
+                    item.addEventListener('dragend', (e) => {
+                        item.style.opacity = '1';
+                        this.draggedMetaId = null;
+                        document.querySelectorAll('.eval-sheet-item').forEach(el => {
+                            el.style.borderTop = '';
+                            el.style.borderBottom = '';
+                        });
+                    });
+                    item.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        const bounding = item.getBoundingClientRect();
+                        const offset = bounding.y + (bounding.height / 2);
+                        if (e.clientY - offset > 0) {
+                            item.style.borderBottom = '2px solid var(--primary-color)';
+                            item.style.borderTop = '';
+                        } else {
+                            item.style.borderTop = '2px solid var(--primary-color)';
+                            item.style.borderBottom = '';
+                        }
+                    });
+                    item.addEventListener('dragleave', (e) => {
+                        item.style.borderBottom = '';
+                        item.style.borderTop = '';
+                    });
+                    item.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        item.style.borderBottom = '';
+                        item.style.borderTop = '';
+                        if (!this.draggedMetaId || this.draggedMetaId === meta.id) return;
+                        
+                        const oldArray = [...this.sheetsMeta];
+                        const draggedIndex = oldArray.findIndex(m => m.id === this.draggedMetaId);
+                        const draggedItem = oldArray[draggedIndex];
+                        oldArray.splice(draggedIndex, 1);
+                        
+                        let newDropIndex = oldArray.findIndex(m => m.id === meta.id);
+                        
+                        const bounding = item.getBoundingClientRect();
+                        const offset = bounding.y + (bounding.height / 2);
+                        if (e.clientY - offset > 0) {
+                            newDropIndex++;
+                        }
+                        
+                        oldArray.splice(newDropIndex, 0, draggedItem);
+                        
+                        oldArray.forEach((m, i) => {
+                            if (m.order !== i) {
+                                m.order = i;
+                                window.db.collection('workEvalSheetsMeta').doc(m.id).update({ order: i });
+                            }
+                        });
+                    });
                 }
 
                 item.addEventListener('click', () => {
