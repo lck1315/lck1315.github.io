@@ -386,36 +386,35 @@
             setTimeout(() => {
                 try {
                     const optimizedSheets = sheets.map(s => {
-                        let celldata = [];
+                        const copy = Object.assign({}, s);
+                        
                         if (s.data && s.data.length > 0) {
+                            const newCelldata = [];
                             for (let r = 0; r < s.data.length; r++) {
                                 if (!s.data[r]) continue;
                                 for (let c = 0; c < s.data[r].length; c++) {
                                     const cell = s.data[r][c];
                                     if (cell != null && typeof cell === 'object' && Object.keys(cell).length > 0) {
-                                        celldata.push({ r: r, c: c, v: cell });
+                                        newCelldata.push({ r: r, c: c, v: cell });
                                     }
                                 }
                             }
-                        } else if (s.celldata) {
-                            celldata = s.celldata;
+                            copy.celldata = newCelldata;
                         }
                         
-                        // 향후 문제가 발생하지 않도록, Luckysheet의 내부 실행 상태(스크롤, 선택영역 등) 쓰레기 데이터를
-                        // DB에 저장하지 않고 '순수 엑셀 데이터'만 엄격하게 추출하여 저장합니다.
-                        return {
-                            name: s.name || "Sheet1",
-                            color: s.color || "",
-                            status: s.status || 0,
-                            order: s.order || 0,
-                            index: s.index || 0,
-                            config: s.config || {},
-                            celldata: celldata,
-                            calcChain: s.calcChain || [],
-                            images: s.images || {},
-                            dataVerification: s.dataVerification || {},
-                            hide: s.hide || 0
-                        };
+                        delete copy.data;
+                        delete copy.luckysheet_select_save;
+                        delete copy.luckysheet_selection_range;
+                        delete copy.scrollLeft;
+                        delete copy.scrollTop;
+                        delete copy.zoomRatio;
+                        delete copy.visibledatarow;
+                        delete copy.visibledatacolumn;
+                        delete copy.ch_width;
+                        delete copy.rh_height;
+                        delete copy.load;
+                        
+                        return copy;
                     });
                     sheets = JSON.parse(JSON.stringify(optimizedSheets));
                 } catch (e) {
