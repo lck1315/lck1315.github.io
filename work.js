@@ -4678,6 +4678,78 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let lastMembersSnapshot = null;
     
+    // ── 읽지 않은 메시지 추적 ──
+    // localStorage에 { roomId: lastReadTimestamp(ms) } 형태로 저장
+    const UNREAD_STORAGE_KEY = 'work_chat_last_read';
+    let chatUnreadMap = {}; // { roomId: true/false } - 읽지 않은 메시지가 있는지
+    let unsubscribeChatUnread = null;
+    
+    function getLastReadMap() {
+        try {
+            return JSON.parse(localStorage.getItem(UNREAD_STORAGE_KEY) || '{}');
+        } catch(e) { return {}; }
+    }
+    function setLastRead(roomId) {
+        const map = getLastReadMap();
+        map[roomId] = Date.now();
+        localStorage.setItem(UNREAD_STORAGE_KEY, JSON.stringify(map));
+        chatUnreadMap[roomId] = false;
+        updateNewBadges();
+    }
+    function updateNewBadges() {
+        // 전체 광장 뱃지
+        const hallBadge = document.getElementById('chat-new-badge-public_hall');
+        if (hallBadge) hallBadge.style.display = chatUnreadMap['public_hall'] ? 'inline-block' : 'none';
+        
+        // 각 구성원 뱃지
+        document.querySelectorAll('[id^="chat-new-badge-"]').forEach(badge => {
+            const roomId = badge.id.replace('chat-new-badge-', '');
+            badge.style.display = chatUnreadMap[roomId] ? 'inline-block' : 'none';
+        });
+    }
+    function startChatUnreadListener() {
+        if (!db || !auth.currentUser) return;
+        if (unsubscribeChatUnread) unsubscribeChatUnread();
+        
+        const myUid = auth.currentUser.uid;
+        const lastReadMap = getLastReadMap();
+        
+        // 전체 공개 채팅 + 나에게 보내진 1:1 채팅 모두 감시
+        unsubscribeChatUnread = db.collection('workMemberChats')
+            .orderBy('createdAt', 'desc')
+            .limit(100)
+            .onSnapshot(snapshot => {
+                const lastReadMap = getLastReadMap();
+                const newUnread = {};
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (!data.createdAt) return;
+                    const msgTime = data.createdAt.seconds ? data.createdAt.seconds * 1000 : 0;
+                    if (msgTime === 0) return;
+                    
+                    const roomId = data.roomId || 'public_hall';
+                    
+                    // 나에게 관련된 채팅방만 체크
+                    if (data.chatType === 'private') {
+                        if (!roomId.includes(myUid)) return; // 내가 참여한 방이 아님
+                    }
+                    
+                    // 내가 보낸 메시지는 무시
+                    const senderUid = data.senderUid || null;
+                    if (senderUid === myUid) return;
+                    
+                    const lastRead = lastReadMap[roomId] || 0;
+                    if (msgTime > lastRead) {
+                        newUnread[roomId] = true;
+                    }
+                });
+                
+                chatUnreadMap = newUnread;
+                updateNewBadges();
+            });
+    }
+    
     window.renderWorkMembersChatList = function() {
         if (!lastMembersSnapshot) return;
         const listEl = document.getElementById('member-list');
@@ -4696,8 +4768,10 @@ document.addEventListener('DOMContentLoaded', () => {
         hallDiv.style.cssText = `padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s; background: ${isHallSelected ? '#e3f2fd' : 'transparent'}; font-weight: bold;`;
         hallDiv.innerHTML = `
             <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary-color, #6b46c1); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;"><i class="fa-solid fa-comments"></i></div>
-            <div>
-                <div style="color: #333; font-size: 0.95rem;">💬 전체 광장 채팅방</div>
+            <div style="flex: 1;">
+                <div style="color: #333; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">💬 전체 광장 채팅방
+                    <span id="chat-new-badge-public_hall" style="display: ${chatUnreadMap['public_hall'] ? 'inline-block' : 'none'}; background: #ff3b30; color: #fff; font-size: 0.65rem; padding: 1px 6px; border-radius: 8px; font-weight: bold; animation: newBadgePulse 1.5s ease-in-out infinite;">NEW</span>
+                </div>
                 <div style="font-size: 0.8rem; color: #888; font-weight: normal;">모든 멤버 수다방</div>
             </div>
         `;
@@ -4768,10 +4842,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const div = document.createElement('div');
             div.className = `member-list-item`;
             div.style.cssText = `padding: 10px 15px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.2s; background: ${currentSelectedMemberId === docId ? '#e3f2fd' : 'transparent'};`;
+            // 1:1 채팅방의 roomId 계산
+            const myUid = auth.currentUser ? auth.currentUser.uid : null;
+            const memberRoomId = myUid ? [myUid, docId].sort().join('_') : null;
+            const hasUnread = memberRoomId && chatUnreadMap[memberRoomId];
+            
             div.innerHTML = `
                 <div style="width: 32px; height: 32px; border-radius: 50%; background: #ccc; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px;"><i class="fa-solid fa-user"></i></div>
-                <div>
-                    <div style="font-weight: bold; color: #333; font-size: 0.95rem;">${nameDisplay}</div>
+                <div style="flex: 1;">
+                    <div style="font-weight: bold; color: #333; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">${nameDisplay}
+                        <span id="chat-new-badge-${memberRoomId || docId}" style="display: ${hasUnread ? 'inline-block' : 'none'}; background: #ff3b30; color: #fff; font-size: 0.65rem; padding: 1px 6px; border-radius: 8px; font-weight: bold; animation: newBadgePulse 1.5s ease-in-out infinite;">NEW</span>
+                    </div>
                     ${dept ? `<div style="font-size: 0.8rem; color: #888;">${dept}</div>` : ''}
                 </div>
             `;
@@ -4801,6 +4882,9 @@ document.addEventListener('DOMContentLoaded', () => {
             lastMembersSnapshot = snapshot;
             window.renderWorkMembersChatList();
         });
+
+        // 읽지 않은 채팅 메시지 감시 시작
+        startChatUnreadListener();
 
         const btnSend = document.getElementById('btn-send-member-chat');
         const inputChat = document.getElementById('member-chat-input');
@@ -4836,6 +4920,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     text: text,
                     senderName: uName,
                     senderRole: uRole,
+                    senderUid: myUid,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
             } catch(e) {
@@ -4874,6 +4959,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         currentSelectedMemberId = id;
+        
+        // 읽음 처리 - 해당 채팅방의 NEW 뱃지 제거
+        const myUidForRead = auth.currentUser ? auth.currentUser.uid : null;
+        if (id === 'public_hall') {
+            setLastRead('public_hall');
+        } else if (myUidForRead) {
+            const readRoomId = [myUidForRead, id].sort().join('_');
+            setLastRead(readRoomId);
+        }
         document.getElementById('member-chat-empty').style.display = 'none';
         document.getElementById('member-chat-area').style.display = 'flex';
         

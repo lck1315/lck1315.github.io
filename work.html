@@ -27,6 +27,11 @@
 
     <link rel="stylesheet" href="style.css?v=1.0.88">
     <style>
+        /* NEW 뱃지 깜빡임 애니메이션 */
+        @keyframes newBadgePulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(0.9); }
+        }
         /* 기존 북마크 스타일 */
         .work-grid {
             display: grid;
@@ -1676,7 +1681,7 @@
     <!-- Evaluation Sheet Manager -->
     <script src="eval-sheet-manager.js?v=1.0.6"></script>
     <!-- Work JavaScript -->
-    <script src="work.js?v=1.2.5"></script>
+    <script src="work.js?v=1.2.6"></script>
 
     <script>
     (function() {
