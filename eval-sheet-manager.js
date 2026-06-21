@@ -387,6 +387,10 @@
                 try {
                     const optimizedSheets = sheets.map(s => {
                         const copy = Object.assign({}, s);
+                        // 2D 배열인 data를 1D 배열인 celldata로 변환하여 저장
+                        if (s.data && s.data.length > 0) {
+                            copy.celldata = luckysheet.transToCellData(s.data);
+                        }
                         delete copy.data;
                         return copy;
                     });
