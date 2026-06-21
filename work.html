@@ -1657,7 +1657,10 @@
                 <input type="text" id="eval-sheet-name-input" placeholder="예: 홍길동 사원 평가" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color); box-sizing: border-box;">
             </div>
             <div class="form-group" style="margin-bottom: 20px;">
-                <label style="display: block; font-weight: bold; margin-bottom: 8px;">보기 권한 (선택된 팀원만 조회 가능)</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <label style="font-weight: bold; margin: 0;">보기 권한 (선택된 팀원만 조회 가능)</label>
+                    <button type="button" id="btn-eval-sheet-toggle-all" style="background: none; border: 1px solid var(--primary-color); color: var(--primary-color); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">전체선택/해제</button>
+                </div>
                 <div id="eval-sheet-users-list" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--card-border); border-radius: 8px; padding: 10px; background: var(--bg-color); display: flex; flex-direction: column; gap: 8px;">
                     <!-- 동적 생성 -->
                 </div>

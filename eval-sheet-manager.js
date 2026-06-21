@@ -26,6 +26,17 @@
 
             // 모달 저장 버튼
             document.getElementById('btn-eval-sheet-save')?.addEventListener('click', () => this.saveSheetMeta());
+
+            // 전체선택/해제 버튼
+            const btnToggleAll = document.getElementById('btn-eval-sheet-toggle-all');
+            if (btnToggleAll) {
+                btnToggleAll.addEventListener('click', () => {
+                    const checkboxes = document.querySelectorAll('.eval-user-cb');
+                    if (checkboxes.length === 0) return;
+                    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                    checkboxes.forEach(cb => cb.checked = !allChecked);
+                });
+            }
         },
 
         loadList: async function() {
@@ -274,6 +285,7 @@
                     const cb = document.createElement('input');
                     cb.type = 'checkbox';
                     cb.value = doc.id;
+                    cb.className = 'eval-user-cb';
                     cb.checked = allowedUsers.includes(doc.id);
                     cb.style.cursor = 'pointer';
 
