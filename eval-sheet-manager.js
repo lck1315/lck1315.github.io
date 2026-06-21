@@ -357,18 +357,26 @@
                 document.getElementById('eval-master-controls').style.display = 'flex';
             }
 
+            console.log('[평가시트 로드] 시작 - sheetId:', sheetId, 'sheetName:', sheetName);
+
             window.db.collection('workEvalSheetsData').doc(sheetId).get().then(doc => {
                 if (doc.exists && doc.data() && doc.data().sheets) {
                     const d = doc.data();
+                    console.log('[평가시트 로드] 데이터 발견! 시트 수:', d.sheets.length);
+                    d.sheets.forEach((s, i) => {
+                        console.log(`[평가시트 로드] 시트[${i}] "${s.name}" - celldata: ${s.celldata ? s.celldata.length : 0}개, data: ${s.data ? '있음' : '없음'}`);
+                    });
                     window.doInitLuckysheet(d.sheets, sheetName, isMaster, true);
                     const savedAt = d.savedAt ? new Date(d.savedAt).toLocaleString('ko-KR') : '';
                     window.showBanner(isMaster ? `<i class="fa-solid fa-crown"></i> 마스터 편집 모드 | 최근 저장: ${savedAt}` : `<i class="fa-solid fa-eye"></i> 읽기 전용 모드 | 최근 저장: ${savedAt}`, isMaster ? 'success' : 'readonly');
                 } else {
+                    console.log('[평가시트 로드] 데이터 없음 (빈 시트)');
                     window.doInitLuckysheet(null, sheetName, isMaster, true);
                     window.showBanner(isMaster ? `<i class="fa-solid fa-crown"></i> 마스터 편집 모드 (빈 시트)` : `<i class="fa-solid fa-eye"></i> 빈 시트`, isMaster ? 'info' : 'readonly');
                 }
             }).catch(err => {
-                console.error("Sheet data load error:", err);
+                console.error("[평가시트 로드] 오류:", err);
+                alert('시트 데이터를 불러오는 중 오류가 발생했습니다.');
             });
         },
 
@@ -377,65 +385,113 @@
             if (!window.db) { alert('Firebase 연결 오류'); return; }
             if (!window.luckysheet) { alert('시트가 아직 준비되지 않았습니다.'); return; }
             
-            let sheets = luckysheet.getAllSheets();
+            const sheetId = this.currentSheetId; // 저장 시점의 sheetId를 캡처
+            console.log('[평가시트 저장] 시작 - sheetId:', sheetId);
+            
+            let sheets;
+            try {
+                sheets = luckysheet.getAllSheets();
+            } catch(e) {
+                console.error('[평가시트 저장] getAllSheets 오류:', e);
+                alert('시트 데이터를 가져올 수 없습니다.');
+                return;
+            }
+            
             if (!sheets || sheets.length === 0) { alert('저장할 데이터가 없습니다.'); return; }
+            console.log('[평가시트 저장] getAllSheets 성공, 시트 수:', sheets.length);
 
             const saveBtn = document.getElementById('btn-eval-save');
             if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 중...'; }
 
-            setTimeout(() => {
-                try {
-                    const optimizedSheets = sheets.map(s => {
-                        const copy = Object.assign({}, s);
-                        
-                        if (s.data && s.data.length > 0) {
-                            const newCelldata = [];
-                            for (let r = 0; r < s.data.length; r++) {
-                                if (!s.data[r]) continue;
-                                for (let c = 0; c < s.data[r].length; c++) {
-                                    const cell = s.data[r][c];
-                                    if (cell != null && typeof cell === 'object' && Object.keys(cell).length > 0) {
-                                        newCelldata.push({ r: r, c: c, v: cell });
-                                    }
+            try {
+                const optimizedSheets = sheets.map((s, idx) => {
+                    const celldata = [];
+                    
+                    // data (2D 배열)가 있으면 celldata (1D 배열)로 변환
+                    if (s.data && Array.isArray(s.data) && s.data.length > 0) {
+                        for (let r = 0; r < s.data.length; r++) {
+                            if (!s.data[r] || !Array.isArray(s.data[r])) continue;
+                            for (let c = 0; c < s.data[r].length; c++) {
+                                const cell = s.data[r][c];
+                                if (cell != null && typeof cell === 'object' && Object.keys(cell).length > 0) {
+                                    celldata.push({ r: r, c: c, v: cell });
                                 }
                             }
-                            copy.celldata = newCelldata;
                         }
-                        
-                        delete copy.data;
-                        delete copy.luckysheet_select_save;
-                        delete copy.luckysheet_selection_range;
-                        delete copy.scrollLeft;
-                        delete copy.scrollTop;
-                        delete copy.zoomRatio;
-                        delete copy.visibledatarow;
-                        delete copy.visibledatacolumn;
-                        delete copy.ch_width;
-                        delete copy.rh_height;
-                        delete copy.load;
-                        
-                        return copy;
+                    } else if (s.celldata && Array.isArray(s.celldata)) {
+                        // data가 없고 celldata만 있는 경우 (아직 초기화 안 된 시트)
+                        celldata.push(...s.celldata);
+                    }
+                    
+                    console.log(`[평가시트 저장] 시트[${idx}] "${s.name}" - celldata 셀 수: ${celldata.length}`);
+                    
+                    // 깨끗한 시트 객체 구성 (Luckysheet 런타임 찌꺼기 제거)
+                    const clean = {
+                        name: s.name || 'Sheet1',
+                        color: s.color || '',
+                        status: s.status != null ? s.status : (idx === 0 ? 1 : 0),
+                        order: s.order != null ? s.order : idx,
+                        index: s.index != null ? s.index : idx,
+                        celldata: celldata,
+                        config: s.config || {},
+                        row: s.row,
+                        column: s.column,
+                        defaultRowHeight: s.defaultRowHeight,
+                        defaultColWidth: s.defaultColWidth,
+                        showGridLines: s.showGridLines,
+                        calcChain: s.calcChain || [],
+                        frozen: s.frozen || null,
+                        filter: s.filter || null,
+                        filter_select: s.filter_select || null,
+                        images: s.images || {},
+                        dataVerification: s.dataVerification || {},
+                        hyperlink: s.hyperlink || {},
+                        hide: s.hide || 0,
+                        authority: s.authority || null
+                    };
+                    
+                    // undefined 값 제거 (Firestore는 undefined를 저장 못함)
+                    Object.keys(clean).forEach(key => {
+                        if (clean[key] === undefined || clean[key] === null) {
+                            delete clean[key];
+                        }
                     });
-                    sheets = JSON.parse(JSON.stringify(optimizedSheets));
-                } catch (e) {
-                    alert('데이터 변환 중 오류가 발생했습니다.');
+                    
+                    return clean;
+                });
+                
+                // JSON 직렬화하여 깊은 복사 + 순환 참조 등 제거
+                const sheetsToSave = JSON.parse(JSON.stringify(optimizedSheets));
+                
+                // Firestore 문서 크기 체크 (1MB 제한)
+                const jsonStr = JSON.stringify(sheetsToSave);
+                const sizeKB = Math.round(jsonStr.length / 1024);
+                console.log(`[평가시트 저장] 총 데이터 크기: ${sizeKB}KB`);
+                
+                if (jsonStr.length > 950000) {
+                    alert(`데이터가 너무 큽니다 (${sizeKB}KB). Firestore 제한(1MB)에 가깝습니다.\n일부 내용을 줄여주세요.`);
                     if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 저장'; }
                     return;
                 }
 
-                window.db.collection('workEvalSheetsData').doc(this.currentSheetId).set({
-                    sheets: sheets,
+                window.db.collection('workEvalSheetsData').doc(sheetId).set({
+                    sheets: sheetsToSave,
                     savedAt: Date.now(),
                     savedBy: window.currentUserDocGlobal ? (window.currentUserDocGlobal.nickname || window.currentUserDocGlobal.email) : '마스터',
                 }).then(() => {
+                    console.log('[평가시트 저장] Firebase 저장 완료! sheetId:', sheetId);
                     window.showBanner(`<i class="fa-solid fa-crown"></i> 저장 완료: ${new Date().toLocaleString('ko-KR')}`, 'success');
                 }).catch(err => {
-                    console.error(err);
+                    console.error('[평가시트 저장] Firebase 오류:', err);
                     alert('저장 오류: ' + err.message);
                 }).finally(() => {
                     if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 저장'; }
                 });
-            }, 50);
+            } catch (e) {
+                console.error('[평가시트 저장] 변환 오류:', e);
+                alert('데이터 변환 중 오류가 발생했습니다: ' + e.message);
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> 저장'; }
+            }
         }
     };
 })();
