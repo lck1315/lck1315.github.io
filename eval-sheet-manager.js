@@ -160,6 +160,7 @@
                     item.addEventListener('dragstart', (e) => {
                         this.draggedMetaId = meta.id;
                         e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', meta.id);
                         item.style.opacity = '0.4';
                     });
                     item.addEventListener('dragend', (e) => {
@@ -191,14 +192,19 @@
                         e.preventDefault();
                         item.style.borderBottom = '';
                         item.style.borderTop = '';
-                        if (!this.draggedMetaId || this.draggedMetaId === meta.id) return;
+                        
+                        const draggedId = e.dataTransfer.getData('text/plain') || this.draggedMetaId;
+                        if (!draggedId || draggedId === meta.id) return;
                         
                         const oldArray = [...this.sheetsMeta];
-                        const draggedIndex = oldArray.findIndex(m => m.id === this.draggedMetaId);
+                        const draggedIndex = oldArray.findIndex(m => m.id === draggedId);
+                        if (draggedIndex === -1) return;
+                        
                         const draggedItem = oldArray[draggedIndex];
                         oldArray.splice(draggedIndex, 1);
                         
                         let newDropIndex = oldArray.findIndex(m => m.id === meta.id);
+                        if (newDropIndex === -1) newDropIndex = 0;
                         
                         const bounding = item.getBoundingClientRect();
                         const offset = bounding.y + (bounding.height / 2);
@@ -211,7 +217,7 @@
                         oldArray.forEach((m, i) => {
                             if (m.order !== i) {
                                 m.order = i;
-                                window.db.collection('workEvalSheetsMeta').doc(m.id).update({ order: i });
+                                window.db.collection('workEvalSheetsMeta').doc(m.id).update({ order: i }).catch(err => console.error(err));
                             }
                         });
                     });

@@ -5246,6 +5246,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 theadTr.appendChild(th);
             });
+            
+            const dummyTh = document.createElement('th');
+            dummyTh.style.cssText = 'border: none; background: transparent; width: auto; pointer-events: none;';
+            theadTr.appendChild(dummyTh);
 
             // 바디 렌더링
             tbody.innerHTML = '';
@@ -5389,6 +5393,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     tr.appendChild(td);
                 });
                 
+                const dummyTd = document.createElement('td');
+                dummyTd.style.cssText = 'border: none; background: transparent; pointer-events: none; width: auto;';
+                tr.appendChild(dummyTd);
+
                 tbody.appendChild(tr);
             });
             
