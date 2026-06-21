@@ -3,8 +3,12 @@
         sheetsMeta: [],
         currentSheetId: null,
         unsubscribeMeta: null,
+        inited: false,
+        workUsersCache: {},
 
         init: function() {
+            if (this.inited) return;
+            this.inited = true;
             console.log('EvalSheetManager initialized');
             
             // 모달 닫기
@@ -23,13 +27,23 @@
             document.getElementById('btn-eval-sheet-save')?.addEventListener('click', () => this.saveSheetMeta());
         },
 
-        loadList: function() {
+        loadList: async function() {
             const isMaster = !!(window.currentUserDocGlobal && window.currentUserDocGlobal.isMaster);
             const currentUser = window.auth && window.auth.currentUser;
             if (!currentUser) return;
 
             const btnAdd = document.getElementById('btn-add-eval-sheet');
             if (btnAdd) btnAdd.style.display = isMaster ? 'inline-block' : 'none';
+
+            // Cache users for displaying names
+            if (Object.keys(this.workUsersCache).length === 0) {
+                try {
+                    const snap = await window.db.collection('workUsers').get();
+                    snap.forEach(doc => {
+                        this.workUsersCache[doc.id] = doc.data().nickname || doc.data().email || '팀원';
+                    });
+                } catch(e) { console.error(e); }
+            }
 
             if (this.unsubscribeMeta) this.unsubscribeMeta();
 
@@ -76,10 +90,21 @@
                     border: 1px solid ${this.currentSheetId === meta.id ? 'var(--primary-color)' : 'var(--card-border)'};
                     transition: all 0.2s;
                 `;
+                let allowedNamesStr = '';
+                if (meta.allowedUsers && meta.allowedUsers.length > 0) {
+                    const names = meta.allowedUsers.map(uid => this.workUsersCache[uid] || '알수없음');
+                    allowedNamesStr = `<div style="font-size: 0.75rem; color: ${this.currentSheetId === meta.id ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)'}; margin-top: 4px; padding-left: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">👤 ${names.join(', ')}</div>`;
+                } else {
+                    allowedNamesStr = `<div style="font-size: 0.75rem; color: ${this.currentSheetId === meta.id ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)'}; margin-top: 4px; padding-left: 24px;">권한 지정 안됨</div>`;
+                }
+
                 item.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
-                        <i class="fa-solid fa-file-excel"></i>
-                        <span style="font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${meta.name}</span>
+                    <div style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+                        <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                            <i class="fa-solid fa-file-excel"></i>
+                            <span style="font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${meta.name}</span>
+                        </div>
+                        ${allowedNamesStr}
                     </div>
                 `;
                 
@@ -207,11 +232,11 @@
             window.db.collection('workEvalSheetsData').doc(sheetId).get().then(doc => {
                 if (doc.exists && doc.data() && doc.data().sheets) {
                     const d = doc.data();
-                    window.doInitLuckysheet(d.sheets, sheetName, isMaster);
+                    window.doInitLuckysheet(d.sheets, sheetName, isMaster, true);
                     const savedAt = d.savedAt ? new Date(d.savedAt).toLocaleString('ko-KR') : '';
                     window.showBanner(isMaster ? `<i class="fa-solid fa-crown"></i> 마스터 편집 모드 | 최근 저장: ${savedAt}` : `<i class="fa-solid fa-eye"></i> 읽기 전용 모드 | 최근 저장: ${savedAt}`, isMaster ? 'success' : 'readonly');
                 } else {
-                    window.doInitLuckysheet(null, sheetName, isMaster);
+                    window.doInitLuckysheet(null, sheetName, isMaster, true);
                     window.showBanner(isMaster ? `<i class="fa-solid fa-crown"></i> 마스터 편집 모드 (빈 시트)` : `<i class="fa-solid fa-eye"></i> 빈 시트`, isMaster ? 'info' : 'readonly');
                 }
             }).catch(err => {

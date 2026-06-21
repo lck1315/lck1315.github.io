@@ -1697,12 +1697,12 @@
 
         // ─── Luckysheet 초기화 ─────────────────────────
         window._initLuckysheetTimer = null;
-        function doInitLuckysheet(data, title, editable) {
+        function doInitLuckysheet(data, title, editable, forceReinit = false) {
             // 라이브러리가 아직 로드 안 되었으면 잠시 후 재시도
             if (!window.luckysheet) {
                 console.warn('[평가시트] luckysheet 로드 대기 중...');
                 if (window._initLuckysheetTimer) clearTimeout(window._initLuckysheetTimer);
-                window._initLuckysheetTimer = setTimeout(() => doInitLuckysheet(data, title, editable), 300);
+                window._initLuckysheetTimer = setTimeout(() => doInitLuckysheet(data, title, editable, forceReinit), 300);
                 return;
             }
 
@@ -1712,16 +1712,24 @@
             // 컨테이너 높이가 0이면 아직 탭이 보이지 않는 상태 → 대기
             if (container.offsetHeight === 0) {
                 if (window._initLuckysheetTimer) clearTimeout(window._initLuckysheetTimer);
-                window._initLuckysheetTimer = setTimeout(() => doInitLuckysheet(data, title, editable), 150);
+                window._initLuckysheetTimer = setTimeout(() => doInitLuckysheet(data, title, editable, forceReinit), 150);
                 return;
             }
 
-            // 이미 초기화 완료 + 새 데이터 없으면 → 크기만 재조정
-            if (luckysheetReady && !data) {
+            // 이미 초기화 완료 + 새 데이터 없으면 + 강제초기화가 아니면 → 크기만 재조정
+            if (luckysheetReady && !data && !forceReinit) {
                 if (typeof window.luckysheet.resize === 'function') {
                     window.luckysheet.resize();
                 }
                 return;
+            }
+
+            // 강제 재초기화인 경우 이전 시트 소멸
+            if (luckysheetReady || forceReinit) {
+                if (typeof window.luckysheet.destroy === 'function') {
+                    window.luckysheet.destroy();
+                }
+                container.innerHTML = ''; // 확실히 비워줌
             }
 
             console.log('[평가시트] luckysheet.create() 호출 시작, 컨테이너 높이:', container.offsetHeight);
@@ -2030,6 +2038,8 @@
 
         // 전역 노출 (work.js 탭 전환에서도 호출 가능하도록)
         window.initEvalUI = initEvalUI;
+        window.doInitLuckysheet = doInitLuckysheet;
+        window.showBanner = showBanner;
 
     })();
     </script>
