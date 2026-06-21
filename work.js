@@ -369,6 +369,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 hasAccess = true;
             } else if (reqPerm === 'login_only') {
                 hasAccess = !!currentUser;
+            } else if (reqPerm === 'private') {
+                hasAccess = !!(currentUser && currentUserDoc && currentUserDoc.isMaster);
             } else { // approval_required
                 hasAccess = !!(currentUser && currentUserDoc && (currentUserDoc.isApproved || currentUserDoc.isMaster));
             }
@@ -886,6 +888,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <option value="public" ${currentPerm === 'public' ? 'selected' : ''}>전체 공개 (비로그인 가능)</option>
                             <option value="login_only" ${currentPerm === 'login_only' ? 'selected' : ''}>로그인 필수</option>
                             <option value="approval_required" ${currentPerm === 'approval_required' ? 'selected' : ''}>마스터 승인 회원 전용</option>
+                            <option value="private" ${currentPerm === 'private' ? 'selected' : ''}>비공개 (마스터 전용)</option>
                         </select>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px; width: 100%; justify-content: flex-end;">
