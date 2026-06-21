@@ -5152,7 +5152,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span style="display: flex; align-items: center; gap: 4px;">
                         ${currentUser ? '<i class="fa-solid fa-grip-vertical" style="color: var(--text-muted); opacity: 0.5;"></i>' : ''} ${colName}
                     </span>
-                    ${isMaster ? `<button class="btn-del-col" data-idx="${cIdx}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 2px 5px;"><i class="fa-solid fa-times"></i></button>` : ''}
+                    ${isMaster ? `<div style="display:flex;gap:4px;"><button class="btn-edit-col" data-idx="${cIdx}" style="background: none; border: none; color: #4a69bd; cursor: pointer; padding: 2px 5px;" title="이름 수정"><i class="fa-solid fa-pen"></i></button><button class="btn-del-col" data-idx="${cIdx}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 2px 5px;" title="삭제"><i class="fa-solid fa-times"></i></button></div>` : ''}
                 `;
                 wrapper.appendChild(content);
 
@@ -5316,7 +5316,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 wrapper.innerHTML = `
                     <span style="display: flex; align-items: center; gap: 8px;">${currentUser ? '<i class="fa-solid fa-grip-vertical" style="color: var(--text-muted); opacity: 0.5;"></i>' : ''} ${rowName}</span>
-                    ${isMaster ? `<button class="btn-del-row" data-idx="${rIdx}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 2px 5px;"><i class="fa-solid fa-times"></i></button>` : ''}
+                    ${isMaster ? `<div style="display:flex;gap:4px;"><button class="btn-edit-row" data-idx="${rIdx}" style="background: none; border: none; color: #4a69bd; cursor: pointer; padding: 2px 5px;" title="이름 수정"><i class="fa-solid fa-pen"></i></button><button class="btn-del-row" data-idx="${rIdx}" style="background: none; border: none; color: #ff4757; cursor: pointer; padding: 2px 5px;" title="삭제"><i class="fa-solid fa-times"></i></button></div>` : ''}
                 `;
                 
                 if (isMaster) {
@@ -5453,6 +5453,34 @@ document.addEventListener('DOMContentLoaded', () => {
                     matrixData.cells = newCells;
                     renderMatrix();
                     saveMatrixToDB();
+                });
+            });
+
+            // 열 이름 편집
+            document.querySelectorAll('.btn-edit-col').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const cIdx = parseInt(e.currentTarget.dataset.idx);
+                    const oldName = matrixData.cols[cIdx];
+                    const newName = prompt('팀원 이름을 수정하세요:', oldName);
+                    if (newName !== null && newName.trim() !== '') {
+                        matrixData.cols[cIdx] = newName.trim();
+                        saveMatrixToDB();
+                        renderMatrix();
+                    }
+                });
+            });
+
+            // 행 이름 편집
+            document.querySelectorAll('.btn-edit-row').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const rIdx = parseInt(e.currentTarget.dataset.idx);
+                    const oldName = matrixData.rows[rIdx];
+                    const newName = prompt('평가 항목 이름을 수정하세요:', oldName);
+                    if (newName !== null && newName.trim() !== '') {
+                        matrixData.rows[rIdx] = newName.trim();
+                        saveMatrixToDB();
+                        renderMatrix();
+                    }
                 });
             });
         }
