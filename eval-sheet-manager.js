@@ -88,25 +88,29 @@
             this.sheetsMeta.forEach(meta => {
                 const item = document.createElement('div');
                 item.className = 'eval-sheet-item';
+                const isMaster = !!(window.currentUserDocGlobal && window.currentUserDocGlobal.isMaster);
+                
                 item.style.cssText = `
                     display: flex; justify-content: space-between; align-items: center; 
-                    padding: 10px 12px; border-radius: 8px; cursor: pointer; 
+                    padding: 10px 12px; border-radius: 8px; cursor: ${isMaster ? 'grab' : 'pointer'}; 
                     background: ${this.currentSheetId === meta.id ? 'var(--primary-color)' : 'var(--input-bg)'};
                     color: ${this.currentSheetId === meta.id ? '#fff' : 'var(--text-color)'};
                     border: 1px solid ${this.currentSheetId === meta.id ? 'var(--primary-color)' : 'var(--card-border)'};
                     transition: all 0.2s;
+                    user-select: none;
                 `;
                 let allowedNamesStr = '';
                 if (meta.allowedUsers && meta.allowedUsers.length > 0) {
                     const names = meta.allowedUsers.map(uid => this.workUsersCache[uid] || '알수없음');
-                    allowedNamesStr = `<div style="font-size: 0.75rem; color: ${this.currentSheetId === meta.id ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)'}; margin-top: 4px; padding-left: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">👤 ${names.join(', ')}</div>`;
+                    allowedNamesStr = `<div style="font-size: 0.75rem; color: ${this.currentSheetId === meta.id ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)'}; margin-top: 4px; padding-left: ${isMaster ? '32px' : '24px'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">👤 ${names.join(', ')}</div>`;
                 } else {
-                    allowedNamesStr = `<div style="font-size: 0.75rem; color: ${this.currentSheetId === meta.id ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)'}; margin-top: 4px; padding-left: 24px;">권한 지정 안됨</div>`;
+                    allowedNamesStr = `<div style="font-size: 0.75rem; color: ${this.currentSheetId === meta.id ? 'rgba(255,255,255,0.6)' : 'var(--text-muted)'}; margin-top: 4px; padding-left: ${isMaster ? '32px' : '24px'};">권한 지정 안됨</div>`;
                 }
 
                 item.innerHTML = `
-                    <div style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+                    <div style="display: flex; flex-direction: column; flex: 1; overflow: hidden; pointer-events: none;">
                         <div style="display: flex; align-items: center; gap: 8px; overflow: hidden;">
+                            ${isMaster ? '<i class="fa-solid fa-grip-vertical" style="color: ' + (this.currentSheetId === meta.id ? 'rgba(255,255,255,0.7)' : 'var(--text-muted)') + '; font-size: 0.9rem;"></i>' : ''}
                             <i class="fa-solid fa-file-excel"></i>
                             <span style="font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${meta.name}</span>
                         </div>
