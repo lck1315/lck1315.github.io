@@ -1868,22 +1868,53 @@
                     showBanner(`<i class="fa-solid fa-crown"></i> 마스터 편집 모드`, 'info');
                     return;
                 }
-                LuckyExcel.transformExcelToLucky(file, function(exportJson) {
-                    if (!exportJson || !exportJson.sheets || exportJson.sheets.length === 0) {
-                        alert('엑셀 파일을 읽는데 실패했습니다.');
+                
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    const data = new Uint8Array(ev.target.result);
+                    let workbook;
+                    if (window.XLSX) {
+                        try {
+                            workbook = XLSX.read(data, { type: 'array', cellFormula: true });
+                        } catch(e) { console.error('XLSX read error', e); }
+                    }
+                    
+                    LuckyExcel.transformExcelToLucky(file, function(exportJson) {
+                        if (!exportJson || !exportJson.sheets || exportJson.sheets.length === 0) {
+                            alert('엑셀 파일을 읽는데 실패했습니다.');
+                            showBanner(`<i class="fa-solid fa-crown"></i> 마스터 편집 모드`, 'info');
+                            if (fi) fi.value = '';
+                            return;
+                        }
+                        
+                        if (workbook) {
+                            exportJson.sheets.forEach(sheet => {
+                                const ws = workbook.Sheets[sheet.name];
+                                if (!ws) return;
+                                if (sheet.celldata) {
+                                    sheet.celldata.forEach(cell => {
+                                        const ref = XLSX.utils.encode_cell({ r: cell.r, c: cell.c });
+                                        if (ws[ref] && ws[ref].f) {
+                                            if (!cell.v) cell.v = {};
+                                            cell.v.f = '=' + ws[ref].f;
+                                        }
+                                    });
+                                }
+                                sheet.calcChain = [];
+                            });
+                        }
+                        
+                        doInitLuckysheet(exportJson.sheets, exportJson.info?.name || file.name, true);
+                        showBanner(`<i class="fa-solid fa-crown"></i> 파일 로드 완료: ${file.name} &nbsp;|&nbsp; "저장(공유)" 버튼을 누르세요`, 'warning');
+                        if (fi) fi.value = '';
+                    }, function(err) {
+                        console.error('LuckyExcel 오류:', err);
+                        alert('xlsx 변환 중 오류가 발생했습니다.');
                         showBanner(`<i class="fa-solid fa-crown"></i> 마스터 편집 모드`, 'info');
                         if (fi) fi.value = '';
-                        return;
-                    }
-                    doInitLuckysheet(exportJson.sheets, exportJson.info?.name || file.name, true);
-                    showBanner(`<i class="fa-solid fa-crown"></i> 파일 로드 완료: ${file.name} &nbsp;|&nbsp; "저장(공유)" 버튼을 누르세요`, 'warning');
-                    if (fi) fi.value = '';
-                }, function(err) {
-                    console.error('LuckyExcel 오류:', err);
-                    alert('xlsx 변환 중 오류가 발생했습니다.');
-                    showBanner(`<i class="fa-solid fa-crown"></i> 마스터 편집 모드`, 'info');
-                    if (fi) fi.value = '';
-                });
+                    });
+                };
+                reader.readAsArrayBuffer(file);
 
             } else if (file.name.match(/\.(xls|csv)$/i)) {
                 showBanner('<i class="fa-solid fa-spinner fa-spin"></i> xls 파일 처리 중...', 'info');
@@ -1897,9 +1928,8 @@
                 reader.onload = function(ev) {
                     try {
                         const data = new Uint8Array(ev.target.result);
-                        const workbook = XLSX.read(data, { type: 'array' });
-                        // xls/csv -> xlsx 메모리 변환
-                        const xlsxArrayBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+                        const workbook = XLSX.read(data, { type: 'array', cellFormula: true });
+                        const xlsxArrayBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array', cellFormula: true });
                         const newFile = new File([xlsxArrayBuffer], file.name.replace(/\.(xls|csv)$/i, '.xlsx'), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                         
                         if (!window.LuckyExcel) {
@@ -1915,6 +1945,22 @@
                                 if (fi) fi.value = '';
                                 return;
                             }
+                            
+                            exportJson.sheets.forEach(sheet => {
+                                const ws = workbook.Sheets[sheet.name];
+                                if (!ws) return;
+                                if (sheet.celldata) {
+                                    sheet.celldata.forEach(cell => {
+                                        const ref = XLSX.utils.encode_cell({ r: cell.r, c: cell.c });
+                                        if (ws[ref] && ws[ref].f) {
+                                            if (!cell.v) cell.v = {};
+                                            cell.v.f = '=' + ws[ref].f;
+                                        }
+                                    });
+                                }
+                                sheet.calcChain = [];
+                            });
+                            
                             doInitLuckysheet(exportJson.sheets, file.name, true);
                             showBanner(`<i class="fa-solid fa-crown"></i> 파일 로드 완료: ${file.name} &nbsp;|&nbsp; "저장(공유)" 버튼을 누르세요`, 'warning');
                             if (fi) fi.value = '';
