@@ -1741,6 +1741,7 @@
                 container: 'evaluation-excel-container',
                 title: title || '평가시트',
                 lang: 'en',
+                forceCalculation: true,
                 showinfobar: false,
                 showtoolbar: editable,
                 showsheetbar: true,
@@ -1902,10 +1903,12 @@
                                             let f = eCell.formula;
                                             if (!f.startsWith('=')) f = '=' + f;
                                             cell.v.f = f;
+                                            delete cell.v.v;
+                                            delete cell.v.m;
                                         }
                                     });
                                 }
-                                sheet.calcChain = [];
+                                // Do NOT clear calcChain, Luckysheet needs it to run formulas!
                             });
                         }
                         
@@ -1971,10 +1974,12 @@
                                                 let f = eCell.formula;
                                                 if (!f.startsWith('=')) f = '=' + f;
                                                 cell.v.f = f;
+                                                delete cell.v.v;
+                                                delete cell.v.m;
                                             }
                                         });
                                     }
-                                    sheet.calcChain = [];
+                                    // Do NOT clear calcChain
                                 });
                             }
                             
