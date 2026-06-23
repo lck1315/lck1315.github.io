@@ -1894,11 +1894,18 @@
                             exportJson.sheets.forEach(sheet => {
                                 const ws = exceljsWorkbook.getWorksheet(sheet.name);
                                 if (!ws) return;
-                                if (sheet.celldata) {
-                                    sheet.celldata.forEach(cell => {
-                                        // ExcelJS uses 1-based indexing for rows and columns
-                                        const eCell = ws.getCell(cell.r + 1, cell.c + 1);
+                                if (!sheet.celldata) sheet.celldata = [];
+                                
+                                ws.eachRow((row, rowNumber) => {
+                                    row.eachCell((eCell, colNumber) => {
                                         if (eCell && eCell.formula) {
+                                            const r = rowNumber - 1;
+                                            const c = colNumber - 1;
+                                            let cell = sheet.celldata.find(item => item.r === r && item.c === c);
+                                            if (!cell) {
+                                                cell = { r: r, c: c, v: {} };
+                                                sheet.celldata.push(cell);
+                                            }
                                             if (!cell.v) cell.v = {};
                                             let f = eCell.formula;
                                             if (!f.startsWith('=')) f = '=' + f;
@@ -1907,8 +1914,14 @@
                                             delete cell.v.m;
                                         }
                                     });
-                                }
-                                // Do NOT clear calcChain, Luckysheet needs it to run formulas!
+                                });
+
+                                sheet.calcChain = [];
+                                sheet.celldata.forEach(cell => {
+                                    if (cell.v && cell.v.f) {
+                                        sheet.calcChain.push({ r: cell.r, c: cell.c, index: sheet.index });
+                                    }
+                                });
                             });
                         }
                         
