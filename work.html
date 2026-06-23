@@ -24,6 +24,7 @@
     
     <!-- SheetJS for fallback (.xls, .csv) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 
     <link rel="stylesheet" href="style.css?v=1.0.88">
     <style>
@@ -1870,13 +1871,14 @@
                 }
                 
                 const reader = new FileReader();
-                reader.onload = function(ev) {
+                reader.onload = async function(ev) {
                     const data = new Uint8Array(ev.target.result);
-                    let workbook;
-                    if (window.XLSX) {
+                    let exceljsWorkbook;
+                    if (window.ExcelJS) {
                         try {
-                            workbook = XLSX.read(data, { type: 'array', cellFormula: true });
-                        } catch(e) { console.error('XLSX read error', e); }
+                            exceljsWorkbook = new ExcelJS.Workbook();
+                            await exceljsWorkbook.xlsx.load(ev.target.result);
+                        } catch(e) { console.error('ExcelJS read error', e); }
                     }
                     
                     LuckyExcel.transformExcelToLucky(file, function(exportJson) {
@@ -1887,16 +1889,19 @@
                             return;
                         }
                         
-                        if (workbook) {
+                        if (exceljsWorkbook) {
                             exportJson.sheets.forEach(sheet => {
-                                const ws = workbook.Sheets[sheet.name];
+                                const ws = exceljsWorkbook.getWorksheet(sheet.name);
                                 if (!ws) return;
                                 if (sheet.celldata) {
                                     sheet.celldata.forEach(cell => {
-                                        const ref = XLSX.utils.encode_cell({ r: cell.r, c: cell.c });
-                                        if (ws[ref] && ws[ref].f) {
+                                        // ExcelJS uses 1-based indexing for rows and columns
+                                        const eCell = ws.getCell(cell.r + 1, cell.c + 1);
+                                        if (eCell && eCell.formula) {
                                             if (!cell.v) cell.v = {};
-                                            cell.v.f = '=' + ws[ref].f;
+                                            let f = eCell.formula;
+                                            if (!f.startsWith('=')) f = '=' + f;
+                                            cell.v.f = f;
                                         }
                                     });
                                 }
@@ -1925,12 +1930,20 @@
                 }
 
                 const reader = new FileReader();
-                reader.onload = function(ev) {
+                reader.onload = async function(ev) {
                     try {
                         const data = new Uint8Array(ev.target.result);
                         const workbook = XLSX.read(data, { type: 'array', cellFormula: true });
                         const xlsxArrayBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array', cellFormula: true });
                         const newFile = new File([xlsxArrayBuffer], file.name.replace(/\.(xls|csv)$/i, '.xlsx'), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                        
+                        let exceljsWorkbook;
+                        if (window.ExcelJS) {
+                            try {
+                                exceljsWorkbook = new ExcelJS.Workbook();
+                                await exceljsWorkbook.xlsx.load(xlsxArrayBuffer);
+                            } catch(e) { console.error('ExcelJS read error', e); }
+                        }
                         
                         if (!window.LuckyExcel) {
                             alert('LuckyExcel 라이브러리가 없습니다.');
@@ -1946,20 +1959,24 @@
                                 return;
                             }
                             
-                            exportJson.sheets.forEach(sheet => {
-                                const ws = workbook.Sheets[sheet.name];
-                                if (!ws) return;
-                                if (sheet.celldata) {
-                                    sheet.celldata.forEach(cell => {
-                                        const ref = XLSX.utils.encode_cell({ r: cell.r, c: cell.c });
-                                        if (ws[ref] && ws[ref].f) {
-                                            if (!cell.v) cell.v = {};
-                                            cell.v.f = '=' + ws[ref].f;
-                                        }
-                                    });
-                                }
-                                sheet.calcChain = [];
-                            });
+                            if (exceljsWorkbook) {
+                                exportJson.sheets.forEach(sheet => {
+                                    const ws = exceljsWorkbook.getWorksheet(sheet.name);
+                                    if (!ws) return;
+                                    if (sheet.celldata) {
+                                        sheet.celldata.forEach(cell => {
+                                            const eCell = ws.getCell(cell.r + 1, cell.c + 1);
+                                            if (eCell && eCell.formula) {
+                                                if (!cell.v) cell.v = {};
+                                                let f = eCell.formula;
+                                                if (!f.startsWith('=')) f = '=' + f;
+                                                cell.v.f = f;
+                                            }
+                                        });
+                                    }
+                                    sheet.calcChain = [];
+                                });
+                            }
                             
                             doInitLuckysheet(exportJson.sheets, file.name, true);
                             showBanner(`<i class="fa-solid fa-crown"></i> 파일 로드 완료: ${file.name} &nbsp;|&nbsp; "저장(공유)" 버튼을 누르세요`, 'warning');
