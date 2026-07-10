@@ -4207,6 +4207,184 @@ document.addEventListener('DOMContentLoaded', () => {
     })();
 
     // ====================================================
+    // 개인별 프로젝트 업무량 통계 그래프
+    // ====================================================
+    let statsChart = null;
+    (function initWorkloadStatsLogic() {
+        const btn = document.getElementById('ps-btn-workload-stats');
+        const modal = document.getElementById('workload-stats-modal');
+        const closeBtn = document.getElementById('workload-stats-close-btn');
+        const typeSelect = document.getElementById('workload-type-select');
+        const canvas = document.getElementById('workloadChart');
+        
+        if (!btn || !modal) return;
+        
+        btn.addEventListener('click', () => {
+            modal.classList.remove('hidden');
+            renderWorkloadChart();
+        });
+        
+        closeBtn.addEventListener('click', () => {
+            modal.classList.add('hidden');
+        });
+        
+        modal.addEventListener('click', e => {
+            if (e.target === modal) modal.classList.add('hidden');
+        });
+        
+        typeSelect.addEventListener('change', () => {
+            renderWorkloadChart();
+        });
+        
+        function renderWorkloadChart() {
+            const type = typeSelect.value; // 'monthly' or 'weekly'
+            
+            // 데이터 집계
+            // 구조: { assigneeName: { '2026년 1월': 5, '2026년 2월': 10 } }
+            const dataByAssignee = {};
+            const labelsSet = new Set();
+            
+            // 보조 함수: 특정 날짜의 속한 주차 (1~52)
+            function getWeekNumber(d) {
+                const date = new Date(d.getTime());
+                date.setHours(0, 0, 0, 0);
+                date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+                const week1 = new Date(date.getFullYear(), 0, 4);
+                return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+            }
+            
+            psData.forEach(task => {
+                if (!task.assignee || task.assignee.trim() === '') return;
+                if (!task.startDate || !task.endDate) return;
+                
+                const start = new Date(task.startDate);
+                const end = new Date(task.endDate);
+                if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
+                if (end < start) return;
+                
+                const assignees = task.assignee.split(',').map(a => a.trim()).filter(a => a !== '');
+                
+                let current = new Date(start);
+                while (current <= end) {
+                    // 현재 선택된 연도(psYear)에 해당하는 데이터만 집계할 수도 있으나, 전체 범위를 다 보여주도록 함
+                    
+                    let label = '';
+                    if (type === 'monthly') {
+                        label = `${current.getFullYear()}년 ${current.getMonth() + 1}월`;
+                    } else {
+                        label = `${current.getFullYear()}년 ${getWeekNumber(current)}주차`;
+                    }
+                    
+                    labelsSet.add(label);
+                    
+                    assignees.forEach(assignee => {
+                        if (!dataByAssignee[assignee]) dataByAssignee[assignee] = {};
+                        if (!dataByAssignee[assignee][label]) dataByAssignee[assignee][label] = 0;
+                        dataByAssignee[assignee][label] += 1; // 1일 추가
+                    });
+                    
+                    current.setDate(current.getDate() + 1);
+                }
+            });
+            
+            // 라벨 정렬
+            let sortedLabels = Array.from(labelsSet);
+            if (type === 'monthly') {
+                sortedLabels.sort((a, b) => {
+                    const [ya, ma] = a.replace('월', '').split('년 ');
+                    const [yb, mb] = b.replace('월', '').split('년 ');
+                    if (ya !== yb) return parseInt(ya) - parseInt(yb);
+                    return parseInt(ma) - parseInt(mb);
+                });
+            } else {
+                sortedLabels.sort((a, b) => {
+                    const [ya, wa] = a.replace('주차', '').split('년 ');
+                    const [yb, wb] = b.replace('주차', '').split('년 ');
+                    if (ya !== yb) return parseInt(ya) - parseInt(yb);
+                    return parseInt(wa) - parseInt(wb);
+                });
+            }
+            
+            // 차트용 datasets 구성
+            const datasets = [];
+            const colors = [
+                '#ff4757', '#2ed573', '#1e90ff', '#ffa502', '#3742fa', 
+                '#ff6b81', '#7bed9f', '#70a1ff', '#eccc68', '#5352ed',
+                '#00cec9', '#fdcb6e', '#e84393', '#6c5ce7', '#00b894'
+            ];
+            let colorIndex = 0;
+            
+            for (const assignee in dataByAssignee) {
+                const data = sortedLabels.map(label => dataByAssignee[assignee][label] || 0);
+                datasets.push({
+                    label: assignee,
+                    data: data,
+                    backgroundColor: colors[colorIndex % colors.length],
+                    borderColor: colors[colorIndex % colors.length],
+                    borderWidth: 1,
+                    borderRadius: 4
+                });
+                colorIndex++;
+            }
+            
+            if (statsChart) {
+                statsChart.destroy();
+            }
+            
+            const ctx = canvas.getContext('2d');
+            statsChart = new window.Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: sortedLabels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    family: "'Noto Sans KR', sans-serif"
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.y + '일';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: false,
+                            ticks: {
+                                font: {
+                                    family: "'Noto Sans KR', sans-serif"
+                                }
+                            }
+                        },
+                        y: {
+                            stacked: false,
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '투입 일수',
+                                font: {
+                                    family: "'Noto Sans KR', sans-serif"
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    })();
+
+    // ====================================================
     // 프로젝트 엑셀 출력 (CSV 변환)
     // ====================================================
     const psExcelAllBtn = document.getElementById('ps-btn-excel-all');

@@ -25,6 +25,9 @@
     <!-- SheetJS for fallback (.xls, .csv) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    
+    <!-- Chart.js for statistics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <link rel="stylesheet" href="style.css?v=1.0.88">
     <style>
@@ -646,6 +649,25 @@
         </div>
     </div>
 
+    <!-- 업무량 통계 모달 -->
+    <div id="workload-stats-modal" class="auth-modal-overlay hidden" style="z-index: 10000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center;">
+        <div class="auth-modal-content" style="width: 90%; max-width: 800px; padding: 2.5rem; position: relative; background: #ffffff; color: #2d3436; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; max-height: 90vh; overflow-y: auto;">
+            <button id="workload-stats-close-btn" style="position: absolute; right: 20px; top: 15px; font-size: 1.8rem; cursor: pointer; color: #2d3436; background: none; border: none;">&times;</button>
+            <h3 style="color: #00cec9; font-size: 1.4rem; font-weight: 800; margin-bottom: 1rem;"><i class="fa-solid fa-chart-line"></i> 개인별 업무량 통계</h3>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <select id="workload-type-select" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; outline: none; font-family: inherit;">
+                    <option value="monthly">월별 업무량</option>
+                    <option value="weekly">주별 업무량</option>
+                </select>
+            </div>
+            
+            <div style="position: relative; height: 400px; width: 100%;">
+                <canvas id="workloadChart"></canvas>
+            </div>
+        </div>
+    </div>
+
     <main style="padding-top: 75px; padding-bottom: 100px;">
 
 
@@ -1033,6 +1055,7 @@
                         <button class="ps-tool-btn" id="ps-btn-export-file"><i class="fa-solid fa-download"></i> 내보내기</button>
                         <button class="ps-tool-btn" id="ps-btn-import-file"><i class="fa-solid fa-upload"></i> 불러오기</button>
                         <button class="ps-tool-btn" id="ps-btn-backup-manage" style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); color:#fff; border:none;"><i class="fa-solid fa-cloud-arrow-up"></i> 클라우드 백업</button>
+                        <button class="ps-tool-btn" id="ps-btn-workload-stats" style="background: linear-gradient(135deg, #00cec9, #81ecec); color:#fff; border:none;"><i class="fa-solid fa-chart-line"></i> 개인별 업무량</button>
                         <input type="file" id="ps-file-input" style="display:none;" accept=".json">
                         <div style="flex:1;"></div>
                         <button class="ps-tool-btn" id="ps-btn-today"><i class="fa-solid fa-calendar-day"></i> 오늘로
