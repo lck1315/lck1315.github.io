@@ -2657,13 +2657,13 @@ function renderPsScheduler() {
 
     // 지연 상태(알람) 계산 로직
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     
     psData.forEach(task => {
         task._isDelayed = false;
         if (task.status && task.status.trim() !== '완료' && task.endDate) {
             const endDate = new Date(task.endDate);
-            if (!isNaN(endDate.getTime()) && endDate < today) {
+            if (!isNaN(endDate.getTime()) && endDate < todayDateOnly) {
                 task._isDelayed = true;
             }
         }
