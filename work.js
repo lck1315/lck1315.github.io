@@ -2665,11 +2665,14 @@ function renderPsScheduler() {
     psRowIndexMap = []; // Reset map
 
     // 지연 상태(알람) 계산 로직
-    const todayStr = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
     psData.forEach(task => {
         task._isDelayed = false;
-        if (task.status !== '완료' && task.endDate) {
-            if (task.endDate < todayStr) {
+        if (task.status && task.status.trim() !== '완료' && task.endDate) {
+            const endDate = new Date(task.endDate);
+            if (!isNaN(endDate.getTime()) && endDate < today) {
                 task._isDelayed = true;
             }
         }
@@ -4252,12 +4255,14 @@ let statsChart = null;
     const modal = document.getElementById('workload-stats-modal');
     const closeBtn = document.getElementById('workload-stats-close-btn');
     const typeSelect = document.getElementById('workload-type-select');
+    const assigneeSelect = document.getElementById('workload-assignee-select');
     const canvas = document.getElementById('workloadChart');
 
     if (!btn || !modal) return;
 
     btn.addEventListener('click', () => {
         modal.classList.remove('hidden');
+        populateAssigneeSelect();
         renderWorkloadChart();
     });
 
@@ -4273,11 +4278,48 @@ let statsChart = null;
         renderWorkloadChart();
     });
 
+    assigneeSelect?.addEventListener('change', () => {
+        renderWorkloadChart();
+    });
+
+    function populateAssigneeSelect() {
+        if (!assigneeSelect) return;
+        const allAssignees = new Set();
+        psData.forEach(task => {
+            if (task.assignee) {
+                task.assignee.split(',').forEach(a => {
+                    const name = a.trim();
+                    if (name) allAssignees.add(name);
+                });
+            }
+        });
+        
+        const currentValue = assigneeSelect.value;
+        assigneeSelect.innerHTML = '<option value="all">모든 인원</option>';
+        
+        Array.from(allAssignees).sort().forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            assigneeSelect.appendChild(opt);
+        });
+        
+        if (allAssignees.has(currentValue) || currentValue === 'all') {
+            assigneeSelect.value = currentValue;
+        } else {
+            assigneeSelect.value = 'all';
+        }
+    }
+
+    // 전역으로 툴팁 정보를 담을 객체
+    let tooltipDataObj = {};
+
     function renderWorkloadChart() {
         const type = typeSelect.value; // 'monthly' or 'weekly'
+        const selectedAssignee = assigneeSelect ? assigneeSelect.value : 'all';
 
         // 데이터 집계
-        // 구조: { assigneeName: { '2026년 1월': 5, '2026년 2월': 10 } }
+        // 구조: { assigneeName: { '2026년 1월': { days: 5, projects: Set() }, ... } }
         const dataByAssignee = {};
         const labelsSet = new Set();
 
@@ -4315,14 +4357,20 @@ let statsChart = null;
                 labelsSet.add(label);
 
                 assignees.forEach(assignee => {
+                    if (selectedAssignee !== 'all' && assignee !== selectedAssignee) return;
+                    
                     if (!dataByAssignee[assignee]) dataByAssignee[assignee] = {};
-                    if (!dataByAssignee[assignee][label]) dataByAssignee[assignee][label] = 0;
-                    dataByAssignee[assignee][label] += 1; // 1일 추가
+                    if (!dataByAssignee[assignee][label]) dataByAssignee[assignee][label] = { days: 0, projects: new Set() };
+                    dataByAssignee[assignee][label].days += 1;
+                    dataByAssignee[assignee][label].projects.add(task.name);
                 });
 
                 current.setDate(current.getDate() + 1);
             }
         });
+
+        // 툴팁용 데이터를 전역 변수에 저장 (차트 콜백에서 접근 가능하도록)
+        tooltipDataObj = dataByAssignee;
 
         // 라벨 정렬
         let sortedLabels = Array.from(labelsSet);
@@ -4352,7 +4400,10 @@ let statsChart = null;
         let colorIndex = 0;
 
         for (const assignee in dataByAssignee) {
-            const data = sortedLabels.map(label => dataByAssignee[assignee][label] || 0);
+            const data = sortedLabels.map(label => {
+                const val = dataByAssignee[assignee][label];
+                return val ? val.days : 0;
+            });
             datasets.push({
                 label: assignee,
                 data: data,
@@ -4395,7 +4446,14 @@ let statsChart = null;
                     tooltip: {
                         callbacks: {
                             label: function (context) {
-                                return context.dataset.label + ': ' + context.parsed.y + '일';
+                                const assignee = context.dataset.label;
+                                const label = context.label;
+                                const dataObj = tooltipDataObj[assignee] ? tooltipDataObj[assignee][label] : null;
+                                let projectsStr = '';
+                                if (dataObj && dataObj.projects && dataObj.projects.size > 0) {
+                                    projectsStr = ' [' + Array.from(dataObj.projects).join(', ') + ']';
+                                }
+                                return assignee + ': ' + context.parsed.y + '일' + projectsStr;
                             }
                         }
                     }
