@@ -671,6 +671,31 @@
         </div>
     </div>
 
+    <!-- 팀원별 프로젝트 리스트 모달 -->
+    <div id="member-projects-modal" class="auth-modal-overlay hidden" style="z-index: 10000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: center;">
+        <div class="auth-modal-content" style="width: 95%; max-width: 1200px; padding: 0; position: relative; background: var(--bg-color); color: var(--text-color); border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); border: 1px solid var(--border-color); height: 85vh; display: flex; flex-direction: column; overflow: hidden;">
+            <div style="padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2);">
+                <h3 style="margin: 0; font-size: 1.4rem; font-weight: 800; color: #f1c40f;"><i class="fa-solid fa-users-viewfinder"></i> 전체 및 팀원별 프로젝트 현황</h3>
+                <button id="member-projects-close-btn" style="background: none; border: none; font-size: 1.8rem; color: var(--text-color); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div style="flex: 1; display: flex; overflow: hidden;">
+                <!-- 왼쪽 패널: 팀원 목록 -->
+                <div style="width: 250px; border-right: 1px solid var(--border-color); background: rgba(255,255,255,0.02); display: flex; flex-direction: column;">
+                    <div id="mp-member-list" style="flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 5px;">
+                        <!-- JS에서 렌더링 -->
+                    </div>
+                </div>
+                <!-- 오른쪽 패널: 프로젝트 목록 -->
+                <div style="flex: 1; padding: 20px; overflow-y: auto; background: var(--card-bg);">
+                    <h4 id="mp-right-title" style="margin-top: 0; margin-bottom: 20px; font-size: 1.2rem; color: var(--primary-color);">전체 프로젝트 현황</h4>
+                    <div id="mp-project-list" style="display: flex; flex-direction: column; gap: 15px;">
+                        <!-- JS에서 렌더링 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <main style="padding-top: 75px; padding-bottom: 100px;">
 
 
@@ -1059,6 +1084,7 @@
                         <button class="ps-tool-btn" id="ps-btn-import-file"><i class="fa-solid fa-upload"></i> 불러오기</button>
                         <button class="ps-tool-btn" id="ps-btn-backup-manage" style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); color:#fff; border:none;"><i class="fa-solid fa-cloud-arrow-up"></i> 클라우드 백업</button>
                         <button class="ps-tool-btn" id="ps-btn-workload-stats" style="background: linear-gradient(135deg, #00cec9, #81ecec); color:#fff; border:none;"><i class="fa-solid fa-chart-line"></i> 개인별 업무량</button>
+                        <button class="ps-tool-btn" id="ps-btn-member-projects" style="background: linear-gradient(135deg, #f39c12, #f1c40f); color:#fff; border:none;"><i class="fa-solid fa-users-viewfinder"></i> 팀원별 프로젝트</button>
                         <input type="file" id="ps-file-input" style="display:none;" accept=".json">
                         <div style="flex:1;"></div>
                         <button class="ps-tool-btn" id="ps-btn-today"><i class="fa-solid fa-calendar-day"></i> 오늘로
