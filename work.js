@@ -6984,19 +6984,32 @@ if (btnMemberProjects && modalMemberProjects && closeBtnMemberProjects) {
 function openMemberProjectsModal() {
     modalMemberProjects.classList.remove('hidden');
     
-    // Extract unique members from psData
-    const membersMap = {}; // { name: taskCount }
-    let totalTasks = 0;
+    // Extract unique members from psData based on top-level projects
+    const membersMap = {}; // { name: projectCount }
+    const topProjectsCount = psData.filter(t => !t.parentId);
+    let totalProjects = 0;
 
-    psData.forEach(task => {
-        if (!task.parentId) return; // Only count sub-tasks
-        if (task.assignee) {
-            const assignees = task.assignee.split(',').map(a => a.trim()).filter(a => a !== '');
-            assignees.forEach(a => {
-                membersMap[a] = (membersMap[a] || 0) + 1;
+    topProjectsCount.forEach(proj => {
+        const projAssignees = new Set();
+        const findAssignees = (parentId) => {
+            const children = psData.filter(t => t.parentId === parentId);
+            children.forEach(child => {
+                if (child.assignee) {
+                    const assignees = child.assignee.split(',').map(a => a.trim()).filter(a => a !== '');
+                    assignees.forEach(a => projAssignees.add(a));
+                }
+                findAssignees(child.id);
             });
-            totalTasks += 1;
+        };
+        findAssignees(proj.id);
+
+        if (projAssignees.size > 0) {
+            totalProjects += 1;
         }
+
+        projAssignees.forEach(a => {
+            membersMap[a] = (membersMap[a] || 0) + 1;
+        });
     });
 
     const members = Object.keys(membersMap).sort();
@@ -7005,7 +7018,7 @@ function openMemberProjectsModal() {
     let htmlLeft = `<div class="mp-member-item active" data-member="all" style="padding: 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; background: rgba(243, 156, 18, 0.2); color: #f39c12; font-weight: bold; border: 1px solid rgba(243, 156, 18, 0.4);">
         <div style="display: flex; justify-content: space-between;">
             <span>전체 현황</span>
-            <span style="background: rgba(243, 156, 18, 0.3); padding: 2px 8px; border-radius: 10px; font-size: 0.8rem;">${totalTasks}건</span>
+            <span style="background: rgba(243, 156, 18, 0.3); padding: 2px 8px; border-radius: 10px; font-size: 0.8rem;">${totalProjects}건</span>
         </div>
     </div>`;
 
@@ -7051,8 +7064,8 @@ function openMemberProjectsModal() {
 
 function renderMemberProjectsRightPane(member) {
     if (member === 'all') {
-        mpRightTitle.innerText = `전체 프로젝트 현황`;
-        mpRightTitle.style.color = '#f1c40f';
+        mpRightTitle.innerText = `전체 프로젝트 현황 (프로젝트 단위)`;
+        mpRightTitle.style.color = '#e67e22';
     } else {
         mpRightTitle.innerText = `${member}님의 담당 프로젝트`;
         mpRightTitle.style.color = '#00cec9';
@@ -7118,7 +7131,7 @@ function renderMemberProjectsRightPane(member) {
             let tasksHtml = '';
             if (member !== 'all' && projTasks.length > 0) {
                 tasksHtml = `<div style="margin-top: 15px; background: rgba(0,0,0,0.1); border-radius: 8px; padding: 10px;">
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">담당 세부 업무 (${total}건)</div>`;
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">담당 세부 업무 (${total}개)</div>`;
                 projTasks.forEach(pt => {
                     let icon = '<i class="fa-solid fa-circle" style="color: #27ae60; font-size: 0.6rem;"></i>';
                     if (pt.status === '완료') icon = '<i class="fa-solid fa-circle-check" style="color: #6c5ce7; font-size: 0.8rem;"></i>';
