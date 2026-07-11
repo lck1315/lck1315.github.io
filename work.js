@@ -486,15 +486,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        const btnWorkloadStats = document.getElementById('ps-btn-workload-stats');
-        if (btnWorkloadStats) {
-            if (currentUserDoc && currentUserDoc.isMaster) {
-                btnWorkloadStats.style.display = 'inline-block';
-            } else {
-                btnWorkloadStats.style.display = 'none';
-            }
-        }
-
         // 공통 렌더링 로직 재호출 (권한 있는 곳만 볼 수 있도록 각 함수 내부에서 권한을 재확인하거나 렌더링)
         // 위에서 권한 있는 탭에 한해서 subscribe 함수들이 호출되므로 여기서는 제외함
         if (typeof renderWorkLinks === 'function') renderWorkLinks();
@@ -4261,6 +4252,10 @@ let statsChart = null;
     if (!btn || !modal) return;
 
     btn.addEventListener('click', () => {
+        if (!currentUserDoc || !currentUserDoc.isMaster) {
+            alert('개인별 업무량 통계는 마스터 권한이 필요합니다.');
+            return;
+        }
         modal.classList.remove('hidden');
         populateAssigneeSelect();
         renderWorkloadChart();
