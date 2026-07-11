@@ -2658,7 +2658,7 @@ function renderPsScheduler() {
     // 지연 상태(알람) 계산 로직
     const now = new Date();
     const todayDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrowDateOnly = new Date(todayDateOnly.getTime() + 24 * 60 * 60 * 1000);
+    const twoDaysLaterDateOnly = new Date(todayDateOnly.getTime() + 2 * 24 * 60 * 60 * 1000);
     
     psData.forEach(task => {
         task._isDelayed = false;
@@ -2668,7 +2668,7 @@ function renderPsScheduler() {
             if (!isNaN(endDate.getTime())) {
                 if (endDate < todayDateOnly) {
                     task._isDelayed = true;
-                } else if (endDate <= tomorrowDateOnly) {
+                } else if (endDate <= twoDaysLaterDateOnly) {
                     task._isWarning = true;
                 }
             }
