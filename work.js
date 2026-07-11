@@ -2658,30 +2658,42 @@ function renderPsScheduler() {
     // 지연 상태(알람) 계산 로직
     const now = new Date();
     const todayDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrowDateOnly = new Date(todayDateOnly.getTime() + 24 * 60 * 60 * 1000);
     
     psData.forEach(task => {
         task._isDelayed = false;
+        task._isWarning = false;
         if (task.status && task.status.trim() !== '완료' && task.endDate) {
             const endDate = new Date(task.endDate);
-            if (!isNaN(endDate.getTime()) && endDate < todayDateOnly) {
-                task._isDelayed = true;
+            if (!isNaN(endDate.getTime())) {
+                if (endDate < todayDateOnly) {
+                    task._isDelayed = true;
+                } else if (endDate <= tomorrowDateOnly) {
+                    task._isWarning = true;
+                }
             }
         }
     });
 
-    let delayedChanged;
+    let statusChanged;
     do {
-        delayedChanged = false;
+        statusChanged = false;
         psData.forEach(task => {
             if (task.parentId) {
                 const parent = psData.find(p => p.id === task.parentId);
-                if (parent && task._isDelayed && !parent._isDelayed) {
-                    parent._isDelayed = true;
-                    delayedChanged = true;
+                if (parent) {
+                    if (task._isDelayed && !parent._isDelayed) {
+                        parent._isDelayed = true;
+                        statusChanged = true;
+                    }
+                    if (task._isWarning && !parent._isWarning) {
+                        parent._isWarning = true;
+                        statusChanged = true;
+                    }
                 }
             }
         });
-    } while (delayedChanged);
+    } while (statusChanged);
 
     // Apply select-based filters and name search before rendering
     let dataToRender = psData.slice();
@@ -2805,7 +2817,12 @@ function renderPsScheduler() {
             });
         }
 
-        const alarmIcon = task._isDelayed ? `<i class="fa-solid fa-bell" style="color: #e55039; font-size: 11px; margin-right: 5px;" title="일정 지연 알림"></i>` : '';
+        let alarmIcon = '';
+        if (task._isDelayed) {
+            alarmIcon = `<i class="fa-solid fa-bell" style="color: #e55039; font-size: 11px; margin-right: 5px;" title="일정 지연 알림"></i>`;
+        } else if (task._isWarning) {
+            alarmIcon = `<i class="fa-solid fa-bell" style="color: #fa8231; font-size: 11px; margin-right: 5px;" title="마감일 임박 알림"></i>`;
+        }
 
         tr.innerHTML = `
                 <div class="ps-col-0">${globalIndex}</div>
@@ -2815,7 +2832,7 @@ function renderPsScheduler() {
                     </span>
                     <span style="margin-right:5px; color:#666; font-size:11px; display:inline-block; min-width:45px; flex-shrink:0; white-space:nowrap;">${prefix}</span>
                     ${alarmIcon}
-                    <input class="ps-tree-input" value="${task.name || ''}" onchange="window.psUpdateField('${task.id}', 'name', this.value)" ${disabledAttr} style="flex: 1; ${task._isDelayed ? 'color: #e55039; font-weight: bold;' : ''}">
+                    <input class="ps-tree-input" value="${task.name || ''}" onchange="window.psUpdateField('${task.id}', 'name', this.value)" ${disabledAttr} style="flex: 1; ${task._isDelayed ? 'color: #e55039; font-weight: bold;' : (task._isWarning ? 'color: #fa8231; font-weight: bold;' : '')}">
                     <i class="fa-solid fa-note-sticky" onclick="event.stopPropagation(); psSelectedId='${task.id}'; window.openMemoModal(${JSON.stringify(task).replace(/"/g, '&quot;')}, event.clientX, event.clientY);" style="margin-left:5px; cursor:pointer; font-size:13px; color: ${task.memo ? '#f59e0b' : '#ccc'};" title="메모 열기"></i>
                 </div>
                 <div class="ps-col-2">
