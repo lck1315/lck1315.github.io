@@ -7051,10 +7051,10 @@ function openMemberProjectsModal() {
 
 function renderMemberProjectsRightPane(member) {
     if (member === 'all') {
-        mpRightTitle.innerText = \`전체 프로젝트 현황\`;
+        mpRightTitle.innerText = `전체 프로젝트 현황`;
         mpRightTitle.style.color = '#f1c40f';
     } else {
-        mpRightTitle.innerText = \`\${member}님의 담당 프로젝트\`;
+        mpRightTitle.innerText = `${member}님의 담당 프로젝트`;
         mpRightTitle.style.color = '#00cec9';
     }
 
@@ -7108,58 +7108,58 @@ function renderMemberProjectsRightPane(member) {
 
             const progress = displayTotal === 0 ? 0 : Math.round((displayCompleted / displayTotal) * 100);
             
-            let statusBadge = \`<span style="background: rgba(39, 174, 96, 0.2); color: #27ae60; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">진행 중</span>\`;
+            let statusBadge = `<span style="background: rgba(39, 174, 96, 0.2); color: #27ae60; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">진행 중</span>`;
             if (proj.status === '완료') {
-                statusBadge = \`<span style="background: rgba(108, 92, 231, 0.2); color: #6c5ce7; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">완료</span>\`;
+                statusBadge = `<span style="background: rgba(108, 92, 231, 0.2); color: #6c5ce7; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">완료</span>`;
             } else if (proj._isDelayed) {
-                statusBadge = \`<span style="background: rgba(229, 80, 57, 0.2); color: #e55039; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">지연</span>\`;
+                statusBadge = `<span style="background: rgba(229, 80, 57, 0.2); color: #e55039; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">지연</span>`;
             }
 
             let tasksHtml = '';
             if (member !== 'all' && projTasks.length > 0) {
-                tasksHtml = \`<div style="margin-top: 15px; background: rgba(0,0,0,0.1); border-radius: 8px; padding: 10px;">
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">담당 세부 업무 (\${total}건)</div>\`;
+                tasksHtml = `<div style="margin-top: 15px; background: rgba(0,0,0,0.1); border-radius: 8px; padding: 10px;">
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">담당 세부 업무 (${total}건)</div>`;
                 projTasks.forEach(pt => {
                     let icon = '<i class="fa-solid fa-circle" style="color: #27ae60; font-size: 0.6rem;"></i>';
                     if (pt.status === '완료') icon = '<i class="fa-solid fa-circle-check" style="color: #6c5ce7; font-size: 0.8rem;"></i>';
                     else if (pt._isDelayed) icon = '<i class="fa-solid fa-circle-exclamation" style="color: #e55039; font-size: 0.8rem;"></i>';
                     else if (pt._isWarning) icon = '<i class="fa-solid fa-circle-exclamation" style="color: #fa8231; font-size: 0.8rem;"></i>';
                     
-                    tasksHtml += \`<div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; padding: 4px 0; border-bottom: 1px dashed rgba(255,255,255,0.1);">
+                    tasksHtml += `<div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; padding: 4px 0; border-bottom: 1px dashed rgba(255,255,255,0.1);">
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            \${icon} <span>\${pt.name}</span>
+                            ${icon} <span>${pt.name}</span>
                         </div>
-                        <div style="font-size: 0.8rem; color: var(--text-muted);">\${pt.endDate || '-'}</div>
-                    </div>\`;
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">${pt.endDate || '-'}</div>
+                    </div>`;
                 });
-                tasksHtml += \`</div>\`;
+                tasksHtml += `</div>`;
             } else if (member === 'all') {
-                tasksHtml = \`<div style="margin-top: 15px; display: flex; align-items: center; gap: 10px;">
+                tasksHtml = `<div style="margin-top: 15px; display: flex; align-items: center; gap: 10px;">
                     <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
-                        <div style="height: 100%; width: \${progress}%; background: #00cec9;"></div>
+                        <div style="height: 100%; width: ${progress}%; background: #00cec9;"></div>
                     </div>
-                    <span style="font-size: 0.85rem; color: var(--text-muted);">\${progress}% (\${displayCompleted}/\${displayTotal})</span>
-                </div>\`;
+                    <span style="font-size: 0.85rem; color: var(--text-muted);">${progress}% (${displayCompleted}/${displayTotal})</span>
+                </div>`;
             }
 
-            htmlRight += \`<div class="glass-card" style="padding: 15px; border-left: 4px solid \${proj._isDelayed ? '#e55039' : (proj.status==='완료' ? '#6c5ce7' : '#00cec9')};">
+            htmlRight += `<div class="glass-card" style="padding: 15px; border-left: 4px solid ${proj._isDelayed ? '#e55039' : (proj.status==='완료' ? '#6c5ce7' : '#00cec9')};">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                     <div>
-                        <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 5px;">\${proj.name}</div>
-                        <div style="font-size: 0.85rem; color: var(--text-muted);"><i class="fa-regular fa-calendar"></i> \${proj.startDate || '-'} ~ \${proj.endDate || '-'}</div>
+                        <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 5px;">${proj.name}</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);"><i class="fa-regular fa-calendar"></i> ${proj.startDate || '-'} ~ ${proj.endDate || '-'}</div>
                     </div>
-                    <div>\${statusBadge}</div>
+                    <div>${statusBadge}</div>
                 </div>
-                \${tasksHtml}
-            </div>\`;
+                ${tasksHtml}
+            </div>`;
         }
     });
 
     if (htmlRight === '') {
-        htmlRight = \`<div style="text-align: center; color: var(--text-muted); margin-top: 50px;">
+        htmlRight = `<div style="text-align: center; color: var(--text-muted); margin-top: 50px;">
             <i class="fa-solid fa-folder-open" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5;"></i>
             <div>담당 중인 프로젝트가 없습니다.</div>
-        </div>\`;
+        </div>`;
     }
 
     mpProjectList.innerHTML = htmlRight;
