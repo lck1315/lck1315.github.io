@@ -2346,7 +2346,12 @@ document.getElementById('ps-btn-add-task')?.addEventListener('click', () => {
         order: Date.now(),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }).then((docRef) => {
-        if (typeof window.logProjectAction === 'function') window.logProjectAction('CREATE', docRef.id, '새 태스크', `부모 프로젝트(${parentTask.name})에 새 태스크 생성`);
+        if (typeof window.logProjectAction === 'function') {
+            let parentName = '알 수 없는 프로젝트';
+            const parentProj = psData.find(p => p.id === parentId);
+            if (parentProj) parentName = parentProj.name;
+            window.logProjectAction('CREATE', docRef.id, `[${parentName}] 새 태스크`, `새 태스크 생성`);
+        }
     }).catch(err => alert("추가 실패: " + err.message));
 
     // 부모 태스크가 닫혀있다면 열어주기
@@ -2362,12 +2367,14 @@ document.getElementById('ps-btn-delete')?.addEventListener('click', () => {
         const task = psData.find(p => p.id === psSelectedId);
         if (task && typeof window.logProjectAction === 'function') {
             let delType = '프로젝트 삭제';
+            let logProjectName = task.name;
             if (task.parentId) {
                 const parentProj = psData.find(p => p.id === task.parentId);
                 const parentName = parentProj ? parentProj.name : '알 수 없는 프로젝트';
-                delType = `부모 프로젝트(${parentName})의 태스크 삭제`;
+                logProjectName = `[${parentName}] ${task.name}`;
+                delType = `태스크 삭제`;
             }
-            window.logProjectAction('DELETE', task.id, task.name, delType);
+            window.logProjectAction('DELETE', task.id, logProjectName, delType);
         }
         db.collection('workProjects').doc(psSelectedId).delete().catch(err => alert("삭제 실패: " + err.message));
         psSelectedId = null;
@@ -2407,7 +2414,13 @@ document.getElementById('ps-btn-paste')?.addEventListener('click', () => {
 
     db.collection('workProjects').add(newTask).then((docRef) => {
         if (typeof window.logProjectAction === 'function') {
-            window.logProjectAction('CREATE', docRef.id, newTask.name, '항목 복사본 생성');
+            let logProjectName = newTask.name;
+            if (parentId) {
+                const parentProj = psData.find(p => p.id === parentId);
+                const parentName = parentProj ? parentProj.name : '알 수 없는 프로젝트';
+                logProjectName = `[${parentName}] ${newTask.name}`;
+            }
+            window.logProjectAction('CREATE', docRef.id, logProjectName, '항목 복사본 생성');
         }
     }).catch(err => alert("붙여넣기 실패: " + err.message));
 });
@@ -2462,15 +2475,16 @@ window.psUpdateField = (id, field, value) => {
             displayValue = value.substring(0, 30) + '...';
         }
         
+        let logProjectName = proj.name;
         let details = `${fieldStr} 변경: ${displayValue}`;
         if (isTask) {
             const parentProj = psData.find(p => p.id === proj.parentId);
             const parentName = parentProj ? parentProj.name : '알 수 없는 프로젝트';
-            details = `[${parentName}의 하위 태스크] ` + details;
+            logProjectName = `[${parentName}] ${proj.name}`;
         }
 
         if (typeof window.logProjectAction === 'function') {
-            window.logProjectAction('UPDATE', id, proj.name, details);
+            window.logProjectAction('UPDATE', id, logProjectName, details);
         }
     }
     db.collection('workProjects').doc(id).update({ [field]: value }).catch(e => console.error(e));
@@ -2490,13 +2504,14 @@ window.psUpdateFields = (id, fieldsObj) => {
         }).join(', ');
         
         if (changes) {
+            let logProjectName = proj.name;
             let detailsStr = `항목 변경 (${changes})`;
             if (isTask) {
                 const parentProj = psData.find(p => p.id === proj.parentId);
                 const parentName = parentProj ? parentProj.name : '알 수 없는 프로젝트';
-                detailsStr = `[${parentName}의 하위 태스크] ` + detailsStr;
+                logProjectName = `[${parentName}] ${proj.name}`;
             }
-            window.logProjectAction('UPDATE', id, proj.name, detailsStr);
+            window.logProjectAction('UPDATE', id, logProjectName, detailsStr);
         }
     }
     db.collection('workProjects').doc(id).update(fieldsObj).catch(e => console.error(e));
@@ -7263,13 +7278,15 @@ window.logProjectAction = function(action, projectId, projectName, details) {
     try {
         const uid = currentUserDoc ? currentUserDoc.uid : currentUser.uid;
         const uName = (currentUserDoc ? currentUserDoc.nickname : null) || (currentUser ? currentUser.displayName : null) || '알 수 없음';
+        const displayId = currentUser && currentUser.email ? currentUser.email.split('@')[0] : uid.substring(0, 6);
+        const finalName = `${uName} (${displayId})`;
         db.collection('workProjectLogs').add({
             action: action,
             projectId: projectId,
             projectName: projectName || '이름 없음',
             details: details || '',
             userUid: uid,
-            userName: uName,
+            userName: finalName,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
     } catch(e) {
@@ -7362,22 +7379,25 @@ async function loadProjectLogs() {
             const actualUserName = globalUsersMap[log.userUid] || log.userName || '알 수 없음';
             const actionText = log.action === 'UPDATE' ? '수정' : (log.action === 'CREATE' ? '생성' : '삭제');
 
+            let formattedProjectName = log.projectName || '이름 없음';
+            // [부모 프로젝트] 뱃지 변환 (projectName에서)
+            formattedProjectName = formattedProjectName.replace(/^\[(.*?)\]\s*/, `<span style="font-size: 0.8rem; background: rgba(128,128,128,0.15); border: 1px solid var(--border-color); padding: 3px 6px; border-radius: 4px; margin-right: 8px; color: var(--text-muted); vertical-align: middle;"><i class="fa-solid fa-code-branch"></i> $1</span> `);
+
             let formattedDetails = log.details || '';
-            
-            // 1. [부모 프로젝트] 뱃지 변환
+            // (이전 데이터 호환용) details에 남아있는 [부모 프로젝트] 뱃지 처리
             formattedDetails = formattedDetails.replace(/^\[(.*?)\]\s*/, `<span style="font-size: 0.8rem; background: rgba(128,128,128,0.15); border: 1px solid var(--border-color); padding: 3px 6px; border-radius: 4px; margin-right: 8px; color: var(--text-muted);"><i class="fa-solid fa-code-branch"></i> $1</span> `);
             
-            // 2. '변경: OOO' 부분 하이라이트
+            // '변경: OOO' 부분 하이라이트
             formattedDetails = formattedDetails.replace(/변경:\s*(.*)/, `변경: <strong style="color: #00cec9; background: rgba(0,206,201,0.15); padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px;">$1</strong>`);
             
-            // 3. '변경 (OOO)' 부분 하이라이트 (여러 항목 동시 수정 등)
+            // '변경 (OOO)' 부분 하이라이트
             formattedDetails = formattedDetails.replace(/변경 \((.*?)\)/, `변경 (<strong style="color: #00cec9; background: rgba(0,206,201,0.15); padding: 2px 6px; border-radius: 4px;">$1</strong>)`);
 
             html += `<div style="background: rgba(0,0,0,0.1); border-left: 4px solid ${actionColor}; border-radius: 6px; padding: 12px 15px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; transition: all 0.2s;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <span style="font-weight: bold; color: ${actionColor}; font-size: 0.85rem; border: 1px solid ${actionColor}40; padding: 3px 8px; border-radius: 12px;">${actionIcon} ${actionText}</span>
-                        <span style="font-weight: bold; font-size: 1.05rem;">${log.projectName}</span>
+                        <span style="font-weight: bold; font-size: 1.05rem; display: flex; align-items: center;">${formattedProjectName}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 15px; font-size: 0.85rem; color: var(--text-muted);">
                         <span style="color: #f39c12; font-weight: bold;"><i class="fa-solid fa-user" style="margin-right:4px;"></i>${actualUserName}</span>
