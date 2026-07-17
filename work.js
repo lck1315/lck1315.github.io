@@ -2446,8 +2446,9 @@ window.psUpdateField = (id, field, value) => {
     if (!currentUser) return alert('로그인이 필요합니다.');
     const proj = psData.find(p => p.id === id);
     if (proj && field !== 'expanded' && field !== 'order') {
+        const isTask = !!proj.parentId;
         let fieldStr = field;
-        if (field === 'name') fieldStr = '프로젝트명';
+        if (field === 'name') fieldStr = isTask ? '태스크명' : '프로젝트명';
         else if (field === 'assignee') fieldStr = '담당자';
         else if (field === 'status') fieldStr = '상태';
         else if (field === 'startDate') fieldStr = '시작일';
@@ -2461,7 +2462,13 @@ window.psUpdateField = (id, field, value) => {
             displayValue = value.substring(0, 30) + '...';
         }
         
-        const details = `${fieldStr} 변경: ${displayValue}`; 
+        let details = `${fieldStr} 변경: ${displayValue}`;
+        if (isTask) {
+            const parentProj = psData.find(p => p.id === proj.parentId);
+            const parentName = parentProj ? parentProj.name : '알 수 없는 프로젝트';
+            details = `[${parentName}의 하위 태스크] ` + details;
+        }
+
         if (typeof window.logProjectAction === 'function') {
             window.logProjectAction('UPDATE', id, proj.name, details);
         }
@@ -2473,7 +2480,8 @@ window.psUpdateFields = (id, fieldsObj) => {
     if (!currentUser) return alert('로그인이 필요합니다.');
     const proj = psData.find(p => p.id === id);
     if (proj && typeof window.logProjectAction === 'function') {
-        const keysMap = { name: '프로젝트명', assignee: '담당자', status: '상태', startDate: '시작일', endDate: '종료일', color: '색상', memo: '메모' };
+        const isTask = !!proj.parentId;
+        const keysMap = { name: isTask ? '태스크명' : '프로젝트명', assignee: '담당자', status: '상태', startDate: '시작일', endDate: '종료일', color: '색상', memo: '메모' };
         
         const changes = Object.keys(fieldsObj).filter(k => k !== 'expanded' && k !== 'order').map(k => {
             let val = fieldsObj[k];
@@ -2482,7 +2490,13 @@ window.psUpdateFields = (id, fieldsObj) => {
         }).join(', ');
         
         if (changes) {
-            window.logProjectAction('UPDATE', id, proj.name, `항목 변경 (${changes})`);
+            let detailsStr = `항목 변경 (${changes})`;
+            if (isTask) {
+                const parentProj = psData.find(p => p.id === proj.parentId);
+                const parentName = parentProj ? parentProj.name : '알 수 없는 프로젝트';
+                detailsStr = `[${parentName}의 하위 태스크] ` + detailsStr;
+            }
+            window.logProjectAction('UPDATE', id, proj.name, detailsStr);
         }
     }
     db.collection('workProjects').doc(id).update(fieldsObj).catch(e => console.error(e));
