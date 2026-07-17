@@ -7340,14 +7340,14 @@ async function loadProjectLogs() {
             const actualUserName = globalUsersMap[log.userUid] || log.userName || '알 수 없음';
             const actionText = log.action === 'UPDATE' ? '수정' : (log.action === 'CREATE' ? '생성' : '삭제');
 
-            html += `<div style="display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.15); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 15px; font-size: 0.85rem;">
+            html += `<div style="display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.15); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 15px; font-size: 0.9rem;">
                 <div style="width: 70px; font-weight: bold; color: ${actionColor}; flex-shrink: 0;">${actionIcon} ${actionText}</div>
-                <div style="flex: 1; display: flex; align-items: center; gap: 12px; overflow: hidden; white-space: nowrap;">
-                    <span style="font-weight: bold; font-size: 0.9rem; min-width: 150px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; display: inline-block;">${log.projectName}</span>
+                <div style="flex: 1; display: flex; align-items: center; gap: 15px; overflow: hidden; white-space: nowrap;">
+                    <span style="font-weight: bold; font-size: 0.95rem; min-width: 150px; max-width: 350px; overflow: hidden; text-overflow: ellipsis; display: inline-block;">${log.projectName}</span>
                     <span style="color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; flex: 1;">${log.details}</span>
                 </div>
-                <div style="width: 100px; color: #f39c12; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;"><i class="fa-solid fa-user" style="margin-right:4px;"></i>${actualUserName}</div>
-                <div style="width: 120px; color: var(--text-muted); text-align: right; white-space: nowrap; flex-shrink: 0;">${dateStr}</div>
+                <div style="width: 120px; color: #f39c12; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;"><i class="fa-solid fa-user" style="margin-right:4px;"></i>${actualUserName}</div>
+                <div style="width: 140px; color: var(--text-muted); text-align: right; white-space: nowrap; flex-shrink: 0;">${dateStr}</div>
             </div>`;
         });
         
