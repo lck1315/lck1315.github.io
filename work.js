@@ -7362,14 +7362,31 @@ async function loadProjectLogs() {
             const actualUserName = globalUsersMap[log.userUid] || log.userName || '알 수 없음';
             const actionText = log.action === 'UPDATE' ? '수정' : (log.action === 'CREATE' ? '생성' : '삭제');
 
-            html += `<div style="display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.15); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 15px; font-size: 0.9rem;">
-                <div style="width: 70px; font-weight: bold; color: ${actionColor}; flex-shrink: 0;">${actionIcon} ${actionText}</div>
-                <div style="flex: 1; display: flex; align-items: center; gap: 15px; overflow: hidden; white-space: nowrap;">
-                    <span style="font-weight: bold; font-size: 0.95rem; min-width: 150px; max-width: 350px; overflow: hidden; text-overflow: ellipsis; display: inline-block;">${log.projectName}</span>
-                    <span style="color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; flex: 1;">${log.details}</span>
+            let formattedDetails = log.details || '';
+            
+            // 1. [부모 프로젝트] 뱃지 변환
+            formattedDetails = formattedDetails.replace(/^\[(.*?)\]\s*/, `<span style="font-size: 0.8rem; background: rgba(128,128,128,0.15); border: 1px solid var(--border-color); padding: 3px 6px; border-radius: 4px; margin-right: 8px; color: var(--text-muted);"><i class="fa-solid fa-code-branch"></i> $1</span> `);
+            
+            // 2. '변경: OOO' 부분 하이라이트
+            formattedDetails = formattedDetails.replace(/변경:\s*(.*)/, `변경: <strong style="color: #00cec9; background: rgba(0,206,201,0.15); padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px;">$1</strong>`);
+            
+            // 3. '변경 (OOO)' 부분 하이라이트 (여러 항목 동시 수정 등)
+            formattedDetails = formattedDetails.replace(/변경 \((.*?)\)/, `변경 (<strong style="color: #00cec9; background: rgba(0,206,201,0.15); padding: 2px 6px; border-radius: 4px;">$1</strong>)`);
+
+            html += `<div style="background: rgba(0,0,0,0.1); border-left: 4px solid ${actionColor}; border-radius: 6px; padding: 12px 15px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; transition: all 0.2s;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-weight: bold; color: ${actionColor}; font-size: 0.85rem; border: 1px solid ${actionColor}40; padding: 3px 8px; border-radius: 12px;">${actionIcon} ${actionText}</span>
+                        <span style="font-weight: bold; font-size: 1.05rem;">${log.projectName}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 15px; font-size: 0.85rem; color: var(--text-muted);">
+                        <span style="color: #f39c12; font-weight: bold;"><i class="fa-solid fa-user" style="margin-right:4px;"></i>${actualUserName}</span>
+                        <span><i class="fa-regular fa-clock" style="margin-right:4px;"></i>${dateStr}</span>
+                    </div>
                 </div>
-                <div style="width: 120px; color: #f39c12; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;"><i class="fa-solid fa-user" style="margin-right:4px;"></i>${actualUserName}</div>
-                <div style="width: 140px; color: var(--text-muted); text-align: right; white-space: nowrap; flex-shrink: 0;">${dateStr}</div>
+                <div style="font-size: 0.95rem; color: var(--text-color); margin-top: 2px; padding-left: 5px;">
+                    ${formattedDetails}
+                </div>
             </div>`;
         });
         
