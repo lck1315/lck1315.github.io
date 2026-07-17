@@ -4692,6 +4692,18 @@ let statsChart = null;
             <i class="fa-regular fa-calendar-check"></i> 마감 임박 및 지연 업무 ( ~ ${targetDateStr} 마감)
         </div>`;
         
+        const getDdayString = (dateStr) => {
+            if (!dateStr) return '';
+            const end = new Date(dateStr);
+            end.setHours(0,0,0,0);
+            const diffTime = end.getTime() - today.getTime();
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) return `<span style="color:#e67e22; font-weight:bold; margin-left:6px;">[D-Day]</span>`;
+            if (diffDays > 0) return `<span style="color:#2980b9; font-weight:bold; margin-left:6px;">[D-${diffDays}]</span>`;
+            return `<span style="color:#e74c3c; font-weight:bold; margin-left:6px;">[지연 D+${Math.abs(diffDays)}]</span>`;
+        };
+
         if (matchingProjects.length === 0) {
             resultsContainer.innerHTML = html + `<div style="text-align: center; color: var(--text-muted); padding: 40px;"><i class="fa-regular fa-face-smile" style="font-size: 2rem; margin-bottom: 10px;"></i><br>해당 기간 내에 마감인 업무가 없습니다!</div>`;
             return;
@@ -4708,7 +4720,7 @@ let statsChart = null;
                     <i class="fa-solid fa-folder-open" style="color:#f1c40f; margin-right: 6px;"></i>${p.name}
                 </div>
                 <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
-                    담당: ${p.assignee || '없음'} | 상태: ${p.status} | 마감일: <span style="${p.isMatched ? 'color:#e74c3c; font-weight:bold;' : ''}">${p.endDate || '없음'}</span>
+                    담당: ${p.assignee || '없음'} | 상태: ${p.status} | 마감일: <span style="${p.isMatched ? 'color:#e74c3c; font-weight:bold;' : ''}">${p.endDate || '없음'}</span> ${p.isMatched ? getDdayString(p.endDate) : ''}
                 </div>
             </div>`;
             html += `</div>`;
@@ -4717,14 +4729,13 @@ let statsChart = null;
             if (p.matchedTasks.length > 0) {
                 html += `<ul style="list-style: none; padding: 0; margin: 0; background: var(--bg-color);">`;
                 p.matchedTasks.forEach(t => {
-                    const isOverdueTask = t.endDate < todayStr;
                     html += `<li style="padding: 10px 15px; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
                         <div style="padding-left: 15px; border-left: 3px solid #0984e3;">
-                            <div style="font-weight: bold; color: var(--text-color);">${t.name} <span style="font-size: 0.75rem; color: #e74c3c; margin-left: 6px;">${isOverdueTask ? '(지연됨)' : ''}</span></div>
+                            <div style="font-weight: bold; color: var(--text-color);">${t.name}</div>
                             <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">담당: ${t.assignee || '없음'} | 상태: ${t.status}</div>
                         </div>
                         <div style="font-weight: bold; color: #e74c3c; font-size: 0.9rem;">
-                            마감일: ${t.endDate}
+                            마감일: ${t.endDate} ${getDdayString(t.endDate)}
                         </div>
                     </li>`;
                 });
