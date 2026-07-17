@@ -7397,20 +7397,14 @@ async function loadProjectLogs() {
             // '변경 (OOO)' 부분 하이라이트
             formattedDetails = formattedDetails.replace(/변경 \((.*?)\)/, `변경 (<strong style="color: #00cec9; background: rgba(0,206,201,0.15); padding: 2px 6px; border-radius: 4px;">$1</strong>)`);
 
-            html += `<div style="background: rgba(0,0,0,0.1); border-left: 4px solid ${actionColor}; border-radius: 6px; padding: 12px 15px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; transition: all 0.2s;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <span style="font-weight: bold; color: ${actionColor}; font-size: 0.85rem; border: 1px solid ${actionColor}40; padding: 3px 8px; border-radius: 12px;">${actionIcon} ${actionText}</span>
-                        <span style="font-weight: bold; font-size: 1.05rem; display: flex; align-items: center;">${formattedProjectName}</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 15px; font-size: 0.85rem; color: var(--text-muted);">
-                        <span style="color: #f39c12; font-weight: bold;"><i class="fa-solid fa-user" style="margin-right:4px;"></i>${actualUserName}</span>
-                        <span><i class="fa-regular fa-clock" style="margin-right:4px;"></i>${dateStr}</span>
-                    </div>
+            html += `<div style="background: rgba(0,0,0,0.15); border-left: 4px solid ${actionColor}; border-radius: 6px; padding: 10px 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 15px; font-size: 0.9rem; transition: all 0.2s;">
+                <div style="width: 75px; font-weight: bold; color: ${actionColor}; flex-shrink: 0; text-align: center; border: 1px solid ${actionColor}40; padding: 2px 0; border-radius: 12px; font-size: 0.85rem;">${actionIcon} ${actionText}</div>
+                <div style="flex: 1; display: flex; align-items: center; gap: 15px; overflow: hidden; white-space: nowrap;">
+                    <span style="font-weight: bold; font-size: 0.95rem; display: flex; align-items: center; flex-shrink: 0; min-width: 150px; max-width: 400px; overflow: hidden; text-overflow: ellipsis;">${formattedProjectName}</span>
+                    <span style="color: var(--text-color); overflow: hidden; text-overflow: ellipsis; flex: 1;">${formattedDetails}</span>
                 </div>
-                <div style="font-size: 0.95rem; color: var(--text-color); margin-top: 2px; padding-left: 5px;">
-                    ${formattedDetails}
-                </div>
+                <div style="width: 130px; color: #f39c12; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; font-weight: bold;"><i class="fa-solid fa-user" style="margin-right:4px;"></i>${actualUserName}</div>
+                <div style="width: 110px; color: var(--text-muted); text-align: right; white-space: nowrap; flex-shrink: 0;">${dateStr}</div>
             </div>`;
         });
         
