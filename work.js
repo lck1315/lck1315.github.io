@@ -7312,7 +7312,9 @@ async function loadProjectLogs() {
         let globalUsersMap = {};
         usersSnap.forEach(uDoc => {
             const data = uDoc.data();
-            globalUsersMap[uDoc.id] = data.nickname || data.name || '알 수 없음';
+            const name = data.nickname || data.name || '알 수 없음';
+            const emailId = data.email ? data.email.split('@')[0] : '';
+            globalUsersMap[uDoc.id] = emailId ? `${name} (${emailId})` : name;
         });
 
         // 2. 로그 정보 가져오기
