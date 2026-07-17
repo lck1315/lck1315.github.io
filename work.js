@@ -2361,7 +2361,12 @@ document.getElementById('ps-btn-delete')?.addEventListener('click', () => {
     if (confirm('선택한 항목을 삭제하시겠습니까? (하위 태스크가 있다면 함께 삭제되지 않을 수 있습니다)')) {
         const task = psData.find(p => p.id === psSelectedId);
         if (task && typeof window.logProjectAction === 'function') {
-            const delType = task.parentId ? '태스크 삭제' : '프로젝트 삭제';
+            let delType = '프로젝트 삭제';
+            if (task.parentId) {
+                const parentProj = psData.find(p => p.id === task.parentId);
+                const parentName = parentProj ? parentProj.name : '알 수 없는 프로젝트';
+                delType = `부모 프로젝트(${parentName})의 태스크 삭제`;
+            }
             window.logProjectAction('DELETE', task.id, task.name, delType);
         }
         db.collection('workProjects').doc(psSelectedId).delete().catch(err => alert("삭제 실패: " + err.message));
