@@ -4644,66 +4644,96 @@ let statsChart = null;
         const days = parseInt(daysInput.value, 10);
         if (isNaN(days)) return alert('숫자를 입력해주세요.');
         
-        // 기준일 계산 (오늘 - days)
-        const targetDate = new Date();
-        targetDate.setDate(targetDate.getDate() - days);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const targetDate = new Date(today);
+        targetDate.setDate(targetDate.getDate() + days);
         
-        const year = targetDate.getFullYear();
-        const month = String(targetDate.getMonth() + 1).padStart(2, '0');
-        const day = String(targetDate.getDate()).padStart(2, '0');
-        const targetDateString = `${year}-${month}-${day}`;
+        const formatDate = d => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const todayStr = formatDate(today);
+        const targetDateStr = formatDate(targetDate);
         
-        // 검색 필터링
-        const matchedItems = psData.filter(item => item.endDate === targetDateString);
+        // 프로젝트 맵 구성
+        const projectsMap = {};
+        psData.forEach(item => {
+            if (!item.parentId) {
+                projectsMap[item.id] = { ...item, matchedTasks: [], isMatched: false };
+            }
+        });
+
+        // 조건: 오늘 ~ N일 이내 마감 (완료된 항목 제외)
+        psData.forEach(item => {
+            if (item.status === '완료') return;
+            if (!item.endDate) return;
+
+            const isMatch = item.endDate >= todayStr && item.endDate <= targetDateStr;
+            const isOverdue = item.endDate < todayStr; 
+            
+            // 지연된 업무도 마감일 임박 업무 조회에서 중요하므로 포함 (isMatch || isOverdue)
+            if (isMatch || isOverdue) {
+                if (!item.parentId) { // 프로젝트
+                    if (projectsMap[item.id]) projectsMap[item.id].isMatched = true;
+                } else { // 태스크
+                    if (projectsMap[item.parentId]) projectsMap[item.parentId].matchedTasks.push(item);
+                }
+            }
+        });
+
+        const matchingProjects = Object.values(projectsMap).filter(p => p.isMatched || p.matchedTasks.length > 0);
         
-        if (matchedItems.length === 0) {
-            resultsContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 40px;"><i class="fa-regular fa-face-frown" style="font-size: 2rem; margin-bottom: 10px;"></i><br>${targetDateString} 마감인 항목이 없습니다.</div>`;
+        let html = `<div style="margin-bottom: 15px; font-weight: bold; color: #0984e3; font-size: 1.1rem;">
+            <i class="fa-regular fa-calendar-check"></i> 마감 임박 및 지연 업무 ( ~ ${targetDateStr} 마감)
+        </div>`;
+        
+        if (matchingProjects.length === 0) {
+            resultsContainer.innerHTML = html + `<div style="text-align: center; color: var(--text-muted); padding: 40px;"><i class="fa-regular fa-face-smile" style="font-size: 2rem; margin-bottom: 10px;"></i><br>해당 기간 내에 마감인 업무가 없습니다!</div>`;
             return;
         }
         
-        const projects = matchedItems.filter(item => !item.parentId);
-        const tasks = matchedItems.filter(item => item.parentId);
-        
-        let html = `<div style="margin-bottom: 15px; font-weight: bold; color: #0984e3; font-size: 1.1rem;"><i class="fa-regular fa-calendar-check"></i> 검색된 마감일: ${targetDateString}</div>`;
-        
-        html += `<h4 style="margin-bottom: 10px; color: var(--text-color);"><i class="fa-solid fa-folder-open" style="color:#f1c40f;"></i> 프로젝트 (${projects.length}건)</h4>`;
-        if (projects.length > 0) {
-            html += `<ul style="list-style: none; padding: 0; margin-bottom: 25px;">`;
-            projects.forEach(p => {
-                html += `<li style="padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.02); margin-bottom: 8px;">
-                    <div style="font-weight: bold; font-size: 1.05rem;">${p.name}</div>
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;">
-                        <span style="display:inline-block; margin-right: 15px;"><i class="fa-solid fa-user"></i> 담당자: ${p.assignee || '없음'}</span>
-                        <span style="display:inline-block;"><i class="fa-solid fa-circle-info"></i> 상태: ${p.status}</span>
-                    </div>
-                </li>`;
-            });
-            html += `</ul>`;
-        } else {
-            html += `<div style="color: var(--text-muted); margin-bottom: 25px; font-size: 0.9rem; padding-left: 10px;">해당 마감일의 프로젝트가 없습니다.</div>`;
-        }
-        
-        html += `<h4 style="margin-bottom: 10px; color: var(--text-color);"><i class="fa-solid fa-list-check" style="color:#27ae60;"></i> 태스크 (${tasks.length}건)</h4>`;
-        if (tasks.length > 0) {
-            html += `<ul style="list-style: none; padding: 0;">`;
-            tasks.forEach(t => {
-                const parent = psData.find(p => p.id === t.parentId);
-                const parentName = parent ? parent.name : '알 수 없는 프로젝트';
-                html += `<li style="padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.02); margin-bottom: 8px;">
-                    <div style="font-weight: bold; font-size: 1.05rem;">
-                        <span style="font-size: 0.8rem; background: rgba(128,128,128,0.15); padding: 3px 6px; border-radius: 4px; margin-right: 8px; color: var(--text-muted); vertical-align: middle;"><i class="fa-solid fa-code-branch"></i> ${parentName}</span>
-                        ${t.name}
-                    </div>
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;">
-                        <span style="display:inline-block; margin-right: 15px;"><i class="fa-solid fa-user"></i> 담당자: ${t.assignee || '없음'}</span>
-                        <span style="display:inline-block;"><i class="fa-solid fa-circle-info"></i> 상태: ${t.status}</span>
-                    </div>
-                </li>`;
-            });
-            html += `</ul>`;
-        } else {
-            html += `<div style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem; padding-left: 10px;">해당 마감일의 태스크가 없습니다.</div>`;
-        }
+        html += `<div style="display: flex; flex-direction: column; gap: 15px;">`;
+        matchingProjects.forEach(p => {
+            html += `<div style="border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">`;
+            
+            // 프로젝트 헤더
+            html += `<div style="padding: 12px 15px; background: rgba(0,0,0,0.03); border-bottom: ${p.matchedTasks.length > 0 ? '1px solid var(--border-color)' : 'none'}; display: flex; justify-content: space-between; align-items: center;">`;
+            html += `<div>
+                <div style="font-weight: bold; font-size: 1.1rem; color: ${p.isMatched ? '#e74c3c' : 'var(--text-color)'};">
+                    <i class="fa-solid fa-folder-open" style="color:#f1c40f; margin-right: 6px;"></i>${p.name}
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
+                    담당: ${p.assignee || '없음'} | 상태: ${p.status} | 마감일: <span style="${p.isMatched ? 'color:#e74c3c; font-weight:bold;' : ''}">${p.endDate || '없음'}</span>
+                </div>
+            </div>`;
+            html += `</div>`;
+            
+            // 포함된 태스크 목록
+            if (p.matchedTasks.length > 0) {
+                html += `<ul style="list-style: none; padding: 0; margin: 0; background: var(--bg-color);">`;
+                p.matchedTasks.forEach(t => {
+                    const isOverdueTask = t.endDate < todayStr;
+                    html += `<li style="padding: 10px 15px; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
+                        <div style="padding-left: 15px; border-left: 3px solid #0984e3;">
+                            <div style="font-weight: bold; color: var(--text-color);">${t.name} <span style="font-size: 0.75rem; color: #e74c3c; margin-left: 6px;">${isOverdueTask ? '(지연됨)' : ''}</span></div>
+                            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">담당: ${t.assignee || '없음'} | 상태: ${t.status}</div>
+                        </div>
+                        <div style="font-weight: bold; color: #e74c3c; font-size: 0.9rem;">
+                            마감일: ${t.endDate}
+                        </div>
+                    </li>`;
+                });
+                html += `</ul>`;
+            }
+            
+            html += `</div>`;
+        });
+        html += `</div>`;
         
         resultsContainer.innerHTML = html;
     });
