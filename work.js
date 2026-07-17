@@ -4384,6 +4384,30 @@ let statsChart = null;
         renderWorkloadChart();
     });
 
+    document.getElementById('workload-deselect-all-btn')?.addEventListener('click', () => {
+        if (!statsChart) return;
+        statsChart.data.datasets.forEach((ds, i) => {
+            if (typeof statsChart.hide === 'function') {
+                statsChart.hide(i);
+            } else {
+                ds.hidden = true;
+            }
+        });
+        if (typeof statsChart.hide !== 'function') statsChart.update();
+    });
+
+    document.getElementById('workload-select-all-btn')?.addEventListener('click', () => {
+        if (!statsChart) return;
+        statsChart.data.datasets.forEach((ds, i) => {
+            if (typeof statsChart.show === 'function') {
+                statsChart.show(i);
+            } else {
+                ds.hidden = false;
+            }
+        });
+        if (typeof statsChart.show !== 'function') statsChart.update();
+    });
+
     function populateAssigneeSelect() {
         if (!assigneeSelect) return;
         const allAssignees = new Set();
