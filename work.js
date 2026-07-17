@@ -2350,7 +2350,7 @@ document.getElementById('ps-btn-add-task')?.addEventListener('click', () => {
             let parentName = '알 수 없는 프로젝트';
             const parentProj = psData.find(p => p.id === parentId);
             if (parentProj) parentName = parentProj.name;
-            window.logProjectAction('CREATE', docRef.id, `[${parentName}] 새 태스크`, `새 태스크 생성`);
+            window.logProjectAction('CREATE', docRef.id, `${parentName} > 새 태스크`, `새 태스크 생성`);
         }
     }).catch(err => alert("추가 실패: " + err.message));
 
@@ -2371,7 +2371,7 @@ document.getElementById('ps-btn-delete')?.addEventListener('click', () => {
             if (task.parentId) {
                 const parentProj = psData.find(p => p.id === task.parentId);
                 const parentName = parentProj ? parentProj.name : '알 수 없는 프로젝트';
-                logProjectName = `[${parentName}] ${task.name}`;
+                logProjectName = `${parentName} > ${task.name}`;
                 delType = `태스크 삭제`;
             }
             window.logProjectAction('DELETE', task.id, logProjectName, delType);
@@ -2418,7 +2418,7 @@ document.getElementById('ps-btn-paste')?.addEventListener('click', () => {
             if (parentId) {
                 const parentProj = psData.find(p => p.id === parentId);
                 const parentName = parentProj ? parentProj.name : '알 수 없는 프로젝트';
-                logProjectName = `[${parentName}] ${newTask.name}`;
+                logProjectName = `${parentName} > ${newTask.name}`;
             }
             window.logProjectAction('CREATE', docRef.id, logProjectName, '항목 복사본 생성');
         }
@@ -2480,7 +2480,7 @@ window.psUpdateField = (id, field, value) => {
         if (isTask) {
             const parentProj = psData.find(p => p.id === proj.parentId);
             const parentName = parentProj ? parentProj.name : '알 수 없는 프로젝트';
-            logProjectName = `[${parentName}] ${proj.name}`;
+            logProjectName = `${parentName} > ${proj.name}`;
         }
 
         if (typeof window.logProjectAction === 'function') {
@@ -2509,7 +2509,7 @@ window.psUpdateFields = (id, fieldsObj) => {
             if (isTask) {
                 const parentProj = psData.find(p => p.id === proj.parentId);
                 const parentName = parentProj ? parentProj.name : '알 수 없는 프로젝트';
-                logProjectName = `[${parentName}] ${proj.name}`;
+                logProjectName = `${parentName} > ${proj.name}`;
             }
             window.logProjectAction('UPDATE', id, logProjectName, detailsStr);
         }
@@ -7380,10 +7380,14 @@ async function loadProjectLogs() {
             const actionText = log.action === 'UPDATE' ? '수정' : (log.action === 'CREATE' ? '생성' : '삭제');
 
             let formattedProjectName = log.projectName || '이름 없음';
-            // [부모 프로젝트] 뱃지 변환 (projectName에서)
+            // ' > ' 패턴을 좀 더 예쁘게 (아이콘 추가 등) 표시
+            formattedProjectName = formattedProjectName.replace(/ > /g, ` <span style="color: var(--text-muted); font-size: 0.8rem; margin: 0 4px;"><i class="fa-solid fa-chevron-right"></i></span> `);
+            // 과거 [부모 프로젝트] 뱃지 변환 호환
             formattedProjectName = formattedProjectName.replace(/^\[(.*?)\]\s*/, `<span style="font-size: 0.8rem; background: rgba(128,128,128,0.15); border: 1px solid var(--border-color); padding: 3px 6px; border-radius: 4px; margin-right: 8px; color: var(--text-muted); vertical-align: middle;"><i class="fa-solid fa-code-branch"></i> $1</span> `);
 
             let formattedDetails = log.details || '';
+            // 불필요한 '부모 프로젝트(OOO)에 ' 등 과거 문구 청소
+            formattedDetails = formattedDetails.replace(/^부모 프로젝트\(.*?\)에\s*/, '');
             // (이전 데이터 호환용) details에 남아있는 [부모 프로젝트] 뱃지 처리
             formattedDetails = formattedDetails.replace(/^\[(.*?)\]\s*/, `<span style="font-size: 0.8rem; background: rgba(128,128,128,0.15); border: 1px solid var(--border-color); padding: 3px 6px; border-radius: 4px; margin-right: 8px; color: var(--text-muted);"><i class="fa-solid fa-code-branch"></i> $1</span> `);
             
