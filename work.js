@@ -2322,7 +2322,8 @@ document.getElementById('ps-btn-add-project')?.addEventListener('click', () => {
         order: Date.now(),
         expanded: true,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(() => {
+    }).then((docRef) => {
+        if (typeof window.logProjectAction === 'function') window.logProjectAction('CREATE', docRef.id, '새 프로젝트', '새 프로젝트 생성');
         alert('새 프로젝트가 추가되었습니다. 목록 맨 아래를 확인해주세요.');
     }).catch(err => alert("추가 실패: " + err.message));
 });
@@ -2344,6 +2345,8 @@ document.getElementById('ps-btn-add-task')?.addEventListener('click', () => {
         color: '#e0f7fa',
         order: Date.now(),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).then((docRef) => {
+        if (typeof window.logProjectAction === 'function') window.logProjectAction('CREATE', docRef.id, '새 태스크', `부모 프로젝트(${parentTask.name})에 새 태스크 생성`);
     }).catch(err => alert("추가 실패: " + err.message));
 
     // 부모 태스크가 닫혀있다면 열어주기
@@ -2356,6 +2359,10 @@ document.getElementById('ps-btn-delete')?.addEventListener('click', () => {
     if (!currentUser) return alert('로그인이 필요합니다.');
     if (!psSelectedId) return alert('삭제할 항목을 선택하세요.');
     if (confirm('선택한 항목을 삭제하시겠습니까? (하위 태스크가 있다면 함께 삭제되지 않을 수 있습니다)')) {
+        const task = psData.find(p => p.id === psSelectedId);
+        if (task && typeof window.logProjectAction === 'function') {
+            window.logProjectAction('DELETE', task.id, task.name, '항목 삭제');
+        }
         db.collection('workProjects').doc(psSelectedId).delete().catch(err => alert("삭제 실패: " + err.message));
         psSelectedId = null;
     }
@@ -2392,7 +2399,11 @@ document.getElementById('ps-btn-paste')?.addEventListener('click', () => {
     newTask.order = Date.now();
     newTask.createdAt = firebase.firestore.FieldValue.serverTimestamp();
 
-    db.collection('workProjects').add(newTask).catch(err => alert("붙여넣기 실패: " + err.message));
+    db.collection('workProjects').add(newTask).then((docRef) => {
+        if (typeof window.logProjectAction === 'function') {
+            window.logProjectAction('CREATE', docRef.id, newTask.name, '항목 복사본 생성');
+        }
+    }).catch(err => alert("붙여넣기 실패: " + err.message));
 });
 
 document.getElementById('ps-btn-color')?.addEventListener('click', () => {
@@ -2427,11 +2438,34 @@ document.getElementById('ps-btn-color')?.addEventListener('click', () => {
 
 window.psUpdateField = (id, field, value) => {
     if (!currentUser) return alert('로그인이 필요합니다.');
+    const proj = psData.find(p => p.id === id);
+    if (proj && field !== 'expanded' && field !== 'order') {
+        let fieldStr = field;
+        if (field === 'name') fieldStr = '프로젝트명';
+        else if (field === 'assignee') fieldStr = '담당자';
+        else if (field === 'status') fieldStr = '상태';
+        else if (field === 'startDate') fieldStr = '시작일';
+        else if (field === 'endDate') fieldStr = '종료일';
+        else if (field === 'color') fieldStr = '색상';
+        else if (field === 'memo') fieldStr = '메모';
+        
+        const details = `${fieldStr} 변경`; // 값 변경 내역까지 넣으려면 value를 포함할 수 있음
+        if (typeof window.logProjectAction === 'function') {
+            window.logProjectAction('UPDATE', id, proj.name, details);
+        }
+    }
     db.collection('workProjects').doc(id).update({ [field]: value }).catch(e => console.error(e));
 };
 
 window.psUpdateFields = (id, fieldsObj) => {
     if (!currentUser) return alert('로그인이 필요합니다.');
+    const proj = psData.find(p => p.id === id);
+    if (proj && typeof window.logProjectAction === 'function') {
+        const keys = Object.keys(fieldsObj).filter(k => k !== 'expanded' && k !== 'order').join(', ');
+        if (keys) {
+            window.logProjectAction('UPDATE', id, proj.name, `항목 복수 변경 (${keys})`);
+        }
+    }
     db.collection('workProjects').doc(id).update(fieldsObj).catch(e => console.error(e));
 };
 
@@ -7188,6 +7222,113 @@ function renderMemberProjectsRightPane(member) {
     }
 
     mpProjectList.innerHTML = htmlRight;
+}
+
+// --- 프로젝트 활동 로그 ---
+window.logProjectAction = function(action, projectId, projectName, details) {
+    if (!currentUserDoc) return;
+    try {
+        db.collection('workProjectLogs').add({
+            action: action,
+            projectId: projectId,
+            projectName: projectName || '이름 없음',
+            details: details || '',
+            userUid: currentUserDoc.uid || currentUser.uid,
+            userName: currentUserDoc.name || '알 수 없음',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+    } catch(e) {
+        console.error('로그 저장 실패:', e);
+    }
+};
+
+const btnProjectLogs = document.getElementById('ps-btn-project-logs');
+const modalProjectLogs = document.getElementById('project-logs-modal');
+const closeBtnProjectLogs = document.getElementById('project-logs-close-btn');
+const plUserFilter = document.getElementById('pl-user-filter');
+const plLogList = document.getElementById('pl-log-list');
+
+if (btnProjectLogs && modalProjectLogs && closeBtnProjectLogs) {
+    btnProjectLogs.addEventListener('click', () => {
+        if (!currentUserDoc || !currentUserDoc.isMaster) {
+            alert('활동 로그는 마스터 권한이 필요합니다.');
+            return;
+        }
+        modalProjectLogs.classList.remove('hidden');
+        loadProjectLogs();
+    });
+
+    closeBtnProjectLogs.addEventListener('click', () => {
+        modalProjectLogs.classList.add('hidden');
+    });
+
+    plUserFilter.addEventListener('change', () => {
+        loadProjectLogs();
+    });
+}
+
+async function loadProjectLogs() {
+    if (!plLogList) return;
+    plLogList.innerHTML = '<div style="text-align:center; padding: 20px;"><i class="fa-solid fa-spinner fa-spin"></i> 로그 불러오는 중...</div>';
+    
+    try {
+        const snap = await db.collection('workProjectLogs').orderBy('createdAt', 'desc').limit(200).get();
+        let logs = [];
+        let usersMap = {};
+        
+        snap.forEach(doc => {
+            const d = doc.data();
+            logs.push({ id: doc.id, ...d });
+            if (d.userName && d.userUid) {
+                usersMap[d.userUid] = d.userName;
+            }
+        });
+        
+        // Update user filter options (only if it has 1 option initially)
+        if (plUserFilter.options.length <= 1) {
+            Object.keys(usersMap).forEach(uid => {
+                const opt = document.createElement('option');
+                opt.value = uid;
+                opt.textContent = usersMap[uid];
+                plUserFilter.appendChild(opt);
+            });
+        }
+        
+        const selectedUid = plUserFilter.value;
+        if (selectedUid !== 'all') {
+            logs = logs.filter(log => log.userUid === selectedUid);
+        }
+        
+        if (logs.length === 0) {
+            plLogList.innerHTML = '<div style="text-align:center; padding: 20px; color: var(--text-muted);">활동 로그가 없습니다.</div>';
+            return;
+        }
+        
+        let html = '';
+        logs.forEach(log => {
+            const dateStr = log.createdAt && log.createdAt.toDate ? log.createdAt.toDate().toLocaleString() : '시간 정보 없음';
+            let actionColor = '#00cec9';
+            let actionIcon = '<i class="fa-solid fa-pen"></i>';
+            if (log.action === 'CREATE') { actionColor = '#27ae60'; actionIcon = '<i class="fa-solid fa-plus"></i>'; }
+            if (log.action === 'DELETE') { actionColor = '#e74c3c'; actionIcon = '<i class="fa-solid fa-trash"></i>'; }
+            
+            html += `<div style="background: rgba(0,0,0,0.1); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-weight: bold; color: ${actionColor};">${actionIcon} ${log.action === 'UPDATE' ? '수정' : (log.action === 'CREATE' ? '생성' : '삭제')}</span>
+                    <span style="font-size: 0.8rem; color: var(--text-muted);">${dateStr}</span>
+                </div>
+                <div style="font-size: 1.05rem; font-weight: bold; margin-bottom: 4px;">${log.projectName}</div>
+                <div style="font-size: 0.9rem; margin-bottom: 8px;">${log.details}</div>
+                <div style="font-size: 0.85rem; color: #f39c12;"><i class="fa-solid fa-user"></i> ${log.userName}</div>
+            </div>`;
+        });
+        
+        plLogList.innerHTML = html;
+        
+    } catch (e) {
+        console.error('로그 로드 실패:', e);
+        plLogList.innerHTML = '<div style="color:#e74c3c; padding:20px;">로그를 불러오는데 실패했습니다.</div>';
+    }
 }
 
 initParticles();
