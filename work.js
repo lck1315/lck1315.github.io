@@ -2185,6 +2185,28 @@ let psFirstRender = true; // 처음 진입 시 오늘 날짜로 스크롤하기 
 db.collection('workProjects').orderBy('order', 'asc').onSnapshot((snapshot) => {
     psData = [];
     snapshot.forEach(doc => psData.push({ id: doc.id, ...doc.data() }));
+    
+    // 프로젝트(부모) 일정 자동 계산: 하위 태스크의 최소 시작일 ~ 최대 마감일 반영
+    psData.filter(p => !p.parentId).forEach(project => {
+        const childTasks = psData.filter(t => t.parentId === project.id);
+        if (childTasks.length > 0) {
+            let minStart = null;
+            let maxEnd = null;
+            
+            childTasks.forEach(t => {
+                if (t.startDate) {
+                    if (!minStart || t.startDate < minStart) minStart = t.startDate;
+                }
+                if (t.endDate) {
+                    if (!maxEnd || t.endDate > maxEnd) maxEnd = t.endDate;
+                }
+            });
+            
+            if (minStart) project.startDate = minStart;
+            if (maxEnd) project.endDate = maxEnd;
+        }
+    });
+
     updateSearchDropdown();
     renderPsScheduler();
     if (typeof window.renderPerformanceDashboard === 'function') {
