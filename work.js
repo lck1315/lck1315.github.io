@@ -2449,7 +2449,13 @@ window.psUpdateField = (id, field, value) => {
         else if (field === 'color') fieldStr = '색상';
         else if (field === 'memo') fieldStr = '메모';
         
-        const details = `${fieldStr} 변경`; // 값 변경 내역까지 넣으려면 value를 포함할 수 있음
+        let displayValue = value;
+        // 색상코드이거나 내용이 너무 길면 자르기
+        if (typeof value === 'string' && value.length > 30) {
+            displayValue = value.substring(0, 30) + '...';
+        }
+        
+        const details = `${fieldStr} 변경: ${displayValue}`; 
         if (typeof window.logProjectAction === 'function') {
             window.logProjectAction('UPDATE', id, proj.name, details);
         }
@@ -2461,9 +2467,16 @@ window.psUpdateFields = (id, fieldsObj) => {
     if (!currentUser) return alert('로그인이 필요합니다.');
     const proj = psData.find(p => p.id === id);
     if (proj && typeof window.logProjectAction === 'function') {
-        const keys = Object.keys(fieldsObj).filter(k => k !== 'expanded' && k !== 'order').join(', ');
-        if (keys) {
-            window.logProjectAction('UPDATE', id, proj.name, `항목 복수 변경 (${keys})`);
+        const keysMap = { name: '프로젝트명', assignee: '담당자', status: '상태', startDate: '시작일', endDate: '종료일', color: '색상', memo: '메모' };
+        
+        const changes = Object.keys(fieldsObj).filter(k => k !== 'expanded' && k !== 'order').map(k => {
+            let val = fieldsObj[k];
+            if (typeof val === 'string' && val.length > 30) val = val.substring(0, 30) + '...';
+            return `${keysMap[k] || k}: ${val}`;
+        }).join(', ');
+        
+        if (changes) {
+            window.logProjectAction('UPDATE', id, proj.name, `항목 변경 (${changes})`);
         }
     }
     db.collection('workProjects').doc(id).update(fieldsObj).catch(e => console.error(e));
