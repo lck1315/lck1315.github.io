@@ -7274,24 +7274,34 @@ async function loadProjectLogs() {
     plLogList.innerHTML = '<div style="text-align:center; padding: 20px;"><i class="fa-solid fa-spinner fa-spin"></i> 로그 불러오는 중...</div>';
     
     try {
+        // 1. 전체 사용자 정보 가져오기 (UID 기반 실명 매핑)
+        const usersSnap = await db.collection('workUsers').get();
+        let globalUsersMap = {};
+        usersSnap.forEach(uDoc => {
+            const data = uDoc.data();
+            globalUsersMap[uDoc.id] = data.nickname || data.name || '알 수 없음';
+        });
+
+        // 2. 로그 정보 가져오기
         const snap = await db.collection('workProjectLogs').orderBy('createdAt', 'desc').limit(200).get();
         let logs = [];
-        let usersMap = {};
+        let filterUsersMap = {}; // 드롭다운용 사용자 목록
         
         snap.forEach(doc => {
             const d = doc.data();
             logs.push({ id: doc.id, ...d });
-            if (d.userName && d.userUid) {
-                usersMap[d.userUid] = d.userName;
+            if (d.userUid) {
+                // 이전 데이터에 '알 수 없음'으로 기록되었어도 workUsers에서 실명을 가져옴
+                filterUsersMap[d.userUid] = globalUsersMap[d.userUid] || d.userName || '알 수 없음';
             }
         });
         
         // Update user filter options (only if it has 1 option initially)
         if (plUserFilter.options.length <= 1) {
-            Object.keys(usersMap).forEach(uid => {
+            Object.keys(filterUsersMap).forEach(uid => {
                 const opt = document.createElement('option');
                 opt.value = uid;
-                opt.textContent = usersMap[uid];
+                opt.textContent = filterUsersMap[uid];
                 plUserFilter.appendChild(opt);
             });
         }
@@ -7308,20 +7318,23 @@ async function loadProjectLogs() {
         
         let html = '';
         logs.forEach(log => {
-            const dateStr = log.createdAt && log.createdAt.toDate ? log.createdAt.toDate().toLocaleString() : '시간 정보 없음';
+            const dateStr = log.createdAt && log.createdAt.toDate ? log.createdAt.toDate().toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '시간 정보 없음';
             let actionColor = '#00cec9';
             let actionIcon = '<i class="fa-solid fa-pen"></i>';
             if (log.action === 'CREATE') { actionColor = '#27ae60'; actionIcon = '<i class="fa-solid fa-plus"></i>'; }
             if (log.action === 'DELETE') { actionColor = '#e74c3c'; actionIcon = '<i class="fa-solid fa-trash"></i>'; }
             
-            html += `<div style="background: rgba(0,0,0,0.1); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-weight: bold; color: ${actionColor};">${actionIcon} ${log.action === 'UPDATE' ? '수정' : (log.action === 'CREATE' ? '생성' : '삭제')}</span>
-                    <span style="font-size: 0.8rem; color: var(--text-muted);">${dateStr}</span>
+            const actualUserName = globalUsersMap[log.userUid] || log.userName || '알 수 없음';
+            const actionText = log.action === 'UPDATE' ? '수정' : (log.action === 'CREATE' ? '생성' : '삭제');
+
+            html += `<div style="display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.15); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 15px; font-size: 0.85rem;">
+                <div style="width: 70px; font-weight: bold; color: ${actionColor}; flex-shrink: 0;">${actionIcon} ${actionText}</div>
+                <div style="flex: 1; display: flex; align-items: center; gap: 12px; overflow: hidden; white-space: nowrap;">
+                    <span style="font-weight: bold; font-size: 0.9rem; min-width: 150px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; display: inline-block;">${log.projectName}</span>
+                    <span style="color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; flex: 1;">${log.details}</span>
                 </div>
-                <div style="font-size: 1.05rem; font-weight: bold; margin-bottom: 4px;">${log.projectName}</div>
-                <div style="font-size: 0.9rem; margin-bottom: 8px;">${log.details}</div>
-                <div style="font-size: 0.85rem; color: #f39c12;"><i class="fa-solid fa-user"></i> ${log.userName}</div>
+                <div style="width: 100px; color: #f39c12; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0;"><i class="fa-solid fa-user" style="margin-right:4px;"></i>${actualUserName}</div>
+                <div style="width: 120px; color: var(--text-muted); text-align: right; white-space: nowrap; flex-shrink: 0;">${dateStr}</div>
             </div>`;
         });
         
