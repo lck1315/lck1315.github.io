@@ -546,17 +546,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (currentUserDoc.isMaster) {
                         btnMasterAdmin.style.display = 'inline-block';
-                        const btnWorkload = document.getElementById('ps-btn-workload-stats');
-                        if (btnWorkload) btnWorkload.style.display = 'inline-block';
-                        const btnMemberProj = document.getElementById('ps-btn-member-projects');
-                        if (btnMemberProj) btnMemberProj.style.display = 'inline-block';
+                        const masterZone = document.getElementById('ps-master-zone');
+                        if (masterZone) masterZone.style.display = 'flex';
                         if (userProfileIcon) userProfileIcon.style.display = 'none';
                     } else {
                         btnMasterAdmin.style.display = 'none';
-                        const btnWorkload = document.getElementById('ps-btn-workload-stats');
-                        if (btnWorkload) btnWorkload.style.display = 'none';
-                        const btnMemberProj = document.getElementById('ps-btn-member-projects');
-                        if (btnMemberProj) btnMemberProj.style.display = 'none';
+                        const masterZone = document.getElementById('ps-master-zone');
+                        if (masterZone) masterZone.style.display = 'none';
                         if (userProfileIcon) {
                             userProfileIcon.style.display = 'block';
                             let pUrl = currentUserDoc.photoURL;
@@ -578,10 +574,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         userProfileImg.src = (pUrl && pUrl !== 'null' && pUrl.trim() !== '') ? pUrl : DEFAULT_AVATAR;
                     }
                     if (btnMasterAdmin) btnMasterAdmin.style.display = 'none';
-                    const btnWorkload = document.getElementById('ps-btn-workload-stats');
-                    if (btnWorkload) btnWorkload.style.display = 'none';
-                    const btnMemberProj = document.getElementById('ps-btn-member-projects');
-                    if (btnMemberProj) btnMemberProj.style.display = 'none';
+                    const masterZone = document.getElementById('ps-master-zone');
+                    if (masterZone) masterZone.style.display = 'none';
 
                     renderRestrictedContent();
                 }
@@ -600,10 +594,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (userProfileIcon) userProfileIcon.style.display = 'none';
             if (btnMasterAdmin) btnMasterAdmin.style.display = 'none';
-            const btnWorkload = document.getElementById('ps-btn-workload-stats');
-            if (btnWorkload) btnWorkload.style.display = 'none';
-            const btnMemberProj = document.getElementById('ps-btn-member-projects');
-            if (btnMemberProj) btnMemberProj.style.display = 'none';
+            const masterZone = document.getElementById('ps-master-zone');
+            if (masterZone) masterZone.style.display = 'none';
 
             if (userGoogleCalendarListener) {
                 userGoogleCalendarListener();

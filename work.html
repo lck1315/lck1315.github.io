@@ -1082,9 +1082,12 @@
                         <button class="ps-tool-btn" id="ps-btn-excel-selected"><i class="fa-solid fa-file-export"></i> 선택 엑셀 출력</button>
                         <button class="ps-tool-btn" id="ps-btn-export-file"><i class="fa-solid fa-download"></i> 내보내기</button>
                         <button class="ps-tool-btn" id="ps-btn-import-file"><i class="fa-solid fa-upload"></i> 불러오기</button>
-                        <button class="ps-tool-btn" id="ps-btn-backup-manage" style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); color:#fff; border:none;"><i class="fa-solid fa-cloud-arrow-up"></i> 클라우드 백업</button>
-                        <button class="ps-tool-btn" id="ps-btn-workload-stats" style="background: linear-gradient(135deg, #00cec9, #81ecec); color:#fff; border:none;"><i class="fa-solid fa-chart-line"></i> 개인별 업무량</button>
-                        <button class="ps-tool-btn" id="ps-btn-member-projects" style="background: linear-gradient(135deg, #f39c12, #f1c40f); color:#fff; border:none;"><i class="fa-solid fa-users-viewfinder"></i> 팀원별 프로젝트</button>
+                        <div id="ps-master-zone" style="display: none; align-items: center; gap: 6px; padding: 4px 10px; margin-left: 10px; border-radius: 8px; border: 1px dashed rgba(241, 196, 15, 0.4); background: rgba(241, 196, 15, 0.05);">
+                            <span style="color: #f1c40f; font-weight: bold; font-size: 0.85rem; margin-right: 4px;"><i class="fa-solid fa-crown"></i> 마스터</span>
+                            <button class="ps-tool-btn" id="ps-btn-backup-manage" style="background: linear-gradient(135deg, #6c5ce7, #a29bfe); color:#fff; border:none; margin-left: 0;"><i class="fa-solid fa-cloud-arrow-up"></i> 클라우드 백업</button>
+                            <button class="ps-tool-btn" id="ps-btn-workload-stats" style="background: linear-gradient(135deg, #00cec9, #81ecec); color:#fff; border:none; margin-left: 0;"><i class="fa-solid fa-chart-line"></i> 개인별 업무량</button>
+                            <button class="ps-tool-btn" id="ps-btn-member-projects" style="background: linear-gradient(135deg, #f39c12, #f1c40f); color:#fff; border:none; margin-left: 0;"><i class="fa-solid fa-users-viewfinder"></i> 팀원별 프로젝트</button>
+                        </div>
                         <input type="file" id="ps-file-input" style="display:none;" accept=".json">
                         <div style="flex:1;"></div>
                         <button class="ps-tool-btn" id="ps-btn-today"><i class="fa-solid fa-calendar-day"></i> 오늘로
