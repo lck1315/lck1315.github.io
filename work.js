@@ -7371,7 +7371,7 @@ async function loadProjectLogs() {
         let html = '';
         logs.forEach(log => {
             const dateStr = log.createdAt && log.createdAt.toDate ? log.createdAt.toDate().toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '시간 정보 없음';
-            let actionColor = '#00cec9';
+            let actionColor = '#2563eb'; // 형광색(#00cec9)에서 짙은 파란색으로 변경
             let actionIcon = '<i class="fa-solid fa-pen"></i>';
             if (log.action === 'CREATE') { actionColor = '#27ae60'; actionIcon = '<i class="fa-solid fa-plus"></i>'; }
             if (log.action === 'DELETE') { actionColor = '#e74c3c'; actionIcon = '<i class="fa-solid fa-trash"></i>'; }
@@ -7392,10 +7392,10 @@ async function loadProjectLogs() {
             formattedDetails = formattedDetails.replace(/^\[(.*?)\]\s*/, `<span style="font-size: 0.8rem; background: rgba(128,128,128,0.15); border: 1px solid var(--border-color); padding: 3px 6px; border-radius: 4px; margin-right: 8px; color: var(--text-muted);"><i class="fa-solid fa-code-branch"></i> $1</span> `);
             
             // '변경: OOO' 부분 하이라이트
-            formattedDetails = formattedDetails.replace(/변경:\s*(.*)/, `변경: <strong style="color: #00cec9; background: rgba(0,206,201,0.15); padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px;">$1</strong>`);
+            formattedDetails = formattedDetails.replace(/변경:\s*(.*)/, `변경: <strong style="color: #2563eb; background: rgba(37,99,235,0.1); padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px;">$1</strong>`);
             
             // '변경 (OOO)' 부분 하이라이트
-            formattedDetails = formattedDetails.replace(/변경 \((.*?)\)/, `변경 (<strong style="color: #00cec9; background: rgba(0,206,201,0.15); padding: 2px 6px; border-radius: 4px;">$1</strong>)`);
+            formattedDetails = formattedDetails.replace(/변경 \((.*?)\)/, `변경 (<strong style="color: #2563eb; background: rgba(37,99,235,0.1); padding: 2px 6px; border-radius: 4px;">$1</strong>)`);
 
             html += `<div style="background: rgba(0,0,0,0.15); border-left: 4px solid ${actionColor}; border-radius: 6px; padding: 10px 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 15px; font-size: 0.9rem; transition: all 0.2s;">
                 <div style="width: 75px; font-weight: bold; color: ${actionColor}; flex-shrink: 0; text-align: center; border: 1px solid ${actionColor}40; padding: 2px 0; border-radius: 12px; font-size: 0.85rem;">${actionIcon} ${actionText}</div>
