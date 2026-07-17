@@ -4611,6 +4611,105 @@ let statsChart = null;
 })();
 
 // ====================================================
+// 마감일 기준 업무 조회 모달 (마스터 전용)
+// ====================================================
+(function initDeadlineSearchLogic() {
+    const btn = document.getElementById('ps-btn-deadline-search');
+    const modal = document.getElementById('deadline-search-modal');
+    const closeBtn = document.getElementById('deadline-search-close-btn');
+    const execBtn = document.getElementById('deadline-search-execute-btn');
+    const daysInput = document.getElementById('deadline-days-input');
+    const resultsContainer = document.getElementById('deadline-search-results');
+
+    if (!btn || !modal) return;
+
+    btn.addEventListener('click', () => {
+        if (!currentUserDoc || !currentUserDoc.isMaster) {
+            alert('이 기능은 마스터 권한이 필요합니다.');
+            return;
+        }
+        modal.classList.remove('hidden');
+        resultsContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px;">숫자를 입력하고 검색 버튼을 눌러주세요.</div>';
+    });
+
+    closeBtn.addEventListener('click', () => {
+        modal.classList.add('hidden');
+    });
+
+    modal.addEventListener('click', e => {
+        if (e.target === modal) modal.classList.add('hidden');
+    });
+
+    execBtn.addEventListener('click', () => {
+        const days = parseInt(daysInput.value, 10);
+        if (isNaN(days)) return alert('숫자를 입력해주세요.');
+        
+        // 기준일 계산 (오늘 - days)
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() - days);
+        
+        const year = targetDate.getFullYear();
+        const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+        const day = String(targetDate.getDate()).padStart(2, '0');
+        const targetDateString = `${year}-${month}-${day}`;
+        
+        // 검색 필터링
+        const matchedItems = psData.filter(item => item.endDate === targetDateString);
+        
+        if (matchedItems.length === 0) {
+            resultsContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 40px;"><i class="fa-regular fa-face-frown" style="font-size: 2rem; margin-bottom: 10px;"></i><br>${targetDateString} 마감인 항목이 없습니다.</div>`;
+            return;
+        }
+        
+        const projects = matchedItems.filter(item => !item.parentId);
+        const tasks = matchedItems.filter(item => item.parentId);
+        
+        let html = `<div style="margin-bottom: 15px; font-weight: bold; color: #0984e3; font-size: 1.1rem;"><i class="fa-regular fa-calendar-check"></i> 검색된 마감일: ${targetDateString}</div>`;
+        
+        html += `<h4 style="margin-bottom: 10px; color: var(--text-color);"><i class="fa-solid fa-folder-open" style="color:#f1c40f;"></i> 프로젝트 (${projects.length}건)</h4>`;
+        if (projects.length > 0) {
+            html += `<ul style="list-style: none; padding: 0; margin-bottom: 25px;">`;
+            projects.forEach(p => {
+                html += `<li style="padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.02); margin-bottom: 8px;">
+                    <div style="font-weight: bold; font-size: 1.05rem;">${p.name}</div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;">
+                        <span style="display:inline-block; margin-right: 15px;"><i class="fa-solid fa-user"></i> 담당자: ${p.assignee || '없음'}</span>
+                        <span style="display:inline-block;"><i class="fa-solid fa-circle-info"></i> 상태: ${p.status}</span>
+                    </div>
+                </li>`;
+            });
+            html += `</ul>`;
+        } else {
+            html += `<div style="color: var(--text-muted); margin-bottom: 25px; font-size: 0.9rem; padding-left: 10px;">해당 마감일의 프로젝트가 없습니다.</div>`;
+        }
+        
+        html += `<h4 style="margin-bottom: 10px; color: var(--text-color);"><i class="fa-solid fa-list-check" style="color:#27ae60;"></i> 태스크 (${tasks.length}건)</h4>`;
+        if (tasks.length > 0) {
+            html += `<ul style="list-style: none; padding: 0;">`;
+            tasks.forEach(t => {
+                const parent = psData.find(p => p.id === t.parentId);
+                const parentName = parent ? parent.name : '알 수 없는 프로젝트';
+                html += `<li style="padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.02); margin-bottom: 8px;">
+                    <div style="font-weight: bold; font-size: 1.05rem;">
+                        <span style="font-size: 0.8rem; background: rgba(128,128,128,0.15); padding: 3px 6px; border-radius: 4px; margin-right: 8px; color: var(--text-muted); vertical-align: middle;"><i class="fa-solid fa-code-branch"></i> ${parentName}</span>
+                        ${t.name}
+                    </div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;">
+                        <span style="display:inline-block; margin-right: 15px;"><i class="fa-solid fa-user"></i> 담당자: ${t.assignee || '없음'}</span>
+                        <span style="display:inline-block;"><i class="fa-solid fa-circle-info"></i> 상태: ${t.status}</span>
+                    </div>
+                </li>`;
+            });
+            html += `</ul>`;
+        } else {
+            html += `<div style="color: var(--text-muted); margin-bottom: 20px; font-size: 0.9rem; padding-left: 10px;">해당 마감일의 태스크가 없습니다.</div>`;
+        }
+        
+        resultsContainer.innerHTML = html;
+    });
+})();
+
+// ====================================================
 // 프로젝트 엑셀 출력 (CSV 변환)
 // ====================================================
 const psExcelAllBtn = document.getElementById('ps-btn-excel-all');
