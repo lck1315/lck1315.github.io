@@ -6982,6 +6982,10 @@ const mpRightTitle = document.getElementById('mp-right-title');
 
 if (btnMemberProjects && modalMemberProjects && closeBtnMemberProjects) {
     btnMemberProjects.addEventListener('click', () => {
+        if (!currentUserDoc || !currentUserDoc.isMaster) {
+            alert('팀원별 프로젝트 현황은 마스터 권한이 필요합니다.');
+            return;
+        }
         openMemberProjectsModal();
     });
     closeBtnMemberProjects.addEventListener('click', () => {
