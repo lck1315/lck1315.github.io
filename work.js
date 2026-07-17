@@ -7226,15 +7226,17 @@ function renderMemberProjectsRightPane(member) {
 
 // --- 프로젝트 활동 로그 ---
 window.logProjectAction = function(action, projectId, projectName, details) {
-    if (!currentUserDoc) return;
+    if (!currentUserDoc && !currentUser) return;
     try {
+        const uid = currentUserDoc ? currentUserDoc.uid : currentUser.uid;
+        const uName = (currentUserDoc ? currentUserDoc.nickname : null) || (currentUser ? currentUser.displayName : null) || '알 수 없음';
         db.collection('workProjectLogs').add({
             action: action,
             projectId: projectId,
             projectName: projectName || '이름 없음',
             details: details || '',
-            userUid: currentUserDoc.uid || currentUser.uid,
-            userName: currentUserDoc.name || '알 수 없음',
+            userUid: uid,
+            userName: uName,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
     } catch(e) {
