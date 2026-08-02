@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckyexcel/dist/luckyexcel.umd.js"></script>
+</head>
+<body>
+    <script>
+        window.onload = function() {
+            var data = "A,B\n1,2\n3,4";
+            var workbook = XLSX.read(data, { type: 'string' });
+            var xlsxArrayBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+            var newFile = new File([xlsxArrayBuffer], "test.xlsx", { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            
+            LuckyExcel.transformExcelToLucky(newFile, function(exportJson) {
+                console.log("Success", exportJson);
+            }, function(err) {
+                console.error("Error", err);
+            });
+        }
+    </script>
+</body>
+</html>

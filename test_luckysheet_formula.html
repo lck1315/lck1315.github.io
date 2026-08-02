@@ -1,0 +1,66 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/css/pluginsCss.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/plugins.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet/dist/css/luckysheet.css' />
+    <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/luckysheet/dist/assets/iconfont/iconfont.css' />
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet/dist/plugins/js/plugin.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckysheet/dist/luckysheet.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luckyexcel/dist/luckyexcel.umd.js"></script>
+</head>
+<body>
+    <div id="luckysheet" style="margin:0px;padding:0px;position:absolute;width:100%;height:100%;left: 0px;top: 0px;"></div>
+    <script>
+        window.testResult = "Waiting";
+        
+        async function runTest() {
+            // Fetch test_formulas.xlsx
+            const resp = await fetch('test_formulas.xlsx');
+            const blob = await resp.blob();
+            const file = new File([blob], 'test_formulas.xlsx');
+            
+            const arrayBuffer = await blob.arrayBuffer();
+            let exceljsWorkbook = new ExcelJS.Workbook();
+            await exceljsWorkbook.xlsx.load(arrayBuffer);
+            
+            LuckyExcel.transformExcelToLucky(file, function(exportJson) {
+                exportJson.sheets.forEach(sheet => {
+                    const ws = exceljsWorkbook.getWorksheet(sheet.name);
+                    if (sheet.celldata) {
+                        sheet.celldata.forEach(cell => {
+                            const eCell = ws.getCell(cell.r + 1, cell.c + 1);
+                            if (eCell && eCell.formula) {
+                                if (!cell.v) cell.v = {};
+                                let f = eCell.formula;
+                                if (!f.startsWith('=')) f = '=' + f;
+                                cell.v.f = f;
+                                delete cell.v.v;
+                                delete cell.v.m;
+                            }
+                        });
+                    }
+                    window.calcChainCheck = sheet.calcChain ? sheet.calcChain.length : 0;
+                });
+                
+                luckysheet.create({
+                    container: 'luckysheet',
+                    data: exportJson.sheets,
+                    forceCalculation: true,
+                    hook: {
+                        workbookCreateAfter: function() {
+                            const val1 = luckysheet.getCellValue(1, 2); // C2
+                            const val2 = luckysheet.getCellValue(2, 2); // C3
+                            window.testResult = "C2: " + JSON.stringify(val1) + ", C3: " + JSON.stringify(val2);
+                        }
+                    }
+                });
+            });
+        }
+        runTest();
+    </script>
+</body>
+</html>
