@@ -153,8 +153,8 @@ canvas{display:block;position:absolute;top:0;left:0}
 // 1. THREE.JS 3D SCENE SETUP
 // ═══════════════════════════════════════════
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#0a1128'); // 밤하늘 스카이박스 색상
-scene.fog = new THREE.FogExp2('#0a1128', 0.007); // 원경이 자연스럽게 가려지는 안개
+scene.background = new THREE.Color('#87CEEB'); // 밝은 낮 하늘
+scene.fog = new THREE.FogExp2('#87CEEB', 0.007); // 밝은 안개
 
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 // 컴투스 프로야구 숄더뷰 스타일: 공격수(타자) 뒤쪽 포수 위치에서 투수를 바라봄
@@ -169,11 +169,11 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.getElementById('game-container').appendChild(renderer.domElement);
 
-const ambLight = new THREE.AmbientLight(0x404050, 1.2);
+const ambLight = new THREE.AmbientLight(0xffffff, 0.7); // 밝고 자연스러운 환경광
 scene.add(ambLight);
 
-const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-dirLight.position.set(5, 20, 10);
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.2); // 밝은 태양광
+dirLight.position.set(20, 50, 20);
 dirLight.castShadow = true;
 dirLight.shadow.mapSize.width = 2048;
 dirLight.shadow.mapSize.height = 2048;
@@ -182,7 +182,7 @@ scene.add(dirLight);
 // 경기장 생성
 const texLoader = new THREE.TextureLoader();
 // 잔디 (전체 그라운드)
-const grassMat = new THREE.MeshLambertMaterial({ color: 0x145e35 });
+const grassMat = new THREE.MeshLambertMaterial({ color: 0x3cb371 }); // 밝고 싱그러운 잔디색
 const grass = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), grassMat);
 grass.rotation.x = -Math.PI / 2;
 grass.receiveShadow = true;
@@ -190,7 +190,7 @@ scene.add(grass);
 
 // 내야 흙 영역 (다이아몬드)
 const infieldGeo = new THREE.PlaneGeometry(39, 39);
-const infield = new THREE.Mesh(infieldGeo, new THREE.MeshLambertMaterial({ color: 0x7c4a1a }));
+const infield = new THREE.Mesh(infieldGeo, new THREE.MeshLambertMaterial({ color: 0xcd853f })); // 밝은 흙색
 infield.rotation.x = -Math.PI / 2;
 infield.rotation.z = Math.PI / 4;
 infield.position.set(0, 0.01, -19.4);
@@ -211,7 +211,7 @@ rightLine.position.set(42, 0.02, -42);
 scene.add(rightLine);
 
 // 흙 (마운드, 홈)
-const dirtMat = new THREE.MeshLambertMaterial({ color: 0x7c4a1a });
+const dirtMat = new THREE.MeshLambertMaterial({ color: 0xcd853f }); // 마운드/홈 밝은 흙색
 const mound = new THREE.Mesh(new THREE.CircleGeometry(3, 32), dirtMat);
 mound.rotation.x = -Math.PI / 2;
 mound.position.set(0, 0.02, -18.5);
@@ -268,19 +268,31 @@ const stand = new THREE.Mesh(standGeo, standMat);
 stand.position.set(0, 15, 0);
 scene.add(stand);
 
-// 관중 (파티클)
-const crowdGeo = new THREE.BufferGeometry();
-const crowdPos = [];
+// 진짜 사람 같은 관중 (InstancedMesh 사용)
+const spectatorGeo = new THREE.BoxGeometry(0.8, 1.2, 0.8); 
+const spectatorMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+const crowdMesh = new THREE.InstancedMesh(spectatorGeo, spectatorMat, 4000);
+
+const dummy = new THREE.Object3D();
+const color = new THREE.Color();
+const colors = [0xef4444, 0x3b82f6, 0xffffff, 0xf59e0b, 0x10b981, 0x1e3a8a, 0x222222, 0xf472b6, 0xeab308]; // 다양한 옷 색상
+
 for (let i = 0; i < 4000; i++) {
-    const angle = Math.PI + (Math.random() * Math.PI);
-    const r = 101 + Math.random() * 20;
-    const h = 6 + (r - 100) * 1.0 + (Math.random() * 2);
-    crowdPos.push(Math.cos(angle) * r, h, Math.sin(angle) * r);
+    const angle = Math.PI + (Math.random() * Math.PI); // 외야 쪽 부채꼴
+    const r = 101 + Math.random() * 20; // 펜스(100) 뒤쪽 스탠드
+    const h = 6 + (r - 100) * 1.0 + (Math.random() * 0.5); // 스탠드 경사도에 맞게 높이
+    
+    dummy.position.set(Math.cos(angle) * r, h, Math.sin(angle) * r);
+    dummy.lookAt(0, 0, 0); // 홈을 바라봄
+    dummy.updateMatrix();
+    
+    crowdMesh.setMatrixAt(i, dummy.matrix);
+    
+    // 랜덤 옷 색상 지정
+    color.setHex(colors[Math.floor(Math.random() * colors.length)]);
+    crowdMesh.setColorAt(i, color);
 }
-crowdGeo.setAttribute('position', new THREE.Float32BufferAttribute(crowdPos, 3));
-const crowdMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.8, transparent: true, opacity: 0.7 });
-const crowd = new THREE.Points(crowdGeo, crowdMat);
-scene.add(crowd);
+scene.add(crowdMesh);
 
 // ═══════════════════════════════════════════
 // 2. 3D 캐릭터 빌더 (다관절 사람 형태)
@@ -431,7 +443,7 @@ catcher.lLeg.rotation.x = -Math.PI/2;
 catcher.rLeg.rotation.x = -Math.PI/2;
 catcher.lArm.rotation.x = -Math.PI/3;
 catcher.rArm.rotation.x = -Math.PI/3;
-scene.add(catcher);
+// scene.add(catcher); // 포수가 타격 뷰를 가리므로 주석 처리 (숨김)
 
 // 수비수(야수) 7명 배치 (1B, 2B, 3B, SS, LF, CF, RF)
 const fielders = [];
