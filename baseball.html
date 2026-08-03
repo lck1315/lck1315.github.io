@@ -14,7 +14,7 @@
 html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Noto Sans KR',sans-serif}
 #game-container{position:absolute;inset:0;z-index:0;}
 canvas{display:block;position:absolute;top:0;left:0}
-#gc{z-index:1;pointer-events:none;}
+#gc{z-index:1;}
 .ui{position:absolute;inset:0;pointer-events:none;z-index:10}
 
 /* ══════ 스코어보드 ══════ */
@@ -141,10 +141,10 @@ scene.fog = new THREE.Fog('#030712', 30, 80);
 
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 // 컴투스 프로야구 숄더뷰 스타일: 공격수(타자) 뒤쪽 포수 위치에서 투수를 바라봄
-// 컴투스 프로야구 숄더뷰 스타일: 포수 우측 어깨 너머로 투수를 바라봄
+// 컴투스 프로야구 숄더뷰 스타일: 포수 정중앙 바로 뒤에서 투수를 바라봄
 // 0: 홈플레이트, -18.5: 마운드
-camera.position.set(0.8, 1.8, 3.5); // 포수 우측 어깨 뒤편
-camera.lookAt(-0.2, 1.0, -18.5); // 투수판 약간 좌측을 바라봄 (원근감 최적화)
+camera.position.set(0, 1.8, 4.0); // 포수 정중앙 바로 뒤편
+camera.lookAt(0, 1.0, -18.5); // 투수판 정중앙을 바라봄
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -507,10 +507,10 @@ function loop() {
     
     // 화면 쉐이크
     if (G.shk > 0) {
-        camera.position.x = 0.8 + (Math.random() - 0.5) * G.shk * 0.1;
+        camera.position.x = 0 + (Math.random() - 0.5) * G.shk * 0.1;
         camera.position.y = 1.8 + (Math.random() - 0.5) * G.shk * 0.1;
         G.shk *= 0.9;
-        if (G.shk < 0.1) { G.shk = 0; camera.position.set(0.8, 1.8, 3.5); }
+        if (G.shk < 0.1) { G.shk = 0; camera.position.set(0, 1.8, 4.0); }
     }
 
     renderer.render(scene, camera);
