@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DODO Puzzle | 슬라이딩 퍼즐</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none}
+body{background:#0a0e1a;color:#e2e8f0;font-family:'Outfit',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh}
+h1{font-family:'Orbitron',sans-serif;font-size:2rem;font-weight:900;background:linear-gradient(135deg,#22c55e,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+.info{display:flex;gap:24px;margin:16px 0;font-family:'Orbitron',sans-serif}
+.info-item{background:rgba(17,29,53,0.9);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:12px 20px;text-align:center}
+.info-item .label{font-size:0.6rem;color:#6366f1;letter-spacing:2px}
+.info-item .val{font-size:1.5rem;font-weight:900;color:#f59e0b;text-shadow:0 0 8px rgba(245,158,11,0.3)}
+#grid{display:grid;gap:4px;border-radius:12px;padding:8px;background:rgba(17,29,53,0.6);border:1px solid rgba(99,102,241,0.2);box-shadow:0 0 40px rgba(99,102,241,0.1)}
+.tile{display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:1.8rem;font-weight:900;border-radius:8px;cursor:pointer;transition:all 0.15s ease;user-select:none}
+.tile:not(.empty):hover{transform:scale(1.05);filter:brightness(1.2)}
+.tile.empty{background:transparent!important;cursor:default}
+.tile.correct{box-shadow:inset 0 0 10px rgba(34,197,94,0.3)}
+.controls{margin-top:20px;display:flex;gap:12px}
+.btn{padding:10px 28px;font-size:0.9rem;font-weight:700;border:none;border-radius:20px;cursor:pointer;transition:transform 0.2s}
+.btn:hover{transform:scale(1.05)}
+.btn-shuffle{background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;box-shadow:0 4px 15px rgba(99,102,241,0.4)}
+.btn-size{background:rgba(17,29,53,0.9);border:1px solid rgba(99,102,241,0.3);color:#94a3b8}
+.btn-size.active{background:linear-gradient(135deg,#06b6d4,#0891b2);color:#fff;border-color:transparent}
+.win{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10}
+.win h2{font-family:'Orbitron',sans-serif;font-size:3rem;color:#f59e0b;text-shadow:0 0 20px rgba(245,158,11,0.5)}
+.win p{color:#94a3b8;margin:12px 0 20px;font-size:1.2rem}
+</style>
+</head>
+<body>
+<h1>🧩 DODO PUZZLE</h1>
+<div class="info">
+<div class="info-item"><div class="label">MOVES</div><div class="val" id="moves">0</div></div>
+<div class="info-item"><div class="label">TIME</div><div class="val" id="timer">0:00</div></div>
+</div>
+<div id="grid"></div>
+<div class="controls">
+<button class="btn btn-size active" onclick="setSize(3)">3×3</button>
+<button class="btn btn-size" onclick="setSize(4)">4×4</button>
+<button class="btn btn-size" onclick="setSize(5)">5×5</button>
+<button class="btn btn-shuffle" onclick="shuffle()">🔀 섞기</button>
+</div>
+<div id="win-screen" class="win" style="display:none"></div>
+<script>
+let N=4,tiles=[],moves=0,timerInterval=null,seconds=0,playing=false;
+const TILE_COLORS=['#ef4444','#f59e0b','#22c55e','#06b6d4','#6366f1','#8b5cf6','#ec4899','#f97316',
+'#14b8a6','#3b82f6','#a855f7','#e11d48','#eab308','#10b981','#0ea5e9','#7c3aed',
+'#d946ef','#fb923c','#2dd4bf','#60a5fa','#c084fc','#f43f5e','#fbbf24','#34d399','#38bdf8'];
+const grid=document.getElementById('grid');
+
+function setSize(n){
+ N=n;document.querySelectorAll('.btn-size').forEach(b=>b.classList.remove('active'));
+ document.querySelector('.btn-size:nth-child('+({3:1,4:2,5:3}[n])+')').classList.add('active');
+ initGame();
+}
+
+function initGame(){
+ const sz=Math.min(Math.floor((window.innerHeight-250)/(N)),90);
+ grid.style.gridTemplateColumns='repeat('+N+','+sz+'px)';
+ grid.style.gridTemplateRows='repeat('+N+','+sz+'px)';
+ tiles=[];for(let i=1;i<N*N;i++)tiles.push(i);tiles.push(0);
+ moves=0;seconds=0;playing=false;
+ if(timerInterval)clearInterval(timerInterval);
+ document.getElementById('moves').textContent='0';
+ document.getElementById('timer').textContent='0:00';
+ document.getElementById('win-screen').style.display='none';
+ renderGrid();
+}
+
+function shuffle(){
+ initGame();
+ for(let i=0;i<N*N*100;i++){
+  const ei=tiles.indexOf(0);const er=Math.floor(ei/N),ec=ei%N;
+  const dirs=[];
+  if(er>0)dirs.push(-N);if(er<N-1)dirs.push(N);if(ec>0)dirs.push(-1);if(ec<N-1)dirs.push(1);
+  const d=dirs[Math.floor(Math.random()*dirs.length)];
+  [tiles[ei],tiles[ei+d]]=[tiles[ei+d],tiles[ei]];
+ }
+ moves=0;seconds=0;playing=true;
+ if(timerInterval)clearInterval(timerInterval);
+ timerInterval=setInterval(()=>{seconds++;document.getElementById('timer').textContent=Math.floor(seconds/60)+':'+(seconds%60<10?'0':'')+seconds%60},1000);
+ renderGrid();
+}
+
+function renderGrid(){
+ grid.innerHTML='';
+ tiles.forEach((v,i)=>{
+  const d=document.createElement('div');d.className='tile'+(v===0?' empty':'');
+  if(v>0){
+   d.textContent=v;
+   const hue=(v-1)/(N*N-1);
+   d.style.background='linear-gradient(135deg,'+TILE_COLORS[(v-1)%TILE_COLORS.length]+','+TILE_COLORS[v%TILE_COLORS.length]+')';
+   d.style.color='#fff';d.style.textShadow='0 2px 4px rgba(0,0,0,0.3)';
+   d.style.fontSize=(N<=3?'2rem':N<=4?'1.5rem':'1.2rem');
+   if(v===i+1)d.classList.add('correct');
+   d.addEventListener('click',()=>moveTile(i));
+  }
+  grid.appendChild(d);
+ });
+}
+
+function moveTile(i){
+ if(!playing)return;
+ const ei=tiles.indexOf(0);const er=Math.floor(ei/N),ec=ei%N;
+ const tr=Math.floor(i/N),tc=i%N;
+ if((Math.abs(er-tr)+Math.abs(ec-tc))===1){
+  [tiles[ei],tiles[i]]=[tiles[i],tiles[ei]];
+  moves++;document.getElementById('moves').textContent=moves;
+  renderGrid();
+  if(tiles.every((v,idx)=>v===0||(v===idx+1))){
+   playing=false;clearInterval(timerInterval);
+   const w=document.getElementById('win-screen');
+   w.innerHTML='<h2>🎉 축하합니다!</h2><p>'+moves+'번 만에 '+Math.floor(seconds/60)+'분 '+(seconds%60)+'초로 완성!</p><button class="btn btn-shuffle" onclick="shuffle();document.getElementById(\'win-screen\').style.display=\'none\'">🔀 다시 하기</button>';
+   w.style.display='flex';
+  }
+ }
+}
+
+initGame();
+</script>
+</body>
+</html>

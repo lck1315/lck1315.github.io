@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>DODO Tetris | 테트리스</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none}
+body{background:#0a0e1a;color:#e2e8f0;font-family:'Outfit',sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;overflow:hidden}
+.game-wrap{display:flex;gap:24px;align-items:flex-start}
+canvas{border:2px solid rgba(99,102,241,0.3);border-radius:8px;box-shadow:0 0 40px rgba(99,102,241,0.15)}
+.side{display:flex;flex-direction:column;gap:16px;min-width:160px}
+.panel{background:rgba(17,29,53,0.9);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:16px;text-align:center}
+.panel h3{font-family:'Orbitron',sans-serif;font-size:0.7rem;color:#6366f1;letter-spacing:2px;margin-bottom:8px}
+.panel .val{font-family:'Orbitron',sans-serif;font-size:1.8rem;font-weight:900;color:#f59e0b;text-shadow:0 0 10px rgba(245,158,11,0.4)}
+#next-canvas{border:1px solid rgba(99,102,241,0.2);border-radius:8px;margin:0 auto}
+.title{font-family:'Orbitron',sans-serif;font-size:1.5rem;font-weight:900;text-align:center;background:linear-gradient(135deg,#6366f1,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+.controls{font-size:0.7rem;color:#475569;line-height:1.8}
+.controls b{color:#94a3b8}
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10}
+#overlay h1{font-family:'Orbitron',sans-serif;font-size:3rem;font-weight:900;background:linear-gradient(135deg,#6366f1,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+#overlay p{color:#94a3b8;margin:12px 0 24px;font-size:1.1rem}
+#overlay button{padding:14px 40px;font-size:1.1rem;font-weight:700;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;border-radius:25px;cursor:pointer;box-shadow:0 4px 20px rgba(99,102,241,0.4);transition:transform 0.2s}
+#overlay button:hover{transform:scale(1.05)}
+.game-over-score{font-family:'Orbitron',sans-serif;font-size:2rem;color:#f59e0b;margin:8px 0}
+@media(max-width:600px){.game-wrap{flex-direction:column;align-items:center}.side{flex-direction:row;flex-wrap:wrap;justify-content:center;min-width:auto}}
+</style>
+</head>
+<body>
+<div id="overlay">
+<h1>DODO TETRIS</h1>
+<p>클래식 테트리스를 즐겨보세요!</p>
+<button onclick="startGame()">▶ 게임 시작</button>
+<div class="controls" style="margin-top:20px">
+<b>← →</b> 이동 &nbsp; <b>↑</b> 회전 &nbsp; <b>↓</b> 빠르게 &nbsp; <b>Space</b> 즉시 낙하
+</div>
+</div>
+<div class="game-wrap">
+<canvas id="board" width="300" height="600"></canvas>
+<div class="side">
+<div class="title">DODO TETRIS</div>
+<div class="panel"><h3>SCORE</h3><div class="val" id="score">0</div></div>
+<div class="panel"><h3>LEVEL</h3><div class="val" id="level">1</div></div>
+<div class="panel"><h3>LINES</h3><div class="val" id="lines">0</div></div>
+<div class="panel"><h3>NEXT</h3><canvas id="next-canvas" width="120" height="120"></canvas></div>
+<div class="controls">
+<b>← →</b> 이동<br><b>↑</b> 회전<br><b>↓</b> 소프트 드롭<br><b>Space</b> 하드 드롭<br><b>P</b> 일시정지
+</div>
+</div>
+</div>
+<script>
+const COLS=10,ROWS=20,SZ=30;
+const COLORS=['#06b6d4','#6366f1','#f59e0b','#ef4444','#22c55e','#ec4899','#8b5cf6'];
+const SHAPES=[[[1,1,1,1]],[[1,0],[1,0],[1,1]],[[0,1],[0,1],[1,1]],[[1,1],[1,1]],[[0,1,1],[1,1,0]],[[1,1,0],[0,1,1]],[[0,1,0],[1,1,1]]];
+const canvas=document.getElementById('board'),ctx=canvas.getContext('2d');
+const nCanvas=document.getElementById('next-canvas'),nCtx=nCanvas.getContext('2d');
+let board,piece,nextPiece,score,totalLines,level,gameOver,paused,dropTimer,dropInterval,animId;
+function newBoard(){return Array.from({length:ROWS},()=>new Array(COLS).fill(0))}
+function randomPiece(){const i=Math.floor(Math.random()*SHAPES.length);return{shape:SHAPES[i].map(r=>[...r]),color:COLORS[i],x:Math.floor(COLS/2)-1,y:0}}
+function rotate(shape){const R=shape.length,C=shape[0].length;const n=Array.from({length:C},()=>new Array(R).fill(0));for(let r=0;r<R;r++)for(let c=0;c<C;c++)n[c][R-1-r]=shape[r][c];return n}
+function valid(shape,px,py){for(let r=0;r<shape.length;r++)for(let c=0;c<shape[0].length;c++){if(!shape[r][c])continue;const nx=px+c,ny=py+r;if(nx<0||nx>=COLS||ny>=ROWS)return false;if(ny>=0&&board[ny][nx])return false;}return true}
+function merge(){piece.shape.forEach((row,r)=>row.forEach((v,c)=>{if(v&&piece.y+r>=0)board[piece.y+r][piece.x+c]=piece.color}))}
+function clearLines(){let cleared=0;for(let r=ROWS-1;r>=0;r--){if(board[r].every(c=>c)){board.splice(r,1);board.unshift(new Array(COLS).fill(0));cleared++;r++}}if(cleared){totalLines+=cleared;const pts=[0,100,300,500,800];score+=pts[cleared]*level;level=Math.floor(totalLines/10)+1;dropInterval=Math.max(100,1000-level*80);document.getElementById('score').textContent=score;document.getElementById('level').textContent=level;document.getElementById('lines').textContent=totalLines}}
+function drawBlock(c,x,y,color,sz){c.fillStyle=color;c.fillRect(x*sz+1,y*sz+1,sz-2,sz-2);c.fillStyle='rgba(255,255,255,0.2)';c.fillRect(x*sz+1,y*sz+1,sz-2,3);c.fillStyle='rgba(0,0,0,0.15)';c.fillRect(x*sz+1,y*sz+sz-4,sz-2,3)}
+function drawGhost(){let gy=piece.y;while(valid(piece.shape,piece.x,gy+1))gy++;ctx.globalAlpha=0.2;piece.shape.forEach((row,r)=>row.forEach((v,c)=>{if(v)drawBlock(ctx,piece.x+c,gy+r,piece.color,SZ)}));ctx.globalAlpha=1}
+function draw(){
+ ctx.fillStyle='#0d1526';ctx.fillRect(0,0,300,600);
+ ctx.strokeStyle='rgba(99,102,241,0.08)';ctx.lineWidth=1;
+ for(let r=0;r<=ROWS;r++){ctx.beginPath();ctx.moveTo(0,r*SZ);ctx.lineTo(300,r*SZ);ctx.stroke()}
+ for(let c=0;c<=COLS;c++){ctx.beginPath();ctx.moveTo(c*SZ,0);ctx.lineTo(c*SZ,600);ctx.stroke()}
+ board.forEach((row,r)=>row.forEach((v,c)=>{if(v)drawBlock(ctx,c,r,v,SZ)}));
+ if(piece){drawGhost();piece.shape.forEach((row,r)=>row.forEach((v,c)=>{if(v&&piece.y+r>=0)drawBlock(ctx,piece.x+c,piece.y+r,piece.color,SZ)}))}
+}
+function drawNext(){
+ nCtx.fillStyle='#0d1526';nCtx.fillRect(0,0,120,120);if(!nextPiece)return;
+ const sz=25,ox=(120-nextPiece.shape[0].length*sz)/2,oy=(120-nextPiece.shape.length*sz)/2;
+ nextPiece.shape.forEach((row,r)=>row.forEach((v,c)=>{if(v){nCtx.fillStyle=nextPiece.color;nCtx.fillRect(ox+c*sz+1,oy+r*sz+1,sz-2,sz-2);nCtx.fillStyle='rgba(255,255,255,0.2)';nCtx.fillRect(ox+c*sz+1,oy+r*sz+1,sz-2,3)}}));
+}
+function drop(){if(valid(piece.shape,piece.x,piece.y+1)){piece.y++}else{merge();clearLines();piece=nextPiece;nextPiece=randomPiece();drawNext();if(!valid(piece.shape,piece.x,piece.y)){gameOver=true;showOverlay('GAME OVER',score);return}}}
+function hardDrop(){while(valid(piece.shape,piece.x,piece.y+1))piece.y++;drop()}
+function tick(){if(gameOver||paused)return;const now=Date.now();if(now-dropTimer>dropInterval){dropTimer=now;drop()}draw();animId=requestAnimationFrame(tick)}
+function startGame(){document.getElementById('overlay').style.display='none';board=newBoard();score=0;totalLines=0;level=1;gameOver=false;paused=false;dropInterval=1000;dropTimer=Date.now();piece=randomPiece();nextPiece=randomPiece();drawNext();document.getElementById('score').textContent='0';document.getElementById('level').textContent='1';document.getElementById('lines').textContent='0';if(animId)cancelAnimationFrame(animId);tick()}
+function showOverlay(title,sc){const o=document.getElementById('overlay');o.innerHTML='<h1>'+title+'</h1><div class="game-over-score">'+sc+' pts</div><p>레벨 '+level+' · '+totalLines+'줄 클리어</p><button onclick="startGame()">▶ 다시 하기</button>';o.style.display='flex'}
+document.addEventListener('keydown',e=>{if(gameOver)return;if(e.key==='p'||e.key==='P'){paused=!paused;if(!paused)tick();return}if(paused)return;switch(e.key){case'ArrowLeft':if(valid(piece.shape,piece.x-1,piece.y))piece.x--;break;case'ArrowRight':if(valid(piece.shape,piece.x+1,piece.y))piece.x++;break;case'ArrowDown':drop();score+=1;document.getElementById('score').textContent=score;break;case'ArrowUp':{const r=rotate(piece.shape);if(valid(r,piece.x,piece.y))piece.shape=r;break}case' ':hardDrop();break}e.preventDefault();draw()});
+let touchStartX,touchStartY;
+canvas.addEventListener('touchstart',e=>{touchStartX=e.touches[0].clientX;touchStartY=e.touches[0].clientY;e.preventDefault()},{passive:false});
+canvas.addEventListener('touchend',e=>{if(gameOver||paused)return;const dx=e.changedTouches[0].clientX-touchStartX,dy=e.changedTouches[0].clientY-touchStartY;if(Math.abs(dx)<10&&Math.abs(dy)<10){const r=rotate(piece.shape);if(valid(r,piece.x,piece.y))piece.shape=r}else if(Math.abs(dx)>Math.abs(dy)){if(dx>30&&valid(piece.shape,piece.x+1,piece.y))piece.x++;else if(dx<-30&&valid(piece.shape,piece.x-1,piece.y))piece.x--}else{if(dy>30)hardDrop()}draw();e.preventDefault()},{passive:false});
+draw();
+</script>
+</body>
+</html>
