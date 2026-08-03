@@ -428,10 +428,10 @@ batter.position.set(-1.0, 0, -0.5); // 우타자 위치
 batter.rotation.y = Math.PI / 2; // 투수를 향해 옆으로 섬
 // 배트 쥐어주기
 const batMat = new THREE.MeshLambertMaterial({color: 0x8B4513});
-const bat = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 1.2, 8), batMat);
-bat.position.set(0, -0.4, 0.5);
-bat.rotation.x = Math.PI/2;
-batter.rArm.add(bat);
+const bat = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, 1.1, 16), batMat);
+bat.position.set(0, -0.35, 0); // 오른손 위치 (elbow 그룹 내부)
+bat.rotation.x = Math.PI/2 - 0.2; // 어깨 뒤로 살짝 눕힘
+batter.rArm.elbow.add(bat); // 팔꿈치/손 그룹에 직접 연결
 scene.add(batter);
 
 const catcher = createHuman(false);
@@ -589,24 +589,35 @@ function update3DAnimations() {
     }
 
     // 타자 애니메이션
+    const now = performance.now();
+    const breath = Math.sin(now * 0.003) * 0.02; // 호흡 모션 (상하)
+    const waggle = Math.sin(now * 0.008) * 0.1; // 배트 흔들기 (대기 자세)
+
     if (G.ba === 'ready') {
-        batter.pelvis.position.y = 0.92; // 살짝 굽힘
+        batter.pelvis.position.y = 0.92 + breath; // 숨쉬며 약간씩 움직임
         batter.lLeg.rotation.x = -0.2; batter.rLeg.rotation.x = -0.2;
         batter.lLeg.knee.rotation.x = 0.4; batter.rLeg.knee.rotation.x = 0.4; // 기마자세
         batter.pelvis.rotation.y = 0;
-        batter.torso.rotation.y = 0;
-        batter.lArm.rotation.set(0.2, 0, -0.4);
-        batter.lArm.elbow.rotation.x = -1.2; // 배트 쥐기 위해 팔꿈치 굽힘
-        batter.rArm.rotation.set(0.2, 0, 0.4);
-        batter.rArm.elbow.rotation.x = -1.5;
-        batter.rArm.rotation.z = Math.PI/4;
+        batter.torso.rotation.y = -Math.PI / 6; // 투수 반대편으로 몸을 비틀어 힘을 모음
+        batter.torso.rotation.z = 0.1;
+        
+        // 왼팔 (가슴 앞으로 당겨 손잡이 잡기)
+        batter.lArm.rotation.set(-0.3, -0.6, -0.5);
+        batter.lArm.elbow.rotation.x = -1.8;
+        
+        // 오른팔 (어깨 뒤쪽으로 높이 들어올려 배트를 쥠)
+        batter.rArm.rotation.set(1.0, 0.5, 0.5);
+        batter.rArm.elbow.rotation.x = -2.2 + waggle; // 손목/팔꿈치를 까딱거리며 타이밍 잼
+        batter.rArm.rotation.z = 0;
     } else if (G.ba === 'swing') {
         // 자연스러운 스윙 애니메이션 (Easing: EaseInOutQuad 사용)
         const t = Math.min(1, G.bf / 22); // 프레임을 22로 하여 여유있게 진행
-        const t_ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // 서서히 시작해서 임팩트 때 빠르게, 이후 부드럽게 감속
+        const t_ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
         
+        batter.pelvis.position.y = 0.92;
         batter.pelvis.rotation.y = -Math.PI * 0.4 * t_ease; // 골반 회전
-        batter.torso.rotation.y = -Math.PI * 0.6 * t_ease; // 몸통 강하게 회전
+        batter.torso.rotation.y = -Math.PI / 6 - (Math.PI * 0.6 * t_ease); // 몸통 강하게 회전
+        batter.torso.rotation.z = 0.1 * (1 - t_ease);
         
         // 하체 중심 이동 (앞다리는 펴고 뒷다리는 굽힘)
         batter.lLeg.rotation.x = -0.2 - (0.2 * t_ease);
@@ -614,11 +625,12 @@ function update3DAnimations() {
         batter.rLeg.rotation.x = -0.2 + (0.2 * t_ease);
         batter.rLeg.knee.rotation.x = 0.4 + (0.3 * t_ease);
         
-        // 팔꿈치가 펴지면서 팔을 뻗는 스윙 로직
-        batter.lArm.rotation.x = 0.2 - (Math.PI/1.8 * t_ease);
-        batter.lArm.elbow.rotation.x = -1.2 * (1 - t_ease);
-        batter.rArm.rotation.x = 0.2 - (Math.PI/1.8 * t_ease);
-        batter.rArm.elbow.rotation.x = -1.5 * (1 - t_ease);
+        // 팔꿈치가 펴지면서 팔을 뻗는 릴리스 스윙 로직
+        batter.lArm.rotation.set(-0.3 + (0.5 * t_ease), -0.6 + (0.6 * t_ease), -0.5 + (0.3 * t_ease));
+        batter.lArm.elbow.rotation.x = -1.8 * (1 - t_ease) - 0.2;
+        
+        batter.rArm.rotation.set(1.0 - (0.8 * t_ease), 0.5 - (0.5 * t_ease), 0.5 - (0.5 * t_ease));
+        batter.rArm.elbow.rotation.x = -2.2 * (1 - t_ease) - 0.2;
     }
 
     // 공 궤적 연산
