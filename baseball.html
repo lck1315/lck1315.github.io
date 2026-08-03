@@ -321,31 +321,52 @@ function createHuman(isAway) {
     brim.position.set(0, -0.05, 0.3); // 앞쪽을 향함
     hat.add(brim);
 
-    // 팔 생성 헬퍼
+    // 팔 생성 헬퍼 (상완 + 하완 + 팔꿈치)
     function createArm(isLeft) {
         const armPivot = new THREE.Group();
         armPivot.position.set(isLeft ? -0.38 : 0.38, 0.3, 0);
-        const armMesh = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.6, 0.18), skinMat);
-        armMesh.position.y = -0.25;
-        armMesh.castShadow = true;
-        armPivot.add(armMesh);
+        const upperArm = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.35, 0.18), skinMat);
+        upperArm.position.y = -0.15;
+        upperArm.castShadow = true;
+        armPivot.add(upperArm);
+        
+        const elbow = new THREE.Group();
+        elbow.position.y = -0.35;
+        armPivot.add(elbow);
+        armPivot.elbow = elbow;
+        
+        const foreArm = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.35, 0.16), skinMat);
+        foreArm.position.y = -0.15;
+        foreArm.castShadow = true;
+        elbow.add(foreArm);
         return armPivot;
     }
     const lArm = createArm(true); torso.add(lArm); group.lArm = lArm;
     const rArm = createArm(false); torso.add(rArm); group.rArm = rArm;
 
-    // 다리 생성 헬퍼
+    // 다리 생성 헬퍼 (허벅지 + 종아리 + 무릎)
     function createLeg(isLeft) {
         const legPivot = new THREE.Group();
         legPivot.position.set(isLeft ? -0.2 : 0.2, 0, 0);
-        const legMesh = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.8, 0.22), pantsMat);
-        legMesh.position.y = -0.4;
-        legMesh.castShadow = true;
-        legPivot.add(legMesh);
+        
+        const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.45, 0.22), pantsMat);
+        thigh.position.y = -0.2;
+        thigh.castShadow = true;
+        legPivot.add(thigh);
+        
+        const knee = new THREE.Group();
+        knee.position.y = -0.45;
+        legPivot.add(knee);
+        legPivot.knee = knee;
+        
+        const calf = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.45, 0.20), pantsMat);
+        calf.position.y = -0.2;
+        calf.castShadow = true;
+        knee.add(calf);
         
         const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.15, 0.3), shoeMat);
         shoe.position.set(0, -0.45, 0.05);
-        legMesh.add(shoe);
+        knee.add(shoe);
         
         return legPivot;
     }
@@ -399,12 +420,16 @@ fielderPositions.forEach(pos => {
     f.position.set(pos[0], 0, pos[1]);
     f.lookAt(0, 0, 0); // 홈을 바라봄
     
-    // 수비 기본 자세 (무릎 굽히고 팔 내림)
-    f.pelvis.position.y = 0.6;
+    // 수비 기본 자세 (무릎 굽히고 기마자세)
+    f.pelvis.position.y = 0.8;
     f.lLeg.rotation.x = -0.3;
+    f.lLeg.knee.rotation.x = 0.6;
     f.rLeg.rotation.x = -0.3;
+    f.rLeg.knee.rotation.x = 0.6;
     f.lArm.rotation.x = -0.4;
+    f.lArm.elbow.rotation.x = -0.2;
     f.rArm.rotation.x = -0.4;
+    f.rArm.elbow.rotation.x = -0.2;
     
     scene.add(f);
     fielders.push(f);
@@ -493,35 +518,63 @@ function update3DAnimations() {
         pitcher.pelvis.position.y = 1.0;
         pitcher.rArm.rotation.set(0, 0, 0);
         pitcher.lArm.rotation.set(0, 0, 0);
+        pitcher.rArm.elbow.rotation.x = 0;
+        pitcher.lArm.elbow.rotation.x = 0;
         pitcher.lLeg.rotation.set(0, 0, 0);
+        pitcher.rLeg.rotation.set(0, 0, 0);
+        pitcher.lLeg.knee.rotation.x = 0;
+        pitcher.rLeg.knee.rotation.x = 0;
         pitcher.torso.rotation.set(0, 0, 0);
     } else if (G.pa === 'windup') {
         const t = G.pf / 8; // 0 to 1
         pitcher.lLeg.rotation.x = -Math.PI / 2 * t; // 다리 들기
+        pitcher.lLeg.knee.rotation.x = Math.PI / 2 * t; // 무릎 굽히기
         pitcher.rArm.rotation.x = -Math.PI * t; // 팔 뒤로
+        pitcher.rArm.elbow.rotation.x = -Math.PI / 2 * t; // 팔꿈치 굽히기
         pitcher.torso.rotation.y = -Math.PI / 4 * t; // 몸 비틀기
     } else if (G.pa === 'throw') {
         const t = G.pf / 6; // 0 to 1
-        pitcher.lLeg.rotation.x = -Math.PI / 2 * (1 - t); // 다리 내리기
-        pitcher.rArm.rotation.x = -Math.PI + (Math.PI * 1.5 * t); // 팔 휘두르기
+        pitcher.lLeg.rotation.x = -Math.PI / 2 * (1 - t); 
+        pitcher.lLeg.knee.rotation.x = Math.PI / 2 * (1 - t); 
+        pitcher.rArm.rotation.x = -Math.PI + (Math.PI * 1.5 * t); 
+        pitcher.rArm.elbow.rotation.x = -Math.PI / 2 * (1 - t); // 팔 펴지기
         pitcher.torso.rotation.y = -Math.PI / 4 * (1 - t); 
         pitcher.torso.rotation.x = Math.PI / 6 * t; // 상체 숙이기
     } else if (G.pa === 'follow') {
         pitcher.rArm.rotation.x = Math.PI / 2;
         pitcher.torso.rotation.x = Math.PI / 6;
+        pitcher.rLeg.rotation.x = -0.3; // 뒷다리 들림
+        pitcher.rLeg.knee.rotation.x = 0.5;
     }
 
     // 타자 애니메이션
     if (G.ba === 'ready') {
+        batter.pelvis.position.y = 0.92; // 살짝 굽힘
+        batter.lLeg.rotation.x = -0.2; batter.rLeg.rotation.x = -0.2;
+        batter.lLeg.knee.rotation.x = 0.4; batter.rLeg.knee.rotation.x = 0.4; // 기마자세
+        batter.pelvis.rotation.y = 0;
         batter.torso.rotation.y = 0;
-        batter.lArm.rotation.set(0, 0, -Math.PI/6);
-        batter.rArm.rotation.set(0, 0, Math.PI/6);
+        batter.lArm.rotation.set(0.2, 0, -0.4);
+        batter.lArm.elbow.rotation.x = -1.2; // 배트 쥐기 위해 팔꿈치 굽힘
+        batter.rArm.rotation.set(0.2, 0, 0.4);
+        batter.rArm.elbow.rotation.x = -1.5;
         batter.rArm.rotation.z = Math.PI/4;
     } else if (G.ba === 'swing') {
-        const t = G.bf / 8; // 0 to 1
-        batter.torso.rotation.y = -Math.PI * t; // 몸통 강하게 회전
-        batter.lArm.rotation.x = -Math.PI/2 * t;
-        batter.rArm.rotation.x = -Math.PI/2 * t;
+        const t = Math.min(1, G.bf / 18); // 스윙을 18 프레임에 걸쳐 묵직하게 진행
+        batter.pelvis.rotation.y = -Math.PI * 0.4 * t; // 골반 회전
+        batter.torso.rotation.y = -Math.PI * 0.6 * t; // 몸통 강하게 회전
+        
+        // 하체 중심 이동 (앞다리는 펴고 뒷다리는 굽힘)
+        batter.lLeg.rotation.x = -0.2 - (0.2 * t);
+        batter.lLeg.knee.rotation.x = 0.4 * (1 - t); 
+        batter.rLeg.rotation.x = -0.2 + (0.2 * t);
+        batter.rLeg.knee.rotation.x = 0.4 + (0.2 * t);
+        
+        // 팔꿈치가 펴지면서 팔을 뻗는 스윙 로직
+        batter.lArm.rotation.x = 0.2 - (Math.PI/1.8 * t);
+        batter.lArm.elbow.rotation.x = -1.2 * (1 - t);
+        batter.rArm.rotation.x = 0.2 - (Math.PI/1.8 * t);
+        batter.rArm.elbow.rotation.x = -1.5 * (1 - t);
     }
 
     // 공 궤적 연산
@@ -616,7 +669,7 @@ function loop() {
     else if (G.pa === 'throw') { G.pf += 0.4; if (G.pf > 6) { G.pa = 'follow'; G.pf = 0; } }
     else if (G.pa === 'follow') { G.pf += 0.1; if (G.pf > 3) { G.pa = 'idle'; G.pf = 0; } }
     
-    if (G.ba === 'swing') { G.bf += 0.7; if (G.bf > 8) { G.ba = 'ready'; G.bf = 0; } }
+    if (G.ba === 'swing') { G.bf += 0.7; if (G.bf > 26) { G.ba = 'ready'; G.bf = 0; } }
     
     if (G.ph === 'PITCH_TIMING') { G.tgs -= 2.2; if (G.tgs < 12) G.tgs = 110; }
 
