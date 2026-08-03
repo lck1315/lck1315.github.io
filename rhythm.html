@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DODO Rhythm | EZ2DJ 스타일</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none}
+body{background:#000;color:#fff;font-family:'Outfit',sans-serif;overflow:hidden;margin:0;display:flex;justify-content:center;align-items:center;height:100vh}
+#game-container{position:relative;width:100%;max-width:500px;height:100%;background:linear-gradient(to bottom, #0a0a0a, #1a1a2e);box-shadow:0 0 50px rgba(139,92,246,0.2);overflow:hidden}
+canvas{display:block;width:100%;height:100%}
+#ui-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;display:flex;flex-direction:column;z-index:10}
+.top-bar{padding:20px;display:flex;justify-content:space-between;align-items:flex-start}
+.stats{text-align:right}
+.combo{font-family:'Orbitron',sans-serif;font-size:3rem;font-weight:900;color:#22d3ee;text-shadow:0 0 20px #22d3ee;margin-top:100px;text-align:center;opacity:0;transition:opacity 0.1s}
+.combo.show{opacity:1;animation:pop 0.2s ease-out}
+@keyframes pop{0%{transform:scale(0.8)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
+.score-display{font-family:'Orbitron',sans-serif;font-size:2rem;color:#facc15;text-shadow:0 0 10px #facc15}
+.judge-msg{font-family:'Orbitron',sans-serif;font-size:2.5rem;font-weight:900;text-align:center;margin-top:20px;opacity:0}
+.judge-msg.show{opacity:1;animation:pop 0.2s}
+.j-perfect{color:#a855f7;text-shadow:0 0 20px #a855f7}
+.j-great{color:#22c55e;text-shadow:0 0 20px #22c55e}
+.j-good{color:#3b82f6;text-shadow:0 0 20px #3b82f6}
+.j-miss{color:#ef4444;text-shadow:0 0 20px #ef4444}
+#overlay{position:absolute;inset:0;background:rgba(0,0,0,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;pointer-events:auto;backdrop-filter:blur(8px)}
+#overlay h2{font-family:'Orbitron',sans-serif;font-size:4rem;color:#a855f7;text-shadow:0 0 30px rgba(168,85,247,0.5);margin-bottom:10px}
+#overlay p{color:#94a3b8;margin:12px 0 30px;font-size:1.2rem;text-align:center}
+.btn{padding:16px 40px;font-size:1.2rem;font-weight:900;font-family:'Orbitron',sans-serif;border:none;border-radius:30px;cursor:pointer;transition:all 0.2s;background:linear-gradient(135deg,#8b5cf6,#ec4899);color:#fff;box-shadow:0 6px 20px rgba(139,92,246,0.6);text-transform:uppercase;letter-spacing:2px}
+.btn:hover{transform:scale(1.05);box-shadow:0 8px 25px rgba(139,92,246,0.8)}
+.back-btn{position:fixed;top:20px;right:20px;background:rgba(0,0,0,0.5);color:#fff;padding:10px 20px;border-radius:20px;text-decoration:none;font-weight:700;z-index:100;border:1px solid rgba(255,255,255,0.2)}
+.keys-hint{display:flex;width:100%;position:absolute;bottom:80px;justify-content:space-around;font-family:'Orbitron',sans-serif;color:rgba(255,255,255,0.5);font-size:1.5rem}
+</style>
+</head>
+<body>
+<a href="game.html" class="back-btn">돌아가기</a>
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui-layer">
+        <div class="top-bar">
+            <h1 style="font-family:'Orbitron';color:#ec4899;text-shadow:0 0 10px #ec4899;font-size:1.5rem">DODO RHYTHM</h1>
+            <div class="stats">
+                <div class="score-display" id="score">000000</div>
+            </div>
+        </div>
+        <div class="combo" id="combo">0 COMBO</div>
+        <div class="judge-msg" id="judge">PERFECT</div>
+        
+        <div class="keys-hint">
+            <div>D</div><div>F</div><div>J</div><div>K</div>
+        </div>
+    </div>
+    
+    <div id="overlay">
+        <h2>EZ BEAT</h2>
+        <p>음악에 맞춰 내려오는 노트를<br>[D] [F] [J] [K] 키로 정확히 누르세요!</p>
+        <button class="btn" onclick="startGame()">PLAY MUSIC</button>
+    </div>
+</div>
+
+<script>
+// Web Audio API for Chiptune
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function playBeep(freq, type='square', duration=0.1) {
+    if(!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+}
+
+// Frequencies for lanes
+const laneFreqs = [261.63, 329.63, 392.00, 523.25]; // C4, E4, G4, C5
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() {
+    const parent = document.getElementById('game-container');
+    W = parent.clientWidth;
+    H = parent.clientHeight;
+    canvas.width = W;
+    canvas.height = H;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Logic
+const lanes = 4;
+const keys = ['d', 'f', 'j', 'k'];
+const colors = ['#ec4899', '#3b82f6', '#3b82f6', '#ec4899'];
+let activeKeys = [false, false, false, false];
+let keyPressEffects = [0, 0, 0, 0]; // Visual effect timers
+
+let notes = [];
+let playing = false;
+let startTime = 0;
+let score = 0;
+let combo = 0;
+let maxCombo = 0;
+let noteSpeed = 800; // pixels per second
+const hitY = H - 100; // Judgment line Y
+
+// Generate simple beat map
+let map = [];
+function generateMap() {
+    map = [];
+    let time = 2000; // Starts after 2 seconds
+    for(let i=0; i<100; i++) { // 100 notes
+        map.push({
+            time: time,
+            lane: Math.floor(Math.random() * 4),
+            hit: false
+        });
+        time += (Math.random() > 0.5 ? 400 : 200); // 150 BPM eighth or sixteenth notes
+    }
+}
+
+function initGame() {
+    if(!audioCtx) audioCtx = new AudioContext();
+    generateMap();
+    notes = JSON.parse(JSON.stringify(map));
+    score = 0; combo = 0; maxCombo = 0;
+    updateScore();
+    startTime = performance.now();
+    playing = true;
+    
+    // Start background beat loop
+    playBGM();
+}
+
+let bgmInterval;
+function playBGM() {
+    let tick = 0;
+    bgmInterval = setInterval(() => {
+        if(!playing) { clearInterval(bgmInterval); return; }
+        // Simple bass drum
+        if(tick % 4 === 0) playBeep(60, 'sine', 0.2);
+        // Hihat
+        if(tick % 2 !== 0) playBeep(4000, 'square', 0.05);
+        tick++;
+    }, 200); // 150 BPM (400ms per beat, 200ms per half beat)
+}
+
+function showJudge(msg, cls) {
+    const el = document.getElementById('judge');
+    el.textContent = msg;
+    el.className = 'judge-msg show ' + cls;
+    
+    const cEl = document.getElementById('combo');
+    if(combo > 2) {
+        cEl.textContent = combo + ' COMBO';
+        cEl.classList.remove('show');
+        void cEl.offsetWidth; // trigger reflow
+        cEl.classList.add('show');
+    } else {
+        cEl.classList.remove('show');
+    }
+    
+    setTimeout(() => { el.classList.remove('show'); }, 300);
+}
+
+function updateScore() {
+    document.getElementById('score').textContent = score.toString().padStart(6, '0');
+}
+
+function hitLane(l) {
+    if(!playing) return;
+    activeKeys[l] = true;
+    keyPressEffects[l] = 1.0;
+    
+    // Check judgment
+    const now = performance.now() - startTime;
+    const hitTime = now + (hitY / noteSpeed) * 1000; // The time the note *should* be hit
+    
+    // Find closest note in this lane
+    let closest = null;
+    let minDiff = 9999;
+    
+    for(let n of notes) {
+        if(n.lane === l && !n.hit) {
+            let diff = Math.abs(n.time - now);
+            if(diff < minDiff) {
+                minDiff = diff;
+                closest = n;
+            }
+        }
+    }
+    
+    if(closest && minDiff < 150) { // Hit window (ms)
+        closest.hit = true;
+        playBeep(laneFreqs[l], 'square', 0.1);
+        
+        if(minDiff < 40) {
+            score += 100; combo++; showJudge('PERFECT', 'j-perfect');
+        } else if (minDiff < 80) {
+            score += 80; combo++; showJudge('GREAT', 'j-great');
+        } else {
+            score += 50; combo = 0; showJudge('GOOD', 'j-good');
+        }
+        if(combo > maxCombo) maxCombo = combo;
+        updateScore();
+    }
+}
+
+function releaseLane(l) {
+    activeKeys[l] = false;
+}
+
+// Input
+window.addEventListener('keydown', (e) => {
+    let idx = keys.indexOf(e.key.toLowerCase());
+    if(idx !== -1 && !activeKeys[idx]) hitLane(idx);
+});
+window.addEventListener('keyup', (e) => {
+    let idx = keys.indexOf(e.key.toLowerCase());
+    if(idx !== -1) releaseLane(idx);
+});
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    for(let i=0; i<e.touches.length; i++) {
+        let t = e.touches[i];
+        let rect = canvas.getBoundingClientRect();
+        let x = t.clientX - rect.left;
+        let l = Math.floor(x / (W/lanes));
+        hitLane(l);
+    }
+}, {passive: false});
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    activeKeys = [false,false,false,false]; // Simple reset for mobile
+});
+
+function draw() {
+    // Clear
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.clearRect(0, 0, W, H);
+    
+    const laneW = W / lanes;
+    
+    // Draw Lanes
+    for(let i=0; i<lanes; i++) {
+        ctx.fillStyle = i%2===0 ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.01)';
+        ctx.fillRect(i*laneW, 0, laneW, H);
+        
+        // Key Press Effect
+        if(keyPressEffects[i] > 0) {
+            let grad = ctx.createLinearGradient(0, hitY, 0, hitY - 300);
+            grad.addColorStop(0, colors[i]);
+            grad.addColorStop(1, 'transparent');
+            ctx.fillStyle = grad;
+            ctx.globalAlpha = keyPressEffects[i] * 0.5;
+            ctx.fillRect(i*laneW, 0, laneW, H);
+            ctx.globalAlpha = 1.0;
+            keyPressEffects[i] -= 0.05;
+        }
+    }
+    
+    // Judgment Line
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#fff';
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, hitY - 2, W, 4);
+    ctx.shadowBlur = 0;
+    
+    if(playing) {
+        const now = performance.now() - startTime;
+        ctx.globalCompositeOperation = 'lighter';
+        
+        let remaining = 0;
+        
+        for(let n of notes) {
+            if(n.hit) continue;
+            
+            // Calculate Y position
+            // (now - n.time) is how long ago the note was supposed to hit
+            // if n.time > now, it's in the future
+            let timeDiff = n.time - now; 
+            // 0 -> hitY. timeDiff = 1000ms -> hitY - noteSpeed
+            let y = hitY - (timeDiff / 1000) * noteSpeed;
+            
+            if(y > -50 && y < H + 50) {
+                // Draw Note
+                ctx.fillStyle = colors[n.lane];
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = colors[n.lane];
+                // Note shape
+                ctx.fillRect(n.lane * laneW + 10, y - 10, laneW - 20, 20);
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(n.lane * laneW + 10, y - 5, laneW - 20, 10);
+            }
+            
+            if(y > H) {
+                // Missed
+                n.hit = true;
+                combo = 0;
+                showJudge('MISS', 'j-miss');
+            }
+            
+            if(!n.hit) remaining++;
+        }
+        
+        ctx.globalCompositeOperation = 'source-over';
+        
+        if(remaining === 0 && now > map[map.length-1].time + 2000) {
+            gameOver("TRACK COMPLETE");
+        }
+    }
+}
+
+function loop() {
+    draw();
+    requestAnimationFrame(loop);
+}
+
+function gameOver(msg) {
+    playing = false;
+    clearInterval(bgmInterval);
+    document.getElementById('overlay').style.display = 'flex';
+    document.getElementById('overlay').querySelector('h2').textContent = msg;
+    document.getElementById('overlay').querySelector('p').innerHTML = `SCORE: ${score}<br>MAX COMBO: ${maxCombo}`;
+}
+
+function startGame() {
+    if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    document.getElementById('overlay').style.display = 'none';
+    initGame();
+}
+
+resize();
+loop();
+</script>
+</body>
+</html>
