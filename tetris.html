@@ -6,7 +6,7 @@
 <title>DODO Tetris | 테트리스</title>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
 <style>
-*{margin:0;padding:0;box-sizing:border-box;user-select:none}
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;touch-action:none}
 body{background:#0a0e1a;color:#e2e8f0;font-family:'Outfit',sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;overflow:hidden}
 .game-wrap{display:flex;gap:24px;align-items:flex-start}
 canvas{border:2px solid rgba(99,102,241,0.3);border-radius:8px;box-shadow:0 0 40px rgba(99,102,241,0.15)}
@@ -24,7 +24,33 @@ canvas{border:2px solid rgba(99,102,241,0.3);border-radius:8px;box-shadow:0 0 40
 #overlay button{padding:14px 40px;font-size:1.1rem;font-weight:700;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;border-radius:25px;cursor:pointer;box-shadow:0 4px 20px rgba(99,102,241,0.4);transition:transform 0.2s}
 #overlay button:hover{transform:scale(1.05)}
 .game-over-score{font-family:'Orbitron',sans-serif;font-size:2rem;color:#f59e0b;margin:8px 0}
-@media(max-width:600px){.game-wrap{flex-direction:column;align-items:center}.side{flex-direction:row;flex-wrap:wrap;justify-content:center;min-width:auto}}
+@media(max-width:600px){
+    .game-wrap{flex-direction:column;align-items:center}
+    .side{flex-direction:row;flex-wrap:wrap;justify-content:center;min-width:auto}
+    .mobile-controls{display:flex;}
+}
+.mobile-controls {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+    width: 100%;
+}
+.mc-row { display: flex; gap: 10px; }
+.mc-btn {
+    width: 60px; height: 60px;
+    background: rgba(99,102,241,0.2);
+    border: 2px solid rgba(99,102,241,0.5);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 1.5rem;
+    display: flex; justify-content: center; align-items: center;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+.mc-btn:active { background: rgba(99,102,241,0.5); transform: scale(0.95); }
+.mc-btn-wide { width: 130px; }
 </style>
 </head>
 <body>
@@ -48,6 +74,22 @@ canvas{border:2px solid rgba(99,102,241,0.3);border-radius:8px;box-shadow:0 0 40
 <b>← →</b> 이동<br><b>↑</b> 회전<br><b>↓</b> 소프트 드롭<br><b>Space</b> 하드 드롭<br><b>P</b> 일시정지
 </div>
 </div>
+</div>
+
+<div class="mobile-controls">
+    <div class="mc-row">
+        <div class="mc-btn" id="btn-up">↻</div>
+    </div>
+    <div class="mc-row">
+        <div class="mc-btn" id="btn-left">←</div>
+        <div class="mc-btn" id="btn-down">↓</div>
+        <div class="mc-btn" id="btn-right">→</div>
+    </div>
+    <div class="mc-row">
+        <div class="mc-btn mc-btn-wide" id="btn-drop">DROP</div>
+    </div>
+</div>
+
 </div>
 <script>
 const COLS=10,ROWS=20,SZ=30;
@@ -83,6 +125,14 @@ function tick(){if(gameOver||paused)return;const now=Date.now();if(now-dropTimer
 function startGame(){document.getElementById('overlay').style.display='none';board=newBoard();score=0;totalLines=0;level=1;gameOver=false;paused=false;dropInterval=1000;dropTimer=Date.now();piece=randomPiece();nextPiece=randomPiece();drawNext();document.getElementById('score').textContent='0';document.getElementById('level').textContent='1';document.getElementById('lines').textContent='0';if(animId)cancelAnimationFrame(animId);tick()}
 function showOverlay(title,sc){const o=document.getElementById('overlay');o.innerHTML='<h1>'+title+'</h1><div class="game-over-score">'+sc+' pts</div><p>레벨 '+level+' · '+totalLines+'줄 클리어</p><button onclick="startGame()">▶ 다시 하기</button>';o.style.display='flex'}
 document.addEventListener('keydown',e=>{if(gameOver)return;if(e.key==='p'||e.key==='P'){paused=!paused;if(!paused)tick();return}if(paused)return;switch(e.key){case'ArrowLeft':if(valid(piece.shape,piece.x-1,piece.y))piece.x--;break;case'ArrowRight':if(valid(piece.shape,piece.x+1,piece.y))piece.x++;break;case'ArrowDown':drop();score+=1;document.getElementById('score').textContent=score;break;case'ArrowUp':{const r=rotate(piece.shape);if(valid(r,piece.x,piece.y))piece.shape=r;break}case' ':hardDrop();break}e.preventDefault();draw()});
+// Mobile UI buttons
+document.getElementById('btn-left').addEventListener('touchstart', (e)=>{ e.preventDefault(); if(!gameOver && !paused && valid(piece.shape,piece.x-1,piece.y)) { piece.x--; draw(); }});
+document.getElementById('btn-right').addEventListener('touchstart', (e)=>{ e.preventDefault(); if(!gameOver && !paused && valid(piece.shape,piece.x+1,piece.y)) { piece.x++; draw(); }});
+document.getElementById('btn-down').addEventListener('touchstart', (e)=>{ e.preventDefault(); if(!gameOver && !paused) { drop(); score+=1; document.getElementById('score').textContent=score; draw(); }});
+document.getElementById('btn-up').addEventListener('touchstart', (e)=>{ e.preventDefault(); if(!gameOver && !paused) { const r=rotate(piece.shape); if(valid(r,piece.x,piece.y)) { piece.shape=r; draw(); }}});
+document.getElementById('btn-drop').addEventListener('touchstart', (e)=>{ e.preventDefault(); if(!gameOver && !paused) { hardDrop(); draw(); }});
+
+// Keep swipe as fallback
 let touchStartX,touchStartY;
 canvas.addEventListener('touchstart',e=>{touchStartX=e.touches[0].clientX;touchStartY=e.touches[0].clientY;e.preventDefault()},{passive:false});
 canvas.addEventListener('touchend',e=>{if(gameOver||paused)return;const dx=e.changedTouches[0].clientX-touchStartX,dy=e.changedTouches[0].clientY-touchStartY;if(Math.abs(dx)<10&&Math.abs(dy)<10){const r=rotate(piece.shape);if(valid(r,piece.x,piece.y))piece.shape=r}else if(Math.abs(dx)>Math.abs(dy)){if(dx>30&&valid(piece.shape,piece.x+1,piece.y))piece.x++;else if(dx<-30&&valid(piece.shape,piece.x-1,piece.y))piece.x--}else{if(dy>30)hardDrop()}draw();e.preventDefault()},{passive:false});
