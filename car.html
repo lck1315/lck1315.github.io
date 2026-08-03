@@ -21,16 +21,10 @@ h1{font-family:'Orbitron',sans-serif;font-size:2rem;font-weight:900;background:l
 .btn{padding:16px 40px;font-size:1.2rem;font-weight:900;font-family:'Orbitron',sans-serif;border:none;border-radius:30px;cursor:pointer;transition:all 0.2s;background:linear-gradient(135deg,#ec4899,#8b5cf6);color:#fff;box-shadow:0 0 20px rgba(236,72,153,0.6);text-transform:uppercase;letter-spacing:2px}
 .btn:hover{transform:scale(1.05);box-shadow:0 0 30px rgba(236,72,153,0.9)}
 #game-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1}
-.touch-zone{position:absolute;top:0;bottom:0;width:50%;z-index:5;pointer-events:auto;display:flex;align-items:center;justify-content:center;font-size:4rem;color:rgba(255,255,255,0.1);font-family:sans-serif;transition:all 0.1s}
-#touch-left{left:0;}
-#touch-right{right:0;}
-.touch-zone:active{background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.3);}
 </style>
 </head>
 <body>
 <div id="game-container"></div>
-<div class="touch-zone" id="touch-left">❮</div>
-<div class="touch-zone" id="touch-right">❯</div>
 <div id="ui-layer">
     <div class="top-bar">
         <h1>DODO RACING</h1>
@@ -167,12 +161,35 @@ let keys = { ArrowLeft: false, ArrowRight: false, a: false, d: false };
 window.addEventListener('keydown', e => { if(keys.hasOwnProperty(e.key)) keys[e.key] = true; });
 window.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.key)) keys[e.key] = false; });
 
-const tl = document.getElementById('touch-left');
-const tr = document.getElementById('touch-right');
-tl.addEventListener('touchstart', (e)=>{e.preventDefault(); keys.ArrowLeft = true;});
-tl.addEventListener('touchend', (e)=>{e.preventDefault(); keys.ArrowLeft = false;});
-tr.addEventListener('touchstart', (e)=>{e.preventDefault(); keys.ArrowRight = true;});
-tr.addEventListener('touchend', (e)=>{e.preventDefault(); keys.ArrowRight = false;});
+// 스마트폰 최적화 드래그(스와이프) 조작
+let touchStartX = null;
+let touchStartCarX = 0;
+
+window.addEventListener('touchstart', (e) => {
+    if(e.target.tagName.toLowerCase() === 'button') return;
+    if(e.touches.length > 0) {
+        touchStartX = e.touches[0].clientX;
+        touchStartCarX = targetCarX;
+    }
+}, {passive: false});
+
+window.addEventListener('touchmove', (e) => {
+    if(!playing) return;
+    e.preventDefault(); // 스크롤 방지
+    if(touchStartX !== null && e.touches.length > 0) {
+        let deltaX = e.touches[0].clientX - touchStartX;
+        let rate = 14 / (window.innerWidth * 0.6); // 화면의 60%를 드래그하면 도로 끝에서 끝으로 이동
+        targetCarX = touchStartCarX + (deltaX * rate);
+        targetCarX = Math.max(-7, Math.min(7, targetCarX));
+    }
+}, {passive: false});
+
+window.addEventListener('touchend', () => {
+    touchStartX = null;
+});
+window.addEventListener('touchcancel', () => {
+    touchStartX = null;
+});
 
 function startGame() {
     document.getElementById('overlay').style.display = 'none';
