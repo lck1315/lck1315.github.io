@@ -272,7 +272,7 @@ for(let r=0; r<8; r++) {
   }
 }
 const border = new THREE.Mesh(new THREE.BoxGeometry(8.6, 0.4, 8.6), new THREE.MeshStandardMaterial({color: 0x3d2314, metalness:0.1, roughness:0.9}));
-border.position.y = -0.2;
+border.position.y = -0.21; // Z-fighting 방지를 위해 타일보다 0.01 낮게 배치
 border.receiveShadow = true;
 boardGroup.add(border);
 
