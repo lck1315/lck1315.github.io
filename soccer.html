@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DODO Soccer | 3D 패널티킥</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none}
+body{background:#4ade80;color:#e2e8f0;font-family:'Outfit',sans-serif;overflow:hidden;margin:0}
+#ui-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;display:flex;flex-direction:column;padding:20px;z-index:10}
+h1{font-family:'Orbitron',sans-serif;font-size:2.5rem;font-weight:900;background:linear-gradient(135deg,#facc15,#fb923c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 4px 10px rgba(0,0,0,0.3);margin-bottom:10px}
+.top-bar{display:flex;justify-content:space-between;align-items:flex-start}
+.stats{display:flex;gap:12px}
+.stat-box{background:rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.2);border-radius:12px;padding:12px 20px;text-align:center;box-shadow:0 4px 15px rgba(0,0,0,0.3);backdrop-filter:blur(5px)}
+.stat-box .label{font-size:0.8rem;color:#cbd5e1;letter-spacing:1px}
+.stat-box .val{font-size:2rem;font-weight:900;color:#fff;font-family:'Orbitron',sans-serif}
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,0.8);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;pointer-events:auto;backdrop-filter:blur(8px)}
+#overlay h2{font-family:'Orbitron',sans-serif;font-size:4rem;color:#facc15;text-shadow:0 0 30px rgba(250,204,21,0.5);margin-bottom:10px}
+#overlay p{color:#94a3b8;margin:12px 0 30px;font-size:1.5rem}
+.btn{padding:16px 40px;font-size:1.2rem;font-weight:900;font-family:'Orbitron',sans-serif;border:none;border-radius:30px;cursor:pointer;transition:all 0.2s;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;box-shadow:0 6px 20px rgba(59,130,246,0.6);text-transform:uppercase;letter-spacing:2px}
+.btn:hover{transform:scale(1.05);box-shadow:0 8px 25px rgba(59,130,246,0.8)}
+#game-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1;cursor:crosshair}
+#message{position:absolute;top:30%;left:50%;transform:translate(-50%, -50%) scale(0);font-family:'Orbitron',sans-serif;font-size:4rem;font-weight:900;color:#fff;text-shadow:0 0 20px rgba(0,0,0,0.8);transition:transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);z-index:15;pointer-events:none}
+#message.show{transform:translate(-50%, -50%) scale(1)}
+.back-btn{position:fixed;top:20px;right:20px;background:rgba(0,0,0,0.5);color:#fff;padding:10px 20px;border-radius:20px;text-decoration:none;font-weight:700;z-index:100;backdrop-filter:blur(5px);border:1px solid rgba(255,255,255,0.2)}
+</style>
+</head>
+<body>
+<a href="game.html" class="back-btn">돌아가기</a>
+<div id="game-container"></div>
+<div id="ui-layer">
+    <div class="top-bar">
+        <h1>DODO SOCCER</h1>
+        <div class="stats">
+            <div class="stat-box">
+                <div class="label">GOALS</div>
+                <div class="val" id="score" style="color:#4ade80">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="label">MISSES</div>
+                <div class="val" id="misses" style="color:#f87171">0</div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="message">GOAL!</div>
+<div id="overlay">
+    <h2>PENALTY KICK</h2>
+    <p>빈 공간을 클릭하여 슛을 쏘세요!</p>
+    <button class="btn" onclick="startGame()">KICK OFF</button>
+</div>
+
+<script>
+let score = 0, misses = 0;
+let phase = 'WAIT'; // WAIT, KICK, RESULT
+let clock = new THREE.Clock();
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb); // 맑은 하늘
+scene.fog = new THREE.FogExp2(0x87ceeb, 0.015);
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 200);
+camera.position.set(0, 2.5, 12);
+camera.lookAt(0, 1.5, 0);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.getElementById('game-container').appendChild(renderer.domElement);
+
+// Lights
+const ambLight = new THREE.AmbientLight(0xffffff, 0.6);
+scene.add(ambLight);
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(10, 20, 10);
+dirLight.castShadow = true;
+dirLight.shadow.camera.left = -15;
+dirLight.shadow.camera.right = 15;
+dirLight.shadow.camera.top = 15;
+dirLight.shadow.camera.bottom = -15;
+scene.add(dirLight);
+
+// Grass Field
+const texCanvas = document.createElement('canvas');
+texCanvas.width = 512; texCanvas.height = 512;
+const ctx = texCanvas.getContext('2d');
+ctx.fillStyle = '#4ade80'; ctx.fillRect(0, 0, 512, 512);
+ctx.fillStyle = '#22c55e';
+for(let i=0; i<512; i+=64) ctx.fillRect(i, 0, 32, 512);
+const grassTex = new THREE.CanvasTexture(texCanvas);
+grassTex.wrapS = THREE.RepeatWrapping; grassTex.wrapT = THREE.RepeatWrapping;
+grassTex.repeat.set(20, 20);
+
+const plane = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshLambertMaterial({map: grassTex}));
+plane.rotation.x = -Math.PI / 2;
+plane.receiveShadow = true;
+scene.add(plane);
+
+// Penalty Area Lines
+const lineMat = new THREE.MeshBasicMaterial({color: 0xffffff});
+const line1 = new THREE.Mesh(new THREE.PlaneGeometry(16, 0.1), lineMat); // 가로
+line1.rotation.x = -Math.PI/2; line1.position.set(0, 0.01, -3); scene.add(line1);
+const line2 = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 5.5), lineMat); // 세로 왼
+line2.rotation.x = -Math.PI/2; line2.position.set(-8, 0.01, -5.75); scene.add(line2);
+const line3 = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 5.5), lineMat); // 세로 오
+line3.rotation.x = -Math.PI/2; line3.position.set(8, 0.01, -5.75); scene.add(line3);
+const goalLine = new THREE.Mesh(new THREE.PlaneGeometry(16, 0.1), lineMat); // 가로
+goalLine.rotation.x = -Math.PI/2; goalLine.position.set(0, 0.01, -8.5); scene.add(goalLine);
+
+// Penalty spot
+const spot = new THREE.Mesh(new THREE.CircleGeometry(0.2, 16), lineMat);
+spot.rotation.x = -Math.PI/2; spot.position.set(0, 0.01, 8); scene.add(spot);
+
+// Goal Post
+const goalGroup = new THREE.Group();
+scene.add(goalGroup);
+const postMat = new THREE.MeshStandardMaterial({color: 0xffffff, roughness: 0.5});
+const pLeft = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 3, 16), postMat);
+pLeft.position.set(-3.5, 1.5, -8.5); pLeft.castShadow = true; goalGroup.add(pLeft);
+const pRight = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 3, 16), postMat);
+pRight.position.set(3.5, 1.5, -8.5); pRight.castShadow = true; goalGroup.add(pRight);
+const pTop = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 7.2, 16), postMat);
+pTop.rotation.z = Math.PI/2; pTop.position.set(0, 3.05, -8.5); pTop.castShadow = true; goalGroup.add(pTop);
+
+// Net (Simple semi-transparent plane)
+const netMat = new THREE.MeshBasicMaterial({color: 0xffffff, wireframe: true, transparent: true, opacity: 0.3});
+const netBack = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 3), netMat);
+netBack.position.set(0, 1.5, -10); goalGroup.add(netBack);
+const netLeft = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 3), netMat);
+netLeft.rotation.y = Math.PI/2; netLeft.position.set(-3.6, 1.5, -9.25); goalGroup.add(netLeft);
+const netRight = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 3), netMat);
+netRight.rotation.y = Math.PI/2; netRight.position.set(3.6, 1.5, -9.25); goalGroup.add(netRight);
+const netTop = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 1.5), netMat);
+netTop.rotation.x = -Math.PI/2; netTop.position.set(0, 3.0, -9.25); goalGroup.add(netTop);
+
+// Goalkeeper (Blocky)
+const gkGroup = new THREE.Group();
+scene.add(gkGroup);
+gkGroup.position.set(0, 0, -8);
+const skin = new THREE.MeshStandardMaterial({color: 0xffdbac, roughness:0.6});
+const shirt = new THREE.MeshStandardMaterial({color: 0xf59e0b, roughness:0.8});
+const pants = new THREE.MeshStandardMaterial({color: 0x111111, roughness:0.8});
+const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), skin); head.position.y = 2.0; head.castShadow=true; gkGroup.add(head);
+const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.9, 0.4), shirt); torso.position.y = 1.3; torso.castShadow=true; gkGroup.add(torso);
+const lArm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.9, 0.3), skin); lArm.position.set(-0.65, 1.3, 0); lArm.castShadow=true; gkGroup.add(lArm);
+const rArm = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.9, 0.3), skin); rArm.position.set(0.65, 1.3, 0); rArm.castShadow=true; gkGroup.add(rArm);
+const lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.9, 0.35), pants); lLeg.position.set(-0.25, 0.45, 0); lLeg.castShadow=true; gkGroup.add(lLeg);
+const rLeg = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.9, 0.35), pants); rLeg.position.set(0.25, 0.45, 0); rLeg.castShadow=true; gkGroup.add(rLeg);
+
+// Ball
+const bTexCanvas = document.createElement('canvas');
+bTexCanvas.width = 128; bTexCanvas.height = 128;
+const bctx = bTexCanvas.getContext('2d');
+bctx.fillStyle = '#ffffff'; bctx.fillRect(0,0,128,128);
+bctx.fillStyle = '#000000';
+for(let i=0; i<6; i++) { 
+    bctx.beginPath(); 
+    bctx.arc(Math.random()*128, Math.random()*128, 15, 0, Math.PI*2); 
+    bctx.fill(); 
+}
+const bTex = new THREE.CanvasTexture(bTexCanvas);
+const ball = new THREE.Mesh(new THREE.SphereGeometry(0.25, 32, 32), new THREE.MeshStandardMaterial({map: bTex, roughness: 0.4}));
+ball.castShadow = true;
+scene.add(ball);
+
+// Variables for mechanics
+let ballVel = new THREE.Vector3();
+let gkTargetX = 0, gkVy = 0;
+
+function resetRound() {
+    ball.position.set(0, 0.25, 8);
+    ball.rotation.set(0,0,0);
+    ballVel.set(0,0,0);
+    gkGroup.position.set(0, 0, -8);
+    gkGroup.rotation.set(0,0,0);
+    lArm.rotation.z = Math.PI/4; rArm.rotation.z = -Math.PI/4;
+    phase = 'WAIT';
+}
+
+function startGame() {
+    document.getElementById('overlay').style.display = 'none';
+    score = 0; misses = 0;
+    document.getElementById('score').textContent = '0';
+    document.getElementById('misses').textContent = '0';
+    resetRound();
+}
+
+function showMsg(text, color) {
+    const el = document.getElementById('message');
+    el.textContent = text;
+    el.style.color = color;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 1500);
+}
+
+// Raycasting for kick
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+const targetPlane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 8.5); // Goal plane at z=-8.5
+
+window.addEventListener('pointerdown', (e) => {
+    if(phase !== 'WAIT' || document.getElementById('overlay').style.display === 'flex') return;
+    
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    
+    const target = new THREE.Vector3();
+    raycaster.ray.intersectPlane(targetPlane, target);
+    
+    if(target) {
+        phase = 'KICK';
+        
+        // Calculate velocity to reach target in ~0.6 seconds
+        const time = 0.6;
+        ballVel.x = (target.x - ball.position.x) / time;
+        ballVel.z = (target.z - ball.position.z) / time;
+        const g = 18;
+        ballVel.y = (Math.max(target.y, 0.25) - ball.position.y + 0.5 * g * time * time) / time;
+        
+        // GK Dive logic (Random prediction)
+        const dir = Math.random();
+        if(dir < 0.4) gkTargetX = -2 - Math.random()*1.5;
+        else if (dir < 0.8) gkTargetX = 2 + Math.random()*1.5;
+        else gkTargetX = (Math.random()-0.5)*1;
+        gkVy = 5 + Math.random()*3;
+    }
+});
+
+function animate() {
+    requestAnimationFrame(animate);
+    const dt = Math.min(clock.getDelta(), 0.1);
+    
+    if(phase === 'KICK') {
+        // Move ball
+        ball.position.addScaledVector(ballVel, dt);
+        ballVel.y -= 18 * dt; // gravity
+        ball.rotation.x -= ballVel.z * dt;
+        ball.rotation.z += ballVel.x * dt;
+        
+        // Move GK
+        gkGroup.position.x += (gkTargetX - gkGroup.position.x) * 8 * dt;
+        gkGroup.position.y += gkVy * dt;
+        gkVy -= 15 * dt;
+        if(gkGroup.position.y < 0) {
+            gkGroup.position.y = 0;
+            gkVy = 0;
+        }
+        gkGroup.rotation.z = (gkGroup.position.x > 0 ? -1 : 1) * Math.min(Math.abs(gkGroup.position.x)*0.3, Math.PI/2);
+        
+        // Collision Detection
+        const bx = ball.position.x, by = ball.position.y, bz = ball.position.z;
+        const gx = gkGroup.position.x, gy = gkGroup.position.y, gz = gkGroup.position.z;
+        
+        // Check GK Save
+        if(bz < gz + 0.5 && bz > gz - 0.5 && Math.abs(bx - gx) < 1.5 && Math.abs(by - gy) < 2) {
+            // Save!
+            ballVel.set((bx-gx)*10, 5, 5);
+            phase = 'RESULT';
+            misses++; document.getElementById('misses').textContent = misses;
+            showMsg('SAVED!', '#f87171');
+            setTimeout(resetRound, 2000);
+        }
+        // Check Goal
+        else if (bz <= -8.5) {
+            phase = 'RESULT';
+            if (bx > -3.5 && bx < 3.5 && by > 0 && by < 3.0) {
+                // Goal
+                ballVel.set(0,0,0);
+                ball.position.z = -9;
+                score++; document.getElementById('score').textContent = score;
+                showMsg('GOAL!', '#4ade80');
+            } else {
+                // Out
+                misses++; document.getElementById('misses').textContent = misses;
+                showMsg('MISS!', '#94a3b8');
+            }
+            setTimeout(resetRound, 2000);
+        }
+        
+        // Check Ground bounce before goal
+        if(by < 0.25 && bz > -8.5) {
+            ball.position.y = 0.25;
+            ballVel.y *= -0.7;
+        }
+    } else if (phase === 'RESULT') {
+        // Keep moving ball if out/saved
+        ball.position.addScaledVector(ballVel, dt);
+        ballVel.y -= 18 * dt;
+        if(ball.position.y < 0.25) { ball.position.y = 0.25; ballVel.y *= -0.7; }
+        
+        // camera shake on goal
+        if(ball.position.z === -9) { // Goal scored state
+            camera.position.x = (Math.random()-0.5)*0.1;
+            camera.position.y = 2.5 + (Math.random()-0.5)*0.1;
+        }
+    }
+    
+    // Idle GK animation
+    if(phase === 'WAIT') {
+        const t = performance.now() * 0.005;
+        gkGroup.position.x = Math.sin(t) * 0.5;
+        lArm.rotation.x = Math.sin(t*2) * 0.2;
+        rArm.rotation.x = -Math.sin(t*2) * 0.2;
+        
+        // reset camera
+        camera.position.x = 0;
+        camera.position.y = 2.5;
+    }
+    
+    renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+animate();
+</script>
+</body>
+</html>
