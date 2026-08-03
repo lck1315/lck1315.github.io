@@ -2,1781 +2,698 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DODO Baseball | 3D 투구 물리 게임</title>
-<meta name="description" content="마그누스 효과, 실시간 물리 엔진 기반 3D 야구 투구 게임. 포심, 슬라이더, 커브 등 8가지 구종 지원.">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>DODO Baseball | 프로야구 V26 스타일</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<!-- Three.js -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.157.0/build/three.min.js"></script>
 <style>
-/* ─── Reset & Base ──────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-    --bg:        #0a0e1a;
-    --surface:   #121828;
-    --card:      #1a2235;
-    --border:    rgba(255,255,255,0.08);
-    --primary:   #3b82f6;
-    --accent:    #60a5fa;
-    --gold:      #f59e0b;
-    --red:       #ef4444;
-    --green:     #22c55e;
-    --text:      #e2e8f0;
-    --muted:     #64748b;
-    --strike-z:  rgba(59,130,246,0.25);
-    --glow:      0 0 20px rgba(59,130,246,0.4);
-}
-html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); font-family: 'Outfit', 'Noto Sans KR', sans-serif; color: var(--text); }
+* { box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Noto Sans KR', sans-serif; }
 
-/* ─── Layout ────────────────────────────────────────────────── */
-#game-wrapper {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
-}
-
-/* ─── Top Header ─────────────────────────────────────────────── */
-#game-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 20px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    z-index: 100;
-    flex-shrink: 0;
-}
-.game-logo {
-    font-size: 1.3rem;
-    font-weight: 900;
-    background: linear-gradient(90deg, #60a5fa, #a78bfa);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: 1px;
-}
-.game-logo span { font-weight: 300; }
-
-.score-board {
-    display: flex;
-    gap: 20px;
-    align-items: center;
-    font-size: 0.85rem;
-}
-.score-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-}
-.score-label { font-size: 0.65rem; color: var(--muted); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
-.score-value { font-size: 1.1rem; font-weight: 800; color: var(--text); }
-.score-value.gold { color: var(--gold); }
-.score-value.red  { color: var(--red); }
-.score-value.green{ color: var(--green); }
-
-.header-btn {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    padding: 6px 14px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    font-family: inherit;
-    transition: 0.2s;
-}
-.header-btn:hover { background: var(--primary); border-color: var(--primary); }
-
-/* ─── Main Area ──────────────────────────────────────────────── */
-#main-area {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-}
-
-/* ─── 3D Canvas ──────────────────────────────────────────────── */
-#canvas-area {
-    flex: 1;
+/* ─── 3D 원근감 씬 ─── */
+#game-scene {
     position: relative;
-    overflow: hidden;
-}
-#three-canvas {
-    display: block;
     width: 100%;
     height: 100%;
+    background: linear-gradient(to bottom, #0a1930 0%, #173663 30%, #2e4c25 30.5%, #183313 100%);
+    overflow: hidden;
+    perspective: 1000px;
 }
 
-/* ─── Overlays ───────────────────────────────────────────────── */
-#pitch-result-overlay {
+/* ─── 야구장 배경 레이어 ─── */
+.stadium-lights {
+    position: absolute; top: 0; left: 0; width: 100%; height: 30%;
+    background: radial-gradient(circle at 20% 10%, rgba(255,255,255,0.15) 0%, transparent 40%),
+                radial-gradient(circle at 80% 10%, rgba(255,255,255,0.15) 0%, transparent 40%);
+}
+.field-lines {
+    position: absolute; top: 30.5%; left: 0; width: 100%; height: 70%;
+    background-image: 
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 50px 20px;
+    transform: perspective(500px) rotateX(60deg);
+    transform-origin: top center;
+}
+.dirt-mound {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0);
-    text-align: center;
-    pointer-events: none;
-    transition: transform 0.15s cubic-bezier(0.34,1.56,0.64,1);
-    z-index: 50;
+    top: 42%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 200px; height: 60px;
+    background: #6b4c3a;
+    border-radius: 50%;
+    box-shadow: inset 0 5px 15px rgba(0,0,0,0.5);
 }
-#pitch-result-overlay.show {
-    transform: translate(-50%, -50%) scale(1);
-}
-.result-text {
-    font-size: 3.5rem;
-    font-weight: 900;
-    text-shadow: 0 0 30px currentColor;
-    letter-spacing: 2px;
-}
-.result-sub {
-    font-size: 1.1rem;
-    color: rgba(255,255,255,0.7);
-    margin-top: 6px;
-}
-
-/* ─── Strike Zone HUD (캔버스 위에 오버레이) ─────────────────── */
-#strikezone-hud {
+.pitcher-plate {
     position: absolute;
-    bottom: 16px;
-    left: 50%;
+    top: 42%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px; height: 6px;
+    background: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
+.dirt-home {
+    position: absolute;
+    bottom: -15%; left: 50%;
     transform: translateX(-50%);
-    width: 160px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    pointer-events: none;
+    width: 600px; height: 300px;
+    background: #6b4c3a;
+    border-radius: 50%;
+    box-shadow: inset 0 20px 50px rgba(0,0,0,0.5);
 }
-.sz-title {
-    font-size: 0.65rem;
-    color: var(--muted);
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-}
-#sz-canvas {
-    border: 2px solid rgba(96,165,250,0.5);
-    border-radius: 4px;
-    background: rgba(0,0,0,0.3);
-    backdrop-filter: blur(4px);
-}
-
-/* ─── Pitch Trail Info ───────────────────────────────────────── */
-#pitch-info-hud {
+.home-plate {
     position: absolute;
-    top: 12px;
-    left: 12px;
-    background: rgba(10,14,26,0.8);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 0.75rem;
-    pointer-events: none;
-    min-width: 160px;
-    backdrop-filter: blur(8px);
+    bottom: 80px; left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 60px; height: 60px;
+    background: #fff;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    z-index: 10;
 }
-.info-row { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 3px; }
-.info-key { color: var(--muted); }
-.info-val { font-weight: 700; color: var(--accent); }
-
-/* ─── Right Panel ────────────────────────────────────────────── */
-#right-panel {
-    width: 280px;
-    background: var(--surface);
-    border-left: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    overflow-y: auto;
-    flex-shrink: 0;
-}
-.panel-section {
-    padding: 16px;
-    border-bottom: 1px solid var(--border);
-}
-.panel-title {
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: var(--muted);
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    margin-bottom: 12px;
+.home-plate::before {
+    content: ''; position: absolute;
+    top: -5px; left: -5px; right: -5px; bottom: -5px;
+    border: 2px solid rgba(255,255,255,0.5);
 }
 
-/* ─── Pitch Selector ─────────────────────────────────────────── */
-#pitch-grid {
+/* ─── 캐릭터 ─── */
+.character { position: absolute; background-size: contain; background-repeat: no-repeat; background-position: center bottom; }
+
+/* 투수 (마운드 위) */
+#pitcher {
+    width: 140px; height: 200px;
+    top: 42%; left: 50%;
+    transform: translate(-50%, -100%);
+    /* 고퀄리티 실루엣 이미지 (SVG 데이터 URL 대체) */
+    background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg"><path d="M45,20 C45,10 55,10 55,20 C60,25 65,35 60,45 L75,70 L65,80 L55,55 L50,85 L60,140 L45,140 L40,95 L30,140 L15,140 L30,75 L15,60 L20,45 L35,55 C35,40 40,30 45,20 Z" fill="%23e2e8f0"/><circle cx="50" cy="15" r="10" fill="%230f172a"/><path d="M30,55 L15,40 L10,50 L25,65 Z" fill="%2394a3b8"/><circle cx="10" cy="50" r="6" fill="%23b45309"/></svg>');
+    z-index: 5;
+    transition: transform 0.1s;
+}
+
+/* 타자 (홈플레이트 왼쪽/오른쪽) */
+#batter {
+    width: 300px; height: 450px;
+    bottom: 20px; left: 10%;
+    background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg"><path d="M80,50 C80,30 120,30 120,50 C130,60 140,80 130,100 L160,150 L140,170 L120,120 L110,180 L130,290 L90,290 L80,200 L60,290 L20,290 L50,160 L20,130 L30,100 L60,120 C60,90 70,70 80,50 Z" fill="%23f8fafc"/><circle cx="100" cy="40" r="22" fill="%23b91c1c"/><path d="M120,40 L160,30 L165,40 L120,50 Z" fill="%23b91c1c"/><rect x="110" y="80" width="10" height="120" transform="rotate(-30 110 80)" fill="%23f59e0b" rx="5"/></svg>');
+    z-index: 20;
+}
+
+/* 포수 (홈플레이트 뒤, 투명도 있음) */
+#catcher {
+    width: 250px; height: 250px;
+    bottom: -40px; left: 50%;
+    transform: translateX(-50%);
+    background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg"><path d="M40,140 C40,90 50,60 75,60 C100,60 110,90 110,140 Z" fill="%231e293b"/><circle cx="75" cy="50" r="25" fill="%230f172a"/><rect x="55" y="35" width="40" height="30" fill="%23333" rx="5"/><circle cx="30" cy="100" r="15" fill="%23b45309"/></svg>');
+    z-index: 25;
+    opacity: 0.85;
+}
+
+/* ─── UI 오버레이 ─── */
+.ui-layer { position: absolute; inset: 0; z-index: 100; pointer-events: none; }
+.pointer-events-auto { pointer-events: auto; }
+
+/* 상단 스코어보드 (컴프야 스타일) */
+#scoreboard {
+    position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+    display: flex; background: rgba(0,0,0,0.8); border: 2px solid #334155; border-radius: 8px;
+    color: #fff; font-family: 'Oswald', sans-serif;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    overflow: hidden;
+}
+.sb-team { padding: 8px 15px; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.sb-team.away { background: linear-gradient(135deg, #1e293b, #0f172a); border-right: 1px solid #333; }
+.sb-team.home { background: linear-gradient(135deg, #b91c1c, #7f1d1d); border-left: 1px solid #333; }
+.sb-score { font-size: 1.8rem; font-weight: 700; width: 40px; text-align: center; }
+.sb-center { padding: 5px 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #0f172a; min-width: 120px; }
+.sb-inning { font-size: 0.8rem; color: #cbd5e1; letter-spacing: 1px; }
+.sb-count { display: flex; gap: 8px; margin-top: 4px; }
+.cnt-lbl { font-size: 0.7rem; color: #94a3b8; font-family: 'Noto Sans KR', sans-serif; font-weight: 700; }
+.cnt-dots { display: flex; gap: 3px; align-items: center; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: #334155; }
+.dot.b.lit { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+.dot.s.lit { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+.dot.o.lit { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+
+/* ─── 스트라이크 존 ─── */
+#strike-zone {
+    position: absolute;
+    bottom: 180px; left: 50%;
+    transform: translateX(-50%);
+    width: 150px; height: 200px;
+    border: 3px solid rgba(255,255,255,0.7);
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    z-index: 50;
+    box-shadow: inset 0 0 20px rgba(59,130,246,0.2), 0 0 20px rgba(59,130,246,0.2);
+    display: none; /* 피치 선택 후 표시 */
+}
+#strike-zone.active { display: grid; }
+.sz-cell {
+    border: 1px dashed rgba(255,255,255,0.3);
+    pointer-events: auto;
+    cursor: crosshair;
+    transition: 0.1s;
+}
+.sz-cell:hover { background: rgba(59,130,246,0.4); }
+/* 타겟 마커 */
+#aim-target {
+    position: absolute;
+    width: 30px; height: 30px;
+    border: 2px solid #ef4444;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    display: none;
+    z-index: 51;
+    box-shadow: 0 0 10px #ef4444, inset 0 0 10px #ef4444;
+}
+#aim-target::after {
+    content: '+'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    color: #ef4444; font-size: 20px; font-weight: bold;
+}
+
+/* ─── 피칭 컨트롤 UI (하단) ─── */
+#pitch-controls {
+    position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 10px; z-index: 100;
 }
 .pitch-btn {
-    background: var(--card);
-    border: 2px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    padding: 8px 6px;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-align: center;
-    transition: 0.15s;
-    position: relative;
-    overflow: hidden;
-}
-.pitch-btn:hover { border-color: var(--accent); transform: translateY(-1px); }
-.pitch-btn.active {
-    background: linear-gradient(135deg, var(--primary), #7c3aed);
-    border-color: var(--accent);
-    box-shadow: 0 0 14px rgba(59,130,246,0.4);
-}
-.pitch-btn .pitch-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    display: inline-block;
-    margin-right: 4px;
-    vertical-align: middle;
-}
-.pitch-spd { font-size: 0.6rem; color: var(--muted); margin-top: 1px; }
-.pitch-btn.active .pitch-spd { color: rgba(255,255,255,0.7); }
-
-/* ─── Aiming (Catcher View) ──────────────────────────────────── */
-#aim-area {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-}
-#aim-canvas-wrap {
-    position: relative;
-    cursor: crosshair;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 0 0 2px var(--border);
-}
-#aim-canvas { display: block; }
-.aim-tip { font-size: 0.65rem; color: var(--muted); text-align: center; }
-
-/* ─── Power / Timing Gauge ───────────────────────────────────── */
-#gauge-area { display: flex; flex-direction: column; gap: 10px; }
-.gauge-row { display: flex; align-items: center; gap: 10px; }
-.gauge-label { font-size: 0.7rem; color: var(--muted); width: 40px; }
-.gauge-track {
-    flex: 1;
-    height: 10px;
-    background: var(--card);
-    border-radius: 10px;
-    overflow: hidden;
-    border: 1px solid var(--border);
-    position: relative;
-}
-.gauge-fill {
-    height: 100%;
-    border-radius: 10px;
-    transition: width 0.05s linear;
-    background: linear-gradient(90deg, var(--primary), var(--accent));
-}
-.gauge-fill.timing {
-    background: linear-gradient(90deg, #f59e0b, #ef4444);
-}
-.gauge-val {
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: var(--accent);
-    width: 32px;
-    text-align: right;
-}
-
-/* ─── Pitch Button ───────────────────────────────────────────── */
-#btn-pitch-container { padding: 12px 16px; }
-#btn-pitch {
-    width: 100%;
-    padding: 14px;
-    background: linear-gradient(135deg, var(--primary), #7c3aed);
-    border: none;
-    border-radius: 12px;
-    color: white;
-    font-size: 1rem;
-    font-weight: 800;
-    cursor: pointer;
-    font-family: inherit;
-    letter-spacing: 1px;
+    background: linear-gradient(to bottom, #1e293b, #0f172a);
+    border: 2px solid #334155; border-radius: 12px;
+    color: #fff; padding: 12px 20px;
+    font-family: 'Oswald', 'Noto Sans KR', sans-serif;
+    font-size: 1.1rem; font-weight: 700;
+    cursor: pointer; pointer-events: auto;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
     transition: 0.2s;
-    box-shadow: var(--glow);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    min-width: 90px;
 }
-#btn-pitch:hover { transform: translateY(-2px); box-shadow: 0 0 30px rgba(59,130,246,0.6); }
-#btn-pitch:active { transform: translateY(0); }
-#btn-pitch:disabled {
-    background: var(--card);
-    color: var(--muted);
-    cursor: not-allowed;
-    box-shadow: none;
-    transform: none;
+.pitch-btn .spd { font-size: 0.7rem; color: #94a3b8; }
+.pitch-btn:hover { border-color: #3b82f6; transform: translateY(-3px); }
+.pitch-btn.selected {
+    background: linear-gradient(to bottom, #2563eb, #1d4ed8);
+    border-color: #60a5fa;
+    box-shadow: 0 0 20px rgba(59,130,246,0.6);
 }
 
-/* ─── Count Indicator ────────────────────────────────────────── */
-#count-display {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-    padding: 12px 16px;
-    background: var(--card);
-    border-bottom: 1px solid var(--border);
+/* ─── 원형 타이밍 게이지 (컴프야 스타일) ─── */
+#timing-ui {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 250px; height: 250px;
+    pointer-events: auto; z-index: 200;
+    display: none; /* 조준 완료 후 표시 */
 }
-.count-group { text-align: center; }
-.count-label { font-size: 0.6rem; color: var(--muted); font-weight: 700; letter-spacing: 1px; }
-.count-dots { display: flex; gap: 4px; margin-top: 4px; justify-content: center; }
-.count-dot {
-    width: 12px; height: 12px;
+#timing-ui.active { display: block; }
+.t-circle {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
     border-radius: 50%;
-    border: 2px solid var(--muted);
-    background: transparent;
-    transition: 0.2s;
 }
-.count-dot.active.strike { background: var(--red); border-color: var(--red); }
-.count-dot.active.ball   { background: var(--green); border-color: var(--green); }
+.t-perfect { width: 80px; height: 80px; border: 4px solid #22c55e; background: rgba(34,197,94,0.2); box-shadow: 0 0 15px #22c55e; }
+.t-good { width: 140px; height: 140px; border: 3px dashed #f59e0b; }
+.t-shrinking { 
+    width: 250px; height: 250px; border: 6px solid #fff; 
+    box-shadow: 0 0 20px #fff, inset 0 0 20px #fff;
+    transition: width linear, height linear;
+}
+.t-hint {
+    position: absolute; top: -40px; left: 50%; transform: translateX(-50%);
+    color: #fff; font-size: 1.2rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    white-space: nowrap; width: 100%; text-align: center;
+}
+#btn-throw {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 100%; height: 100%; border-radius: 50%;
+    background: transparent; border: none; cursor: pointer;
+}
 
-/* ─── Camera Controls ────────────────────────────────────────── */
-#camera-controls {
-    display: flex;
-    gap: 6px;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--border);
-    flex-wrap: wrap;
+/* ─── 날아가는 공 ─── */
+#baseball {
+    position: absolute;
+    width: 20px; height: 20px;
+    background: radial-gradient(circle at 30% 30%, #fff, #cbd5e1);
+    border-radius: 50%;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    z-index: 60; display: none;
+    pointer-events: none;
 }
-.cam-btn {
-    flex: 1;
-    min-width: 60px;
-    padding: 6px 4px;
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--muted);
-    font-size: 0.65rem;
-    font-weight: 700;
-    cursor: pointer;
-    font-family: inherit;
-    text-align: center;
-    transition: 0.15s;
+/* 실밥 */
+#baseball::before, #baseball::after {
+    content: ''; position: absolute;
+    width: 16px; height: 10px; border-radius: 50%;
+    border-top: 2px solid #ef4444; border-bottom: 2px transparent;
 }
-.cam-btn:hover, .cam-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+#baseball::before { top: 2px; left: 0; transform: rotate(30deg); }
+#baseball::after { bottom: 2px; right: 0; transform: rotate(210deg); }
 
-/* ─── Pitch Log ──────────────────────────────────────────────── */
-#pitch-log {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px 16px;
+/* ─── 결과 텍스트 ─── */
+#result-msg {
+    position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0);
+    font-family: 'Oswald', 'Noto Sans KR', sans-serif;
+    font-size: 5rem; font-weight: 900;
+    color: #fff; text-shadow: 0 5px 20px rgba(0,0,0,0.8), 2px 2px 0 #000;
+    z-index: 300; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    text-align: center; line-height: 1.1;
+    pointer-events: none;
 }
-.log-entry {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    font-size: 0.72rem;
-}
-.log-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.log-name { flex: 1; color: var(--text); }
-.log-speed { color: var(--muted); }
-.log-result { font-weight: 700; width: 40px; text-align: right; }
+#result-msg.show { transform: translate(-50%, -50%) scale(1); }
+#result-sub { font-size: 1.5rem; color: #cbd5e1; }
+#result-speed { font-size: 2rem; color: #f59e0b; margin-top: 10px; }
 
-/* ─── Physics Info Toggle ─────────────────────────────────────── */
-#physics-panel {
-    padding: 12px 16px;
-    border-top: 1px solid var(--border);
-    background: rgba(0,0,0,0.2);
+/* ─── 미니맵 / 구속 표시 (좌측 상단) ─── */
+#pitch-info {
+    position: absolute; top: 120px; left: 20px;
+    background: rgba(0,0,0,0.6); padding: 15px; border-radius: 10px;
+    border: 1px solid #334155; color: #fff;
+    pointer-events: none;
 }
-.physics-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.68rem;
-    margin-bottom: 4px;
-    color: var(--muted);
-}
-.physics-row span:last-child { color: var(--accent); font-weight: 700; }
+.pi-speed { font-family: 'Oswald', sans-serif; font-size: 2.5rem; font-weight: 700; color: #f59e0b; line-height: 1; }
+.pi-type { font-size: 1rem; color: #94a3b8; font-weight: 700; margin-bottom: 10px; }
 
-/* ─── Loading Screen ──────────────────────────────────────────── */
-#loading-screen {
-    position: fixed;
-    inset: 0;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    gap: 20px;
-    transition: opacity 0.5s;
+/* 단계별 안내 */
+#guide-text {
+    position: absolute; top: 180px; left: 50%; transform: translateX(-50%);
+    font-size: 1.5rem; font-weight: 700; color: #60a5fa;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+    pointer-events: none; animation: pulse 1.5s infinite;
 }
-#loading-screen.hide { opacity: 0; pointer-events: none; }
-.loading-logo {
-    font-size: 3rem;
-    font-weight: 900;
-    background: linear-gradient(90deg, #60a5fa, #a78bfa);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-.loading-bar-wrap { width: 220px; height: 4px; background: var(--card); border-radius: 4px; overflow: hidden; }
-.loading-bar { height: 100%; background: linear-gradient(90deg, #3b82f6, #a78bfa); width: 0%; transition: width 0.3s; border-radius: 4px; }
-.loading-text { font-size: 0.85rem; color: var(--muted); }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-
-/* Mobile */
-@media (max-width: 700px) {
-    #right-panel { width: 220px; }
-    .result-text { font-size: 2rem; }
+/* 카메라 쉐이크 */
+@keyframes shake {
+    0% { transform: translate(1px, 1px) rotate(0deg); }
+    10% { transform: translate(-1px, -2px) rotate(-1deg); }
+    20% { transform: translate(-3px, 0px) rotate(1deg); }
+    30% { transform: translate(3px, 2px) rotate(0deg); }
+    40% { transform: translate(1px, -1px) rotate(1deg); }
+    50% { transform: translate(-1px, 2px) rotate(-1deg); }
+    60% { transform: translate(-3px, 1px) rotate(0deg); }
+    70% { transform: translate(3px, 1px) rotate(-1deg); }
+    80% { transform: translate(-1px, -1px) rotate(1deg); }
+    90% { transform: translate(1px, 2px) rotate(0deg); }
+    100% { transform: translate(1px, -2px) rotate(-1deg); }
 }
+.shake { animation: shake 0.5s; }
+
 </style>
 </head>
 <body>
 
-<!-- ─── Loading ─────────────────────────────────────────────── -->
-<div id="loading-screen">
-    <div class="loading-logo">⚾ DODO Baseball</div>
-    <div>
-        <div class="loading-bar-wrap"><div class="loading-bar" id="loading-bar"></div></div>
-    </div>
-    <div class="loading-text" id="loading-text">3D 스타디움 로딩 중...</div>
+<div id="game-scene">
+    <!-- 배경 -->
+    <div class="stadium-lights"></div>
+    <div class="field-lines"></div>
+    
+    <!-- 그라운드 -->
+    <div class="dirt-mound"></div>
+    <div class="pitcher-plate"></div>
+    
+    <div class="dirt-home"></div>
+    <div class="home-plate"></div>
+
+    <!-- 캐릭터 -->
+    <div id="pitcher" class="character"></div>
+    <div id="batter" class="character"></div>
+    <div id="catcher" class="character"></div>
+
+    <!-- 야구공 -->
+    <div id="baseball"></div>
 </div>
 
-<!-- ─── Game Wrapper ─────────────────────────────────────────── -->
-<div id="game-wrapper">
-
-    <!-- Header -->
-    <div id="game-header">
-        <div class="game-logo">⚾ DODO <span>Baseball</span></div>
-        <div class="score-board">
-            <div class="score-item">
-                <div class="score-label">이닝</div>
-                <div class="score-value gold" id="sc-inning">1</div>
-            </div>
-            <div class="score-item">
-                <div class="score-label">홈</div>
-                <div class="score-value green" id="sc-home">0</div>
-            </div>
-            <div class="score-item">
-                <div class="score-label">원정</div>
-                <div class="score-value red" id="sc-away">0</div>
-            </div>
-            <div class="score-item">
-                <div class="score-label">아웃</div>
-                <div class="score-value" id="sc-out">0</div>
-            </div>
-            <div class="score-item">
-                <div class="score-label">피치</div>
-                <div class="score-value" id="sc-pitches">0</div>
+<div class="ui-layer">
+    <!-- 스코어보드 -->
+    <div id="scoreboard">
+        <div class="sb-team away">
+            <span>AWAY</span> <div class="sb-score" id="score-away">0</div>
+        </div>
+        <div class="sb-center">
+            <div class="sb-inning"><span id="inning-val">1</span>회초</div>
+            <div class="sb-count">
+                <div class="cnt-group">
+                    <span class="cnt-lbl">B</span>
+                    <div class="cnt-dots"><div class="dot b" id="b1"></div><div class="dot b" id="b2"></div><div class="dot b" id="b3"></div></div>
+                </div>
+                <div class="cnt-group" style="margin-left: 8px;">
+                    <span class="cnt-lbl">S</span>
+                    <div class="cnt-dots"><div class="dot s" id="s1"></div><div class="dot s" id="s2"></div></div>
+                </div>
+                <div class="cnt-group" style="margin-left: 8px;">
+                    <span class="cnt-lbl">O</span>
+                    <div class="cnt-dots"><div class="dot o" id="o1"></div><div class="dot o" id="o2"></div></div>
+                </div>
             </div>
         </div>
-        <div style="display:flex;gap:8px;">
-            <button class="header-btn" id="btn-reset-game"><i class="fa-solid fa-rotate-right"></i> 리셋</button>
-            <button class="header-btn" onclick="window.location.href='game.html'"><i class="fa-solid fa-arrow-left"></i> 돌아가기</button>
+        <div class="sb-team home">
+            <div class="sb-score" id="score-home">0</div> <span>DODO</span>
         </div>
     </div>
 
-    <!-- Main -->
-    <div id="main-area">
+    <!-- 좌측 정보 -->
+    <div id="pitch-info">
+        <div class="pi-speed"><span id="info-speed">000</span> <span style="font-size:1.2rem;color:#cbd5e1">km/h</span></div>
+        <div class="pi-type" id="info-type">-</div>
+        <div style="font-size:0.8rem; color:#94a3b8">투구수: <span id="info-count" style="color:#fff">0</span>개</div>
+    </div>
 
-        <!-- 3D Canvas Area -->
-        <div id="canvas-area">
-            <canvas id="three-canvas"></canvas>
+    <!-- 안내 텍스트 -->
+    <div id="guide-text">던질 구종을 선택하세요</div>
 
-            <!-- Pitch Info HUD -->
-            <div id="pitch-info-hud" style="display:none;">
-                <div class="info-row"><span class="info-key">구종</span><span class="info-val" id="hud-type">-</span></div>
-                <div class="info-row"><span class="info-key">구속</span><span class="info-val" id="hud-speed">-</span></div>
-                <div class="info-row"><span class="info-key">회전수</span><span class="info-val" id="hud-rpm">-</span></div>
-                <div class="info-row"><span class="info-key">이동시간</span><span class="info-val" id="hud-time">-</span></div>
-                <div class="info-row"><span class="info-key">무브먼트</span><span class="info-val" id="hud-break">-</span></div>
-            </div>
+    <!-- 스트라이크 존 -->
+    <div id="strike-zone" class="pointer-events-auto">
+        <!-- 9구역 -->
+        <div class="sz-cell" data-r="0" data-c="0"></div><div class="sz-cell" data-r="0" data-c="1"></div><div class="sz-cell" data-r="0" data-c="2"></div>
+        <div class="sz-cell" data-r="1" data-c="0"></div><div class="sz-cell" data-r="1" data-c="1"></div><div class="sz-cell" data-r="1" data-c="2"></div>
+        <div class="sz-cell" data-r="2" data-c="0"></div><div class="sz-cell" data-r="2" data-c="1"></div><div class="sz-cell" data-r="2" data-c="2"></div>
+    </div>
+    <div id="aim-target"></div>
 
-            <!-- Result Overlay -->
-            <div id="pitch-result-overlay">
-                <div class="result-text" id="result-text">STRIKE!</div>
-                <div class="result-sub" id="result-sub">완벽한 코너 워크</div>
-            </div>
+    <!-- 타이밍 UI -->
+    <div id="timing-ui">
+        <div class="t-hint">원형 게이지가 초록 원에 올 때 터치!</div>
+        <div class="t-circle t-good"></div>
+        <div class="t-circle t-perfect" id="t-perfect"></div>
+        <div class="t-circle t-shrinking" id="t-shrinking"></div>
+        <button id="btn-throw"></button>
+    </div>
 
-            <!-- Strike Zone HUD (mini) -->
-            <div id="strikezone-hud">
-                <div class="sz-title">홈플레이트 뷰</div>
-                <canvas id="sz-canvas" width="120" height="100"></canvas>
-            </div>
-        </div>
+    <!-- 결과 메시지 -->
+    <div id="result-msg">
+        <div id="result-main">STRIKE</div>
+        <div id="result-sub">PERFECT TIMING!</div>
+        <div id="result-speed">155 km/h</div>
+    </div>
 
-        <!-- Right Panel -->
-        <div id="right-panel">
-
-            <!-- Count -->
-            <div id="count-display">
-                <div class="count-group">
-                    <div class="count-label">BALL</div>
-                    <div class="count-dots" id="ball-dots">
-                        <div class="count-dot ball" id="ball-0"></div>
-                        <div class="count-dot ball" id="ball-1"></div>
-                        <div class="count-dot ball" id="ball-2"></div>
-                    </div>
-                </div>
-                <div class="count-group" style="font-size:1.5rem; color:var(--gold); font-weight:900; align-self:center;">⚾</div>
-                <div class="count-group">
-                    <div class="count-label">STRIKE</div>
-                    <div class="count-dots" id="strike-dots">
-                        <div class="count-dot strike" id="strike-0"></div>
-                        <div class="count-dot strike" id="strike-1"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Camera Controls -->
-            <div id="camera-controls">
-                <button class="cam-btn active" data-cam="pitcher" onclick="setCamera('pitcher',this)">투수뷰</button>
-                <button class="cam-btn" data-cam="catcher" onclick="setCamera('catcher',this)">포수뷰</button>
-                <button class="cam-btn" data-cam="side" onclick="setCamera('side',this)">사이드</button>
-                <button class="cam-btn" data-cam="top" onclick="setCamera('top',this)">탑뷰</button>
-            </div>
-
-            <!-- Pitch Selection -->
-            <div class="panel-section">
-                <div class="panel-title"><i class="fa-solid fa-hand-fist"></i> 구종 선택</div>
-                <div id="pitch-grid"></div>
-            </div>
-
-            <!-- Aim -->
-            <div class="panel-section">
-                <div class="panel-title"><i class="fa-solid fa-crosshairs"></i> 스트라이크존 조준</div>
-                <div id="aim-area">
-                    <div id="aim-canvas-wrap">
-                        <canvas id="aim-canvas" width="200" height="160"></canvas>
-                    </div>
-                    <div class="aim-tip">캔버스를 클릭하여 목표 지점 설정</div>
-                </div>
-            </div>
-
-            <!-- Gauges -->
-            <div class="panel-section">
-                <div class="panel-title"><i class="fa-solid fa-gauge-high"></i> 파워 &amp; 타이밍</div>
-                <div id="gauge-area">
-                    <div class="gauge-row">
-                        <span class="gauge-label">파워</span>
-                        <div class="gauge-track">
-                            <div class="gauge-fill" id="power-fill" style="width:80%"></div>
-                        </div>
-                        <span class="gauge-val" id="power-val">80%</span>
-                    </div>
-                    <div class="gauge-row">
-                        <span class="gauge-label">타이밍</span>
-                        <div class="gauge-track">
-                            <div class="gauge-fill timing" id="timing-fill" style="width:0%"></div>
-                        </div>
-                        <span class="gauge-val" id="timing-val">-</span>
-                    </div>
-                    <input type="range" id="power-slider" min="60" max="100" value="80"
-                        style="width:100%;accent-color:var(--primary);margin-top:4px;">
-                </div>
-            </div>
-
-            <!-- Pitch Button -->
-            <div id="btn-pitch-container">
-                <button id="btn-pitch">⚾ 투구!</button>
-            </div>
-
-            <!-- Physics Info -->
-            <div id="physics-panel">
-                <div class="panel-title" style="margin-bottom:8px;"><i class="fa-solid fa-atom"></i> 실시간 물리</div>
-                <div class="physics-row"><span>항력(Cd)</span><span id="phys-cd">-</span></div>
-                <div class="physics-row"><span>마그누스(CL)</span><span id="phys-cl">-</span></div>
-                <div class="physics-row"><span>공기밀도(ρ)</span><span id="phys-rho">1.204 kg/m³</span></div>
-                <div class="physics-row"><span>중력(g)</span><span>9.807 m/s²</span></div>
-            </div>
-
-            <!-- Pitch Log -->
-            <div class="panel-section" style="border-bottom:none; padding-bottom:4px;">
-                <div class="panel-title"><i class="fa-solid fa-list"></i> 투구 기록</div>
-            </div>
-            <div id="pitch-log"></div>
-
-        </div><!-- /right-panel -->
-    </div><!-- /main-area -->
-</div><!-- /game-wrapper -->
+    <!-- 하단 구종 선택 -->
+    <div id="pitch-controls">
+        <button class="pitch-btn" data-pitch="4S">
+            <div>포심</div><div class="spd">148-155</div>
+        </button>
+        <button class="pitch-btn" data-pitch="SL">
+            <div>슬라이더</div><div class="spd">135-142</div>
+        </button>
+        <button class="pitch-btn" data-pitch="CU">
+            <div>커브</div><div class="spd">120-128</div>
+        </button>
+        <button class="pitch-btn" data-pitch="CH">
+            <div>체인지업</div><div class="spd">130-138</div>
+        </button>
+    </div>
+</div>
 
 <script>
-// ══════════════════════════════════════════════════════════════════
-//  DODO Baseball - Main Game Engine
-//  Three.js 기반 3D 야구 물리 게임
-// ══════════════════════════════════════════════════════════════════
-
-'use strict';
-
-// ── 전역 상태 ────────────────────────────────────────────────────
-const STATE = {
-    balls: 0,
-    strikes: 0,
-    outs: 0,
-    inning: 1,
-    homeScore: 0,
-    awayScore: 0,
-    totalPitches: 0,
-    isThrowing: false,
-    selectedPitch: 'fourseam',
-    aimX: 0, aimY: 0,      // 정규화 -1~1
-    power: 80,
-    timingScore: 0,
-    camera: 'pitcher',
-    lastResult: null,
+// ─── 상태 머신 ───
+const state = {
+    phase: 'SELECT_PITCH', // SELECT_PITCH -> AIM -> TIMING -> THROWING -> RESULT
+    pitch: null,
+    target: { x: 0, y: 0, rawX:0, rawY:0 },
+    timingScore: 0, // 0 (bad) ~ 1 (perfect)
+    
+    // 게임 데이터
+    balls: 0, strikes: 0, outs: 0, pitches: 0,
+    awayScore: 0, homeScore: 0, inning: 1
 };
 
-// ── 구종 데이터 (Worker와 동기화) ───────────────────────────────
-const PITCH_SPECS = {
-    fourseam:    { name:'포심', name_en:'4-Seam', speedKmh:[148,158], color:'#FF4444', Cd:0.35, CL_base:0.23 },
-    twoseam:     { name:'투심', name_en:'Sinker',  speedKmh:[143,153], color:'#FF7700', Cd:0.36, CL_base:0.20 },
-    cutter:      { name:'커터', name_en:'Cutter',  speedKmh:[138,148], color:'#FF9900', Cd:0.35, CL_base:0.18 },
-    curveball:   { name:'커브', name_en:'Curve',   speedKmh:[118,130], color:'#4488FF', Cd:0.38, CL_base:0.30 },
-    slider:      { name:'슬라이더', name_en:'Slider', speedKmh:[128,140], color:'#00AAFF', Cd:0.37, CL_base:0.22 },
-    sweeper:     { name:'스위퍼', name_en:'Sweeper', speedKmh:[123,135], color:'#00DDFF', Cd:0.38, CL_base:0.28 },
-    changeup:    { name:'체인지업', name_en:'Change', speedKmh:[130,140], color:'#44CC44', Cd:0.40, CL_base:0.15 },
-    splitter:    { name:'스플리터', name_en:'Split',  speedKmh:[135,145], color:'#AACC00', Cd:0.42, CL_base:0.08 },
-    knuckleball: { name:'너클볼', name_en:'Knuckle', speedKmh:[105,118], color:'#AA44FF', Cd:0.50, CL_base:0.0 },
+const PITCHES = {
+    '4S': { name: '포심 패스트볼', min: 148, max: 155, drop: 0, curve: 0, color: '#ef4444' },
+    'SL': { name: '슬라이더', min: 135, max: 142, drop: 15, curve: 25, color: '#06b6d4' },
+    'CU': { name: '커브볼', min: 120, max: 128, drop: 40, curve: 10, color: '#3b82f6' },
+    'CH': { name: '체인지업', min: 130, max: 138, drop: 25, curve: -15, color: '#22c55e' }
 };
 
-// ── THREE.js 변수 ────────────────────────────────────────────────
-let scene, camera, renderer;
-let ballMesh, ballTrail, trailPoints = [];
-let pitcherGroup, batterGroup;
-let moundGroup, fieldGroup;
-let ambientLight, sunLight;
-let animReq;
-let pitchData = null;    // 현재 투구 데이터
-let ballT = 0;           // 궤적 보간용 인덱스
-let ballAnimating = false;
-let trailLine;
-let timingActive = false;
-let timingValue = 0;
-let timingDir = 1;
+// ─── UI 엘리먼트 ───
+const els = {
+    guide: document.getElementById('guide-text'),
+    pitchBtns: document.querySelectorAll('.pitch-btn'),
+    strikeZone: document.getElementById('strike-zone'),
+    aimTarget: document.getElementById('aim-target'),
+    timingUI: document.getElementById('timing-ui'),
+    tShrink: document.getElementById('t-shrinking'),
+    btnThrow: document.getElementById('btn-throw'),
+    ball: document.getElementById('baseball'),
+    pitcher: document.getElementById('pitcher'),
+    batter: document.getElementById('batter'),
+    resMsg: document.getElementById('result-msg'),
+    resMain: document.getElementById('result-main'),
+    resSub: document.getElementById('result-sub'),
+    resSpd: document.getElementById('result-speed'),
+    scene: document.getElementById('game-scene')
+};
 
-// ── Worker ───────────────────────────────────────────────────────
-let physicsWorker = null;
-let pendingPitchId = 0;
+// ─── 1. 구종 선택 ───
+els.pitchBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        if (state.phase !== 'SELECT_PITCH' && state.phase !== 'AIM') return;
+        
+        els.pitchBtns.forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        
+        state.pitch = PITCHES[btn.dataset.pitch];
+        state.phase = 'AIM';
+        
+        // UI 업데이트
+        document.getElementById('info-type').textContent = state.pitch.name;
+        document.getElementById('info-speed').textContent = state.pitch.max;
+        document.getElementById('info-speed').style.color = state.pitch.color;
+        
+        els.guide.textContent = "스트라이크 존을 터치하여 위치를 지정하세요";
+        els.strikeZone.classList.add('active');
+        els.aimTarget.style.display = 'none';
+    });
+});
 
-// ══════════════════════════════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════════════════════════════
-function init() {
-    setLoadProgress(10, '물리 엔진 워커 초기화...');
-    initWorker();
-    setLoadProgress(30, '3D 씬 구성 중...');
-    initThree();
-    setLoadProgress(55, '스타디움 모델 생성 중...');
-    buildStadium();
-    setLoadProgress(70, '투수/타자 생성 중...');
-    buildPitcher();
-    buildBatter();
-    setLoadProgress(85, 'UI 초기화...');
-    initUI();
-    setLoadProgress(95, '게임 시작 준비...');
+// ─── 2. 투구 위치 조준 ───
+els.strikeZone.addEventListener('pointerdown', (e) => {
+    if (state.phase !== 'AIM') return;
+    
+    // 존 내의 클릭 좌표 계산 (0~100%)
+    const rect = els.strikeZone.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // 중앙 타겟 마커 표시
+    els.aimTarget.style.display = 'block';
+    els.aimTarget.style.left = (rect.left + x) + 'px';
+    els.aimTarget.style.top = (rect.top + y) + 'px';
+    
+    // 투구 좌표 저장 (-1 ~ 1 맵핑)
+    state.target.x = (x / rect.width) * 2 - 1;
+    state.target.y = (y / rect.height) * 2 - 1;
+    state.target.rawX = x;
+    state.target.rawY = y;
+    
+    state.phase = 'TIMING';
+    els.guide.textContent = "";
+    els.strikeZone.classList.remove('active');
+    
+    startTimingGauge();
+});
+
+// ─── 3. 타이밍 게이지 ───
+let timingAnim;
+let gaugeSize = 250;
+let shrinkSpeed = 3;
+
+function startTimingGauge() {
+    els.timingUI.classList.add('active');
+    gaugeSize = 250;
+    
+    // 구속에 따른 게이지 속도 조절
+    shrinkSpeed = state.pitch.max > 145 ? 4.5 : 3.5;
+    
+    function animate() {
+        if (state.phase !== 'TIMING') return;
+        gaugeSize -= shrinkSpeed;
+        if (gaugeSize < 20) {
+            gaugeSize = 250; // 리셋 (계속 돎)
+        }
+        els.tShrink.style.width = gaugeSize + 'px';
+        els.tShrink.style.height = gaugeSize + 'px';
+        timingAnim = requestAnimationFrame(animate);
+    }
     animate();
-    setLoadProgress(100, '준비 완료!');
-    setTimeout(() => {
-        document.getElementById('loading-screen').classList.add('hide');
-        setTimeout(() => document.getElementById('loading-screen').remove(), 600);
-    }, 400);
 }
 
-function setLoadProgress(pct, msg) {
-    document.getElementById('loading-bar').style.width = pct + '%';
-    document.getElementById('loading-text').textContent = msg;
-}
-
-// ── Web Worker ───────────────────────────────────────────────────
-function initWorker() {
-    try {
-        physicsWorker = new Worker('baseball-physics.worker.js');
-        physicsWorker.onmessage = onWorkerMessage;
-        physicsWorker.onerror = (e) => {
-            console.warn('Worker error, falling back to main thread physics:', e);
-            physicsWorker = null;
-        };
-    } catch(e) {
-        console.warn('Web Worker not available, using main thread physics');
-        physicsWorker = null;
-    }
-}
-
-function onWorkerMessage(e) {
-    const { cmd, payload, id } = e.data;
-    if (cmd === 'result' && id === pendingPitchId) {
-        startBallAnimation(payload);
-    }
-}
-
-function requestPhysicsSimulation(pitchType, options) {
-    pendingPitchId++;
-    const id = pendingPitchId;
-
-    if (physicsWorker) {
-        physicsWorker.postMessage({ cmd: 'simulate', payload: { pitchType, options, id } });
+// ─── 4. 투구 실행 ───
+els.btnThrow.addEventListener('pointerdown', () => {
+    if (state.phase !== 'TIMING') return;
+    cancelAnimationFrame(timingAnim);
+    
+    els.timingUI.classList.remove('active');
+    els.aimTarget.style.display = 'none';
+    state.phase = 'THROWING';
+    
+    // 타이밍 판정 (퍼펙트=80, 굿=140)
+    let quality = '';
+    let qColor = '';
+    if (gaugeSize >= 70 && gaugeSize <= 90) {
+        quality = 'PERFECT'; qColor = '#22c55e'; state.timingScore = 1;
+    } else if (gaugeSize >= 50 && gaugeSize <= 130) {
+        quality = 'GOOD'; qColor = '#f59e0b'; state.timingScore = 0.6;
     } else {
-        // Fallback: run inline (simplified)
-        const result = simulatePitchInline(pitchType, options);
-        setTimeout(() => startBallAnimation(result), 0);
+        quality = 'BAD'; qColor = '#ef4444'; state.timingScore = 0.2;
     }
-}
+    
+    els.resSub.textContent = quality + " TIMING!";
+    els.resSub.style.color = qColor;
+    
+    // 애니메이션 시작
+    executePitchAnimation(quality);
+});
 
-// ── Inline physics fallback (simplified) ─────────────────────────
-function simulatePitchInline(pitchType, options = {}) {
-    const spec = PITCH_SPECS[pitchType];
-    const speedKmh = spec.speedKmh[0] + Math.random() * (spec.speedKmh[1] - spec.speedKmh[0]);
-    const speedMs = speedKmh / 3.6;
-    const HOME_Z = 18.39, REL_H = 1.9;
-
-    const AXIS_MAP = {
-        fourseam:    { x:0,    y:0, z:1.0  },
-        twoseam:     { x:0.2,  y:0, z:0.98 },
-        cutter:      { x:-0.3, y:0, z:0.95 },
-        curveball:   { x:0,    y:0, z:-1.0 },
-        slider:      { x:-0.7, y:0.1, z:0.7 },
-        sweeper:     { x:-1.0, y:0, z:0.2  },
-        changeup:    { x:0.15, y:0, z:0.98 },
-        splitter:    { x:0,    y:0, z:-0.5 },
-        knuckleball: { x:0,    y:0, z:0    },
-    };
-    const RPM_MAP = {
-        fourseam:[2200,2600], twoseam:[1900,2200], cutter:[2100,2500],
-        curveball:[2400,3000], slider:[2200,2700], sweeper:[2500,3000],
-        changeup:[1400,1800], splitter:[900,1300], knuckleball:[25,75],
-    };
-
-    const ax = AXIS_MAP[pitchType] || AXIS_MAP.fourseam;
-    const rpmRange = RPM_MAP[pitchType] || [1500,2000];
-    const rpm = rpmRange[0] + Math.random() * (rpmRange[1]-rpmRange[0]);
-    const omega = (rpm * 2 * Math.PI) / 60;
-
-    const g=-9.80665, rho=1.2041, A=0.004268, m=0.14175, R=0.03685;
-    const Cd=spec.Cd, CL_base=spec.CL_base;
-    const dt = 1/240;
-    const tX=options.targetX??0, tY=options.targetY??0.65;
-    const relX=-0.35, relY=REL_H, relZ=HOME_Z;
-
-    const dirLen = Math.sqrt((tX-relX)**2+(tY-relY)**2+relZ**2);
-    let vel = { x:(tX-relX)/dirLen*speedMs, y:(tY-relY)/dirLen*speedMs, z:-speedMs/dirLen*speedMs };
-    vel.z = -speedMs * 0.99;
-    vel.x = (tX-relX)/relZ * speedMs;
-    vel.y = (tY-relY)/relZ * speedMs;
-
-    let pos = {x:relX, y:relY, z:relZ};
-    const axLen = Math.sqrt(ax.x**2+ax.y**2+ax.z**2)||1;
-    const axN = {x:ax.x/axLen, y:ax.y/axLen, z:ax.z/axLen};
-
-    const traj = [];
-    let t=0;
-    const maxT = (relZ/speedMs)*2.2;
-
-    let kDx=0, kDy=0;
-
-    while(pos.z > -0.2 && t < maxT) {
-        const v = Math.sqrt(vel.x**2+vel.y**2+vel.z**2);
-        const v2=v*v;
-        const vhx=vel.x/v, vhy=vel.y/v, vhz=vel.z/v;
-
-        // Gravity
-        const fgY = g*m;
-
-        // Drag
-        let cd=Cd;
-        if(pitchType==='knuckleball') {
-            kDx+=(Math.random()-0.5)*1.5*dt;
-            kDy+=(Math.random()-0.5)*1.2*dt;
-            kDx=Math.max(-0.8,Math.min(0.8,kDx));
-            kDy=Math.max(-0.5,Math.min(0.5,kDy));
-            cd=Cd+Math.sin(t*8.5)*0.12+Math.cos(t*5.3)*0.08;
+function executePitchAnimation(quality) {
+    state.pitches++;
+    document.getElementById('info-count').textContent = state.pitches;
+    
+    // 실제 투구 속도 계산
+    const spd = Math.floor(state.pitch.min + (state.pitch.max - state.pitch.min) * state.timingScore);
+    document.getElementById('info-speed').textContent = spd;
+    
+    // 1. 투수 와인드업 애니메이션
+    els.pitcher.style.transform = 'translate(-50%, -100%) scale(1.1)';
+    
+    setTimeout(() => {
+        // 투구 릴리즈
+        els.pitcher.style.transform = 'translate(-50%, -100%) scale(1.0)';
+        
+        // 2. 공 날아가기
+        els.ball.style.display = 'block';
+        
+        const duration = 160 / spd * 1000; // 속도 비례 비행 시간 (약 1초)
+        const startX = window.innerWidth / 2;
+        const startY = window.innerHeight * 0.4;
+        
+        // 존의 중심점
+        const zRect = els.strikeZone.getBoundingClientRect();
+        
+        // 타이밍 미스시 제구 흔들림
+        const jitterX = (1 - state.timingScore) * (Math.random() - 0.5) * 100;
+        const jitterY = (1 - state.timingScore) * (Math.random() - 0.5) * 100;
+        
+        const endX = zRect.left + state.target.rawX + jitterX + state.pitch.curve;
+        const endY = zRect.top + state.target.rawY + jitterY + state.pitch.drop;
+        
+        const startTime = performance.now();
+        
+        function fly(now) {
+            let t = (now - startTime) / duration;
+            if (t > 1) t = 1;
+            
+            // 3D 느낌을 위한 EaseIn 스케일 커브
+            const easeIn = t * t;
+            
+            // 공 위치 계산 (직선 + 구종별 휨)
+            const curX = startX + (endX - startX) * t + Math.sin(t * Math.PI) * state.pitch.curve;
+            const curY = startY + (endY - startY) * t + Math.sin(t * Math.PI) * state.pitch.drop;
+            
+            // 공 크기 변화 (멀리서 날아옴)
+            const scale = 0.3 + (easeIn * 1.5);
+            
+            els.ball.style.left = curX + 'px';
+            els.ball.style.top = curY + 'px';
+            els.ball.style.transform = `translate(-50%, -50%) scale(${scale}) rotate(${t*1000}deg)`;
+            
+            if (t < 1) {
+                requestAnimationFrame(fly);
+            } else {
+                els.ball.style.display = 'none';
+                judgePitch(endX, endY, zRect, spd);
+            }
         }
-        const fd=-0.5*rho*v2*A*cd;
-        const fdX=fd*vhx, fdY=fd*vhy, fdZ=fd*vhz;
-
-        // Magnus
-        const spinRatio=(omega*R)/v;
-        let CL=CL_base*Math.sqrt(Math.min(spinRatio/0.25,1.0));
-        const crossX=axN.y*vhz-axN.z*vhy;
-        const crossY=axN.z*vhx-axN.x*vhz;
-        const crossZ=axN.x*vhy-axN.y*vhx;
-        const fmMag=0.5*rho*v2*A*CL;
-        let fmX=fmMag*crossX, fmY=fmMag*crossY, fmZ=fmMag*crossZ;
-        if(pitchType==='knuckleball'){fmX+=kDx*0.8; fmY+=kDy*0.6;}
-
-        // Integrate
-        vel.x += (fdX+fmX)/m*dt;
-        vel.y += (fgY+fdY+fmY)/m*dt;
-        vel.z += (fdZ+fmZ)/m*dt;
-        pos.x += vel.x*dt;
-        pos.y += vel.y*dt;
-        pos.z += vel.z*dt;
-
-        if(Math.round(t/dt)%4===0) traj.push({x:pos.x,y:pos.y,z:pos.z,t,speedKmh:v*3.6});
-        t+=dt;
-    }
-
-    return { trajectory:traj, speedKmh, rpm, finalX:pos.x, finalY:pos.y, pitchType, travelTime:t };
+        requestAnimationFrame(fly);
+        
+    }, 400); // 와인드업 시간
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  THREE.JS INIT
-// ══════════════════════════════════════════════════════════════════
-function initThree() {
-    const canvas = document.getElementById('three-canvas');
-    const area = document.getElementById('canvas-area');
-
-    // Renderer
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(area.clientWidth, area.clientHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
-
-    // Scene
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0e1a);
-    scene.fog = new THREE.FogExp2(0x0a0e1a, 0.006);
-
-    // Camera
-    camera = new THREE.PerspectiveCamera(60, area.clientWidth / area.clientHeight, 0.01, 300);
-    setCameraPosition('pitcher');
-
-    // Lights
-    ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-    scene.add(ambientLight);
-
-    sunLight = new THREE.DirectionalLight(0xfff4e0, 1.8);
-    sunLight.position.set(30, 50, 20);
-    sunLight.castShadow = true;
-    sunLight.shadow.camera.near = 0.1;
-    sunLight.shadow.camera.far = 200;
-    sunLight.shadow.camera.left = -40;
-    sunLight.shadow.camera.right = 40;
-    sunLight.shadow.camera.top = 40;
-    sunLight.shadow.camera.bottom = -40;
-    sunLight.shadow.mapSize.set(2048, 2048);
-    scene.add(sunLight);
-
-    // Fill light
-    const fill = new THREE.DirectionalLight(0x6699ff, 0.5);
-    fill.position.set(-20, 10, -10);
-    scene.add(fill);
-
-    // Resize
-    window.addEventListener('resize', () => {
-        const w = area.clientWidth, h = area.clientHeight;
-        renderer.setSize(w, h);
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-    });
-}
-
-// ── Stadium ────────────────────────────────────────────────────────
-function buildStadium() {
-    fieldGroup = new THREE.Group();
-    scene.add(fieldGroup);
-
-    // Infield dirt
-    const dirtGeo = new THREE.CircleGeometry(28, 64);
-    const dirtMat = new THREE.MeshLambertMaterial({ color: 0x8B6543 });
-    const dirt = new THREE.Mesh(dirtGeo, dirtMat);
-    dirt.rotation.x = -Math.PI / 2;
-    dirt.position.y = -0.01;
-    dirt.receiveShadow = true;
-    fieldGroup.add(dirt);
-
-    // Outfield grass
-    const grassGeo = new THREE.CircleGeometry(90, 64);
-    const grassMat = new THREE.MeshLambertMaterial({ color: 0x1a5c2a });
-    const grass = new THREE.Mesh(grassGeo, grassMat);
-    grass.rotation.x = -Math.PI / 2;
-    grass.position.y = -0.02;
-    grass.receiveShadow = true;
-    fieldGroup.add(grass);
-
-    // Grass stripes (mow pattern)
-    for (let i = 0; i < 8; i++) {
-        const stripeGeo = new THREE.PlaneGeometry(160, 10);
-        const colOffset = i % 2 === 0 ? 0x1a5c2a : 0x1e6830;
-        const stripeMat = new THREE.MeshLambertMaterial({ color: colOffset });
-        const stripe = new THREE.Mesh(stripeGeo, stripeMat);
-        stripe.rotation.x = -Math.PI / 2;
-        stripe.position.set(0, -0.015, -35 + i * 10);
-        fieldGroup.add(stripe);
-    }
-
-    // Mound
-    moundGroup = new THREE.Group();
-    const moundGeo = new THREE.CylinderGeometry(2.7, 3.0, 0.25, 32);
-    const moundMat = new THREE.MeshLambertMaterial({ color: 0x8B6543 });
-    const mound = new THREE.Mesh(moundGeo, moundMat);
-    mound.castShadow = true;
-    mound.receiveShadow = true;
-    moundGroup.add(mound);
-    moundGroup.position.set(0, 0.12, 18.39);
-    fieldGroup.add(moundGroup);
-
-    // Pitching rubber
-    const rubberGeo = new THREE.BoxGeometry(0.61, 0.05, 0.15);
-    const rubberMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-    const rubber = new THREE.Mesh(rubberGeo, rubberMat);
-    rubber.position.set(0, 0.27, 18.39);
-    fieldGroup.add(rubber);
-
-    // Home plate
-    const plateShape = new THREE.Shape();
-    plateShape.moveTo(-0.22, -0.22);
-    plateShape.lineTo(0.22, -0.22);
-    plateShape.lineTo(0.22, 0.05);
-    plateShape.lineTo(0, 0.22);
-    plateShape.lineTo(-0.22, 0.05);
-    plateShape.closePath();
-    const plateGeo = new THREE.ShapeGeometry(plateShape);
-    const plateMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-    const plate = new THREE.Mesh(plateGeo, plateMat);
-    plate.rotation.x = -Math.PI / 2;
-    plate.position.set(0, 0.01, 0);
-    fieldGroup.add(plate);
-
-    // Strike zone box (wireframe)
-    const szGeo = new THREE.BoxGeometry(0.43, 0.65, 0.01);
-    const szMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true, opacity: 0.5, transparent: true });
-    const szBox = new THREE.Mesh(szGeo, szMat);
-    szBox.position.set(0, 0.95, 0.15);
-    szBox.name = 'strikeZoneBox';
-    fieldGroup.add(szBox);
-
-    // Bases
-    [[0, 0, -27.43], [27.43, 0, -13.72], [-27.43, 0, -13.72]].forEach(([x, y, z]) => {
-        const bGeo = new THREE.BoxGeometry(0.38, 0.07, 0.38);
-        const bMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-        const base = new THREE.Mesh(bGeo, bMat);
-        base.position.set(x, y, z);
-        fieldGroup.add(base);
-    });
-
-    // Foul poles (simplified)
-    [-1, 1].forEach(side => {
-        const poleGeo = new THREE.CylinderGeometry(0.05, 0.05, 15, 8);
-        const poleMat = new THREE.MeshLambertMaterial({ color: 0xffff00 });
-        const pole = new THREE.Mesh(poleGeo, poleMat);
-        pole.position.set(side * 75, 7.5, -65);
-        scene.add(pole);
-    });
-
-    // Stadium walls (simplified arc)
-    const wallCurve = new THREE.ArcCurve(0, -75, 80, Math.PI*0.1, Math.PI*0.9, false);
-    const wallPts = wallCurve.getPoints(40);
-    wallPts.forEach((p) => {
-        const wGeo = new THREE.BoxGeometry(3, 3, 0.5);
-        const wMat = new THREE.MeshLambertMaterial({ color: 0x1a2840 });
-        const wall = new THREE.Mesh(wGeo, wMat);
-        wall.position.set(p.x, 1.5, p.y);
-        scene.add(wall);
-    });
-
-    // Catcher
-    buildCatcher();
-}
-
-function buildCatcher() {
-    const catcherGroup = new THREE.Group();
-
-    // Body
-    const bodyGeo = new THREE.CapsuleGeometry(0.25, 0.8, 4, 8);
-    const bodyMat = new THREE.MeshLambertMaterial({ color: 0x1a2840 });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.y = 0.8;
-    body.castShadow = true;
-    catcherGroup.add(body);
-
-    // Helmet
-    const helmGeo = new THREE.SphereGeometry(0.22, 12, 8);
-    const helmMat = new THREE.MeshLambertMaterial({ color: 0x111827 });
-    const helm = new THREE.Mesh(helmGeo, helmMat);
-    helm.position.y = 1.7;
-    helm.castShadow = true;
-    catcherGroup.add(helm);
-
-    // Mitt
-    const mittGeo = new THREE.SphereGeometry(0.18, 8, 6);
-    const mittMat = new THREE.MeshLambertMaterial({ color: 0x7c3012 });
-    const mitt = new THREE.Mesh(mittGeo, mittMat);
-    mitt.position.set(STATE.aimX * 0.3, 0.9 + STATE.aimY * 0.2, 0.3);
-    mitt.name = 'catcher-mitt';
-    catcherGroup.add(mitt);
-
-    catcherGroup.position.set(0, 0, -0.6);
-    catcherGroup.name = 'catcher';
-    scene.add(catcherGroup);
-}
-
-// ── Pitcher ────────────────────────────────────────────────────────
-function buildPitcher() {
-    pitcherGroup = new THREE.Group();
-
-    // Shoes
-    const shoeGeo = new THREE.BoxGeometry(0.15, 0.08, 0.3);
-    const shoeMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
-    [-0.1, 0.1].forEach(ox => {
-        const shoe = new THREE.Mesh(shoeGeo, shoeMat);
-        shoe.position.set(ox, 0.04, 0);
-        shoe.castShadow = true;
-        pitcherGroup.add(shoe);
-    });
-
-    // Legs
-    const legGeo = new THREE.CapsuleGeometry(0.09, 0.55, 4, 6);
-    const legMat = new THREE.MeshLambertMaterial({ color: 0xf0f0ff }); // white pants
-    [-0.12, 0.12].forEach(ox => {
-        const leg = new THREE.Mesh(legGeo, legMat);
-        leg.position.set(ox, 0.45, 0);
-        leg.castShadow = true;
-        pitcherGroup.add(leg);
-    });
-
-    // Body / Jersey (LG 트윈스 스타일 - 세로 줄무늬 흰색)
-    const torsoGeo = new THREE.CapsuleGeometry(0.2, 0.55, 4, 8);
-    const torsoMat = new THREE.MeshLambertMaterial({ color: 0xfafafa });
-    const torso = new THREE.Mesh(torsoGeo, torsoMat);
-    torso.position.y = 1.15;
-    torso.castShadow = true;
-    pitcherGroup.add(torso);
-
-    // Number on jersey
-    // (Texture would be ideal but we use color accent)
-    const accentGeo = new THREE.PlaneGeometry(0.25, 0.35);
-    const accentMat = new THREE.MeshBasicMaterial({ color: 0xc8102e, side: THREE.DoubleSide });
-    const accent = new THREE.Mesh(accentGeo, accentMat);
-    accent.position.set(0, 1.15, -0.21);
-    pitcherGroup.add(accent);
-
-    // Arms
-    const armGeo = new THREE.CapsuleGeometry(0.07, 0.42, 4, 6);
-    const armMat = new THREE.MeshLambertMaterial({ color: 0xfafafa });
-    // Glove arm (left)
-    const armL = new THREE.Mesh(armGeo, armMat);
-    armL.position.set(-0.32, 1.2, 0.1);
-    armL.rotation.z = 0.5;
-    armL.castShadow = true;
-    pitcherGroup.add(armL);
-    // Throw arm (right) - raised
-    const armR = new THREE.Mesh(armGeo, armMat);
-    armR.position.set(0.32, 1.45, -0.1);
-    armR.rotation.z = -1.2;
-    armR.rotation.x = -0.5;
-    armR.castShadow = true;
-    armR.name = 'throw-arm';
-    pitcherGroup.add(armR);
-
-    // Head
-    const headGeo = new THREE.SphereGeometry(0.18, 12, 8);
-    const headMat = new THREE.MeshLambertMaterial({ color: 0xf5cba7 });
-    const head = new THREE.Mesh(headGeo, headMat);
-    head.position.y = 1.73;
-    head.castShadow = true;
-    pitcherGroup.add(head);
-
-    // Cap (LG style - 유광 검정)
-    const capGeo = new THREE.SphereGeometry(0.19, 12, 6, 0, Math.PI*2, 0, Math.PI*0.6);
-    const capMat = new THREE.MeshPhongMaterial({ color: 0x111111, shininess: 80, specular: 0x444444 });
-    const cap = new THREE.Mesh(capGeo, capMat);
-    cap.position.y = 1.79;
-    cap.castShadow = true;
-    pitcherGroup.add(cap);
-
-    // Cap brim
-    const brimGeo = new THREE.CylinderGeometry(0.25, 0.25, 0.04, 16, 1, false, 0, Math.PI);
-    const brimMat = new THREE.MeshPhongMaterial({ color: 0x111111, shininess: 80 });
-    const brim = new THREE.Mesh(brimGeo, brimMat);
-    brim.position.set(0, 1.75, -0.12);
-    brim.rotation.x = Math.PI * 0.05;
-    pitcherGroup.add(brim);
-
-    pitcherGroup.position.set(-0.2, 0.25, 18.39);
-    pitcherGroup.rotation.y = Math.PI; // 타자쪽 보게
-    scene.add(pitcherGroup);
-}
-
-// ── Batter ─────────────────────────────────────────────────────────
-function buildBatter() {
-    batterGroup = new THREE.Group();
-
-    const batGeom = new THREE.CylinderGeometry(0.03, 0.07, 0.9, 8);
-    const batMat = new THREE.MeshLambertMaterial({ color: 0x7c4a1e });
-    const bat = new THREE.Mesh(batGeom, batMat);
-    bat.position.set(0.5, 1.0, 0);
-    bat.rotation.z = -0.7;
-    bat.rotation.x = 0.3;
-    bat.castShadow = true;
-    batterGroup.add(bat);
-
-    const bodyGeo = new THREE.CapsuleGeometry(0.18, 0.6, 4, 8);
-    const bodyMat = new THREE.MeshLambertMaterial({ color: 0x0f4c9e });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.y = 0.95;
-    body.castShadow = true;
-    batterGroup.add(body);
-
-    const headGeo = new THREE.SphereGeometry(0.16, 10, 7);
-    const headMat = new THREE.MeshLambertMaterial({ color: 0xf5cba7 });
-    const head = new THREE.Mesh(headGeo, headMat);
-    head.position.y = 1.6;
-    batterGroup.add(head);
-
-    const helmGeo = new THREE.SphereGeometry(0.18, 10, 6);
-    const helmMat = new THREE.MeshPhongMaterial({ color: 0x0a2d6e, shininess: 60 });
-    const helm = new THREE.Mesh(helmGeo, helmMat);
-    helm.position.y = 1.65;
-    batterGroup.add(helm);
-
-    batterGroup.position.set(0.4, 0, -0.3);
-    scene.add(batterGroup);
-}
-
-// ── Ball ────────────────────────────────────────────────────────────
-function createBall(color) {
-    if (ballMesh) { scene.remove(ballMesh); ballMesh = null; }
-    const ballGeo = new THREE.SphereGeometry(0.037, 16, 12);
-    const ballMat = new THREE.MeshPhongMaterial({
-        color: 0xfafafa,
-        emissive: new THREE.Color(color || '#ffffff'),
-        emissiveIntensity: 0.3,
-        shininess: 60,
-        specular: 0xaaaaaa,
-    });
-    ballMesh = new THREE.Mesh(ballGeo, ballMat);
-    ballMesh.castShadow = true;
-    scene.add(ballMesh);
-    return ballMesh;
-}
-
-function clearTrail() {
-    if (trailLine) { scene.remove(trailLine); trailLine = null; }
-    trailPoints = [];
-}
-
-function addTrailPoint(pos, color) {
-    trailPoints.push(new THREE.Vector3(pos.x, pos.y, pos.z));
-    if (trailPoints.length > 80) trailPoints.shift();
-
-    if (trailLine) scene.remove(trailLine);
-
-    const geo = new THREE.BufferGeometry().setFromPoints(trailPoints);
-    const mat = new THREE.LineBasicMaterial({
-        color: new THREE.Color(color || '#88BBFF'),
-        opacity: 0.7,
-        transparent: true,
-    });
-    trailLine = new THREE.Line(geo, mat);
-    scene.add(trailLine);
-}
-
-// ─── Particle system for dust ────────────────────────────────────
-let dustParticles = null;
-function createDustEffect(pos) {
-    if (dustParticles) { scene.remove(dustParticles); dustParticles = null; }
-    const count = 80;
-    const geo = new THREE.BufferGeometry();
-    const positions = new Float32Array(count * 3);
-    const velocities = [];
-    for (let i = 0; i < count; i++) {
-        positions[i*3]   = pos.x + (Math.random()-0.5)*0.2;
-        positions[i*3+1] = pos.y;
-        positions[i*3+2] = pos.z + (Math.random()-0.5)*0.2;
-        velocities.push({
-            x: (Math.random()-0.5)*0.04,
-            y:  Math.random()*0.05 + 0.01,
-            z: (Math.random()-0.5)*0.04,
-        });
-    }
-    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const mat = new THREE.PointsMaterial({ color: 0x8B6543, size: 0.04, transparent: true, opacity: 0.8 });
-    dustParticles = new THREE.Points(geo, mat);
-    dustParticles._vels = velocities;
-    dustParticles._life = 1.0;
-    scene.add(dustParticles);
-}
-
-let dustClock = 0;
-function updateDust(dt) {
-    if (!dustParticles) return;
-    dustParticles._life -= dt * 1.2;
-    if (dustParticles._life <= 0) { scene.remove(dustParticles); dustParticles = null; return; }
-    const pos = dustParticles.geometry.attributes.position.array;
-    dustParticles._vels.forEach((v, i) => {
-        v.y -= 0.002;
-        pos[i*3]   += v.x;
-        pos[i*3+1] += Math.max(v.y, 0);
-        pos[i*3+2] += v.z;
-    });
-    dustParticles.material.opacity = dustParticles._life * 0.8;
-    dustParticles.geometry.attributes.position.needsUpdate = true;
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  CAMERA
-// ══════════════════════════════════════════════════════════════════
-const CAMERA_PRESETS = {
-    pitcher: { pos: [0.0, 2.5, 22.5], look: [0, 0.8, 0], fov: 55 },
-    catcher: { pos: [0.3, 1.4, -2.5], look: [0, 1.0, 18], fov: 65 },
-    side:    { pos: [20, 4.0, 8],     look: [0, 1.2, 8],  fov: 50 },
-    top:     { pos: [0, 25, 8],       look: [0, 0, 8],    fov: 60 },
-};
-
-function setCameraPosition(name) {
-    const p = CAMERA_PRESETS[name];
-    if (!p) return;
-    camera.position.set(...p.pos);
-    camera.lookAt(...p.look);
-    camera.fov = p.fov;
-    camera.updateProjectionMatrix();
-}
-
-function setCamera(name, btnEl) {
-    STATE.camera = name;
-    setCameraPosition(name);
-    document.querySelectorAll('.cam-btn').forEach(b => b.classList.remove('active'));
-    if (btnEl) btnEl.classList.add('active');
-}
-
-// ── Smooth camera transition ─────────────────────────────────────
-let camTarget = null;
-function transitionCamera(name) {
-    const p = CAMERA_PRESETS[name];
-    camTarget = {
-        pos: new THREE.Vector3(...p.pos),
-        look: new THREE.Vector3(...p.look),
-        fov: p.fov,
-        t: 0,
-        fromPos: camera.position.clone(),
-        fromFov: camera.fov,
-    };
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  PITCH ANIMATION
-// ══════════════════════════════════════════════════════════════════
-function startBallAnimation(data) {
-    pitchData = data;
-    ballT = 0;
-    ballAnimating = true;
-    STATE.isThrowing = true;
-
-    const spec = PITCH_SPECS[data.pitchType] || PITCH_SPECS.fourseam;
-    clearTrail();
-    createBall(spec.color);
-
-    // Update HUD
-    const hud = document.getElementById('pitch-info-hud');
-    hud.style.display = 'block';
-    document.getElementById('hud-type').textContent = spec.name;
-    document.getElementById('hud-speed').textContent = data.speedKmh.toFixed(1) + ' km/h';
-    document.getElementById('hud-rpm').textContent = Math.round(data.rpm) + ' RPM';
-    document.getElementById('hud-time').textContent = (data.travelTime * 1000).toFixed(0) + ' ms';
-
-    document.getElementById('phys-cd').textContent = spec.Cd.toFixed(3);
-    document.getElementById('phys-cl').textContent = spec.CL_base.toFixed(3);
-
-    // Dust at mound
-    createDustEffect({ x: -0.2, y: 0.25, z: 18.0 });
-
-    // Pitcher arm animation
-    animatePitcherThrow();
-}
-
-let pitcherArmAnim = 0;
-function animatePitcherThrow() {
-    pitcherArmAnim = 1.0;
-}
-
-function updateBallAnimation(dt) {
-    if (!ballAnimating || !pitchData || !ballMesh) return;
-
-    const traj = pitchData.trajectory;
-    if (!traj || traj.length === 0) { endBallAnimation(); return; }
-
-    // Advance along trajectory at real speed
-    ballT += dt * (traj.length / pitchData.travelTime);
-
-    const idx = Math.min(Math.floor(ballT), traj.length - 1);
-
-    if (idx >= traj.length - 1) {
-        // Ball reached home plate
-        endBallAnimation();
-        return;
-    }
-
-    const p0 = traj[idx];
-    const p1 = traj[Math.min(idx + 1, traj.length - 1)];
-    const frac = ballT - idx;
-
-    // Interpolate position
-    const bx = p0.x + (p1.x - p0.x) * frac;
-    const by = p0.y + (p1.y - p0.y) * frac;
-    const bz = p0.z + (p1.z - p0.z) * frac;
-
-    ballMesh.position.set(bx, by, bz);
-
-    // Ball spin rotation
-    ballMesh.rotation.x += dt * 30;
-    ballMesh.rotation.z += dt * 20;
-
-    // Trail
-    const spec = PITCH_SPECS[pitchData.pitchType] || {};
-    if (idx % 3 === 0) addTrailPoint({x:bx, y:by, z:bz}, spec.color || '#88BBFF');
-
-    // Update HUD speed dynamically
-    const curSpeed = p0.speedKmh;
-    document.getElementById('hud-speed').textContent = curSpeed.toFixed(1) + ' km/h';
-    document.getElementById('hud-break').textContent =
-        `H:${((pitchData.finalX||0)*30).toFixed(1)}cm V:${((pitchData.finalY-0.65)*-30).toFixed(1)}cm`;
-}
-
-function endBallAnimation() {
-    ballAnimating = false;
-    STATE.isThrowing = false;
-
-    // Judge pitch
-    if (!pitchData) return;
-    const fx = pitchData.finalX || 0;
-    const fy = pitchData.finalY || 0.65;
-
-    // Strike zone: x ±0.215m, y 0.51~1.18m
-    const isStrike = Math.abs(fx) < 0.215 && fy >= 0.51 && fy < 1.18;
-
-    // Probability of swing (simulate batter logic)
-    const nearEdge = Math.abs(fx) > 0.15 || fy < 0.55 || fy > 1.1;
-    const swings = Math.random() < (isStrike ? 0.7 : nearEdge ? 0.35 : 0.15);
-
-    let resultText, resultSub, resultColor;
-
-    if (swings && isStrike) {
-        // Perfect hit or foul or swing-miss
-        const hitRng = Math.random();
-        if (hitRng < 0.3) {
-            resultText = 'HIT!'; resultSub = '안타!'; resultColor = '#f59e0b';
-            setTimeout(() => triggerHitAnimation(), 100);
-        } else if (hitRng < 0.5) {
-            resultText = 'FOUL'; resultSub = '파울볼'; resultColor = '#94a3b8';
-            addStrike();
+// ─── 5. 결과 판정 ───
+function judgePitch(endX, endY, zRect, spd) {
+    // 존 내에 들어왔는지 판정
+    const inZone = endX > zRect.left && endX < zRect.right && endY > zRect.top && endY < zRect.bottom;
+    
+    // AI 타자 스윙 여부
+    const swingChance = inZone ? 0.7 : 0.2;
+    const swings = Math.random() < swingChance;
+    
+    let resText = '';
+    let resColor = '';
+    let isHit = false;
+    
+    if (swings) {
+        // 배트 스윙 애니메이션
+        els.batter.style.transform = 'rotate(-10deg) translateX(30px)';
+        
+        if (inZone) {
+            // 맞음! 타이밍에 따라 결과 (여기선 심플하게 확률로)
+            const hitR = Math.random();
+            if (hitR < 0.2) {
+                resText = 'HOME RUN!!'; resColor = '#f59e0b'; isHit = true;
+                state.homeScore++; els.scene.classList.add('shake');
+            } else if (hitR < 0.6) {
+                resText = 'HIT!'; resColor = '#22c55e'; isHit = true;
+                state.homeScore++;
+            } else {
+                resText = 'FOUL'; resColor = '#94a3b8';
+                if (state.strikes < 2) state.strikes++;
+            }
         } else {
-            resultText = 'STRIKE!'; resultSub = '헛스윙 삼진!'; resultColor = '#ef4444';
-            addStrike();
+            resText = 'STRIKE (SWING)'; resColor = '#ef4444';
+            state.strikes++;
         }
-    } else if (swings && !isStrike) {
-        resultText = 'STRIKE!'; resultSub = '헛스윙!'; resultColor = '#ef4444';
-        addStrike();
-    } else if (!swings && isStrike) {
-        resultText = 'STRIKE!'; resultSub = '루킹 스트라이크!'; resultColor = '#ef4444';
-        addStrike();
     } else {
-        resultText = 'BALL'; resultSub = '볼!'; resultColor = '#22c55e';
-        addBall();
+        if (inZone) {
+            resText = 'STRIKE (LOOKING)'; resColor = '#ef4444';
+            state.strikes++;
+        } else {
+            resText = 'BALL'; resColor = '#3b82f6';
+            state.balls++;
+        }
     }
-
-    showResult(resultText, resultSub, resultColor);
-    addToLog(pitchData, resultText);
-    updateSZCanvas(pitchData.finalX, pitchData.finalY, isStrike);
-
-    // Enable throw button again
-    document.getElementById('btn-pitch').disabled = false;
-
-    // Auto-clear ball after 2s
+    
+    // 타자 원상복구
+    setTimeout(() => { els.batter.style.transform = 'none'; }, 500);
+    
+    // 화면 출력
+    els.resMain.textContent = resText;
+    els.resMain.style.color = resColor;
+    els.resSpd.textContent = `${spd} km/h - ${state.pitch.name}`;
+    
+    els.resMsg.classList.add('show');
+    
+    // 스코어보드 업데이트
+    updateScore();
+    
+    // 리셋
     setTimeout(() => {
-        if (ballMesh) { scene.remove(ballMesh); ballMesh = null; }
-        clearTrail();
+        els.resMsg.classList.remove('show');
+        resetTurn();
     }, 2000);
 }
 
-function triggerHitAnimation() {
-    if (!ballMesh) return;
-    // Simulate hit ball flying away
-    let hVx = (Math.random() - 0.5) * 15;
-    let hVy = 15 + Math.random() * 10;
-    let hVz = -(20 + Math.random() * 30);
-    let hT = 0;
-    const hInterval = setInterval(() => {
-        hT += 1/60;
-        hVy -= 9.8 / 60;
-        if (ballMesh) {
-            ballMesh.position.x += hVx / 60;
-            ballMesh.position.y += hVy / 60;
-            ballMesh.position.z += hVz / 60;
-        }
-        if (hT > 3 || !ballMesh) clearInterval(hInterval);
-    }, 1000/60);
+function updateScore() {
+    if (state.strikes >= 3) { state.outs++; state.strikes = 0; state.balls = 0; }
+    if (state.balls >= 4) { state.strikes = 0; state.balls = 0; /* 밀어내기는 생략 */ }
+    if (state.outs >= 3) { state.outs = 0; state.inning++; }
+    
+    document.getElementById('score-home').textContent = state.homeScore;
+    document.getElementById('score-away').textContent = state.awayScore;
+    document.getElementById('inning-val').textContent = state.inning;
+    
+    // 점등
+    for(let i=1; i<=3; i++) document.getElementById('b'+i).classList.toggle('lit', i <= state.balls);
+    for(let i=1; i<=2; i++) document.getElementById('s'+i).classList.toggle('lit', i <= state.strikes);
+    for(let i=1; i<=2; i++) document.getElementById('o'+i).classList.toggle('lit', i <= state.outs);
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  GAME LOGIC
-// ══════════════════════════════════════════════════════════════════
-function addStrike() {
-    STATE.strikes++;
-    if (STATE.strikes >= 3) {
-        STATE.outs++;
-        STATE.strikes = 0;
-        STATE.balls = 0;
-        if (STATE.outs >= 3) { STATE.outs = 0; STATE.inning++; }
-    }
-    updateCountDisplay();
-    updateScoreBoard();
+function resetTurn() {
+    state.phase = 'SELECT_PITCH';
+    els.pitchBtns.forEach(b => b.classList.remove('selected'));
+    document.getElementById('info-type').textContent = '-';
+    document.getElementById('info-speed').textContent = '000';
+    document.getElementById('info-speed').style.color = '#f59e0b';
+    els.guide.textContent = "던질 구종을 선택하세요";
 }
 
-function addBall() {
-    STATE.balls++;
-    if (STATE.balls >= 4) {
-        STATE.balls = 0;
-        STATE.strikes = 0;
-        // Walk
-    }
-    updateCountDisplay();
-}
-
-function updateCountDisplay() {
-    for (let i = 0; i < 3; i++) {
-        const d = document.getElementById('ball-' + i);
-        if (d) d.classList.toggle('active', i < STATE.balls);
-    }
-    for (let i = 0; i < 2; i++) {
-        const d = document.getElementById('strike-' + i);
-        if (d) d.classList.toggle('active', i < STATE.strikes);
-    }
-}
-
-function updateScoreBoard() {
-    document.getElementById('sc-inning').textContent = STATE.inning;
-    document.getElementById('sc-home').textContent   = STATE.homeScore;
-    document.getElementById('sc-away').textContent   = STATE.awayScore;
-    document.getElementById('sc-out').textContent    = STATE.outs;
-    document.getElementById('sc-pitches').textContent= STATE.totalPitches;
-}
-
-function showResult(text, sub, color) {
-    const ov = document.getElementById('pitch-result-overlay');
-    const rt = document.getElementById('result-text');
-    const rs = document.getElementById('result-sub');
-    rt.textContent = text;
-    rt.style.color = color;
-    rs.textContent = sub;
-    ov.classList.add('show');
-    setTimeout(() => ov.classList.remove('show'), 1800);
-}
-
-function addToLog(data, result) {
-    const log = document.getElementById('pitch-log');
-    const spec = PITCH_SPECS[data.pitchType] || {};
-    const div = document.createElement('div');
-    div.className = 'log-entry';
-    const rColor = result === 'BALL' ? '#22c55e' : result === 'HIT!' ? '#f59e0b' : '#ef4444';
-    div.innerHTML = `
-        <div class="log-dot" style="background:${spec.color||'#888'}"></div>
-        <div class="log-name">${spec.name||'?'}</div>
-        <div class="log-speed">${data.speedKmh.toFixed(0)}km</div>
-        <div class="log-result" style="color:${rColor}">${result}</div>
-    `;
-    log.prepend(div);
-    if (log.children.length > 30) log.removeChild(log.lastChild);
-}
-
-// ── Strike Zone Canvas (mini HUD) ─────────────────────────────────
-function updateSZCanvas(fx, fy, isStrike) {
-    const cvs = document.getElementById('sz-canvas');
-    const ctx = cvs.getContext('2d');
-    ctx.clearRect(0, 0, cvs.width, cvs.height);
-
-    // Strike zone rect (canvas coords)
-    const szX = 15, szW = 90, szY = 10, szH = 80;
-
-    // Background
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.fillRect(0, 0, cvs.width, cvs.height);
-
-    // Strike zone
-    ctx.strokeStyle = '#3b82f6';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(szX, szY, szW, szH);
-
-    // Grid
-    ctx.strokeStyle = 'rgba(59,130,246,0.3)';
-    ctx.lineWidth = 0.5;
-    for (let i = 1; i < 3; i++) {
-        ctx.beginPath(); ctx.moveTo(szX + szW/3*i, szY); ctx.lineTo(szX + szW/3*i, szY+szH); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(szX, szY+szH/3*i); ctx.lineTo(szX+szW, szY+szH/3*i); ctx.stroke();
-    }
-
-    // Ball position
-    // fx: -0.215 ~ 0.215 → szX ~ szX+szW
-    // fy: 0.51 ~ 1.18   → szY+szH ~ szY
-    const bx = szX + szW * (fx / 0.43 + 0.5);
-    const by = szY + szH * (1 - (fy - 0.51) / 0.67);
-    const bClamp = {
-        x: Math.max(szX-10, Math.min(szX+szW+10, bx)),
-        y: Math.max(szY-10, Math.min(szY+szH+10, by)),
-    };
-
-    ctx.beginPath();
-    ctx.arc(bClamp.x, bClamp.y, 6, 0, Math.PI*2);
-    ctx.fillStyle = isStrike ? '#ef4444' : '#22c55e';
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = isStrike ? '#ef4444' : '#22c55e';
-    ctx.fill();
-    ctx.shadowBlur = 0;
-}
-
-// ── Aim Canvas ─────────────────────────────────────────────────────
-function initAimCanvas() {
-    const cvs = document.getElementById('aim-canvas');
-    const ctx = cvs.getContext('2d');
-    drawAimCanvas(ctx, cvs.width, cvs.height, 0, 0);
-
-    cvs.addEventListener('click', (e) => {
-        const rect = cvs.getBoundingClientRect();
-        const mx = (e.clientX - rect.left) / rect.width * 2 - 1;
-        const my = -((e.clientY - rect.top) / rect.height * 2 - 1);
-        STATE.aimX = Math.max(-1, Math.min(1, mx));
-        STATE.aimY = Math.max(-1, Math.min(1, my));
-        drawAimCanvas(ctx, cvs.width, cvs.height, STATE.aimX, STATE.aimY);
-    });
-
-    cvs.addEventListener('mousemove', (e) => {
-        if (e.buttons !== 1) return;
-        const rect = cvs.getBoundingClientRect();
-        const mx = (e.clientX - rect.left) / rect.width * 2 - 1;
-        const my = -((e.clientY - rect.top) / rect.height * 2 - 1);
-        STATE.aimX = Math.max(-1, Math.min(1, mx));
-        STATE.aimY = Math.max(-1, Math.min(1, my));
-        drawAimCanvas(ctx, cvs.width, cvs.height, STATE.aimX, STATE.aimY);
-    });
-}
-
-function drawAimCanvas(ctx, w, h, ax, ay) {
-    ctx.clearRect(0, 0, w, h);
-
-    // Background - batter's perspective
-    const grad = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w*0.7);
-    grad.addColorStop(0, '#1e2d3e');
-    grad.addColorStop(1, '#0a1520');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
-
-    // Strike zone
-    const szX = w*0.2, szY = h*0.1, szW = w*0.6, szH = h*0.8;
-    ctx.strokeStyle = 'rgba(59,130,246,0.8)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(szX, szY, szW, szH);
-
-    // Zone grid
-    ctx.strokeStyle = 'rgba(59,130,246,0.2)';
-    ctx.lineWidth = 1;
-    for (let i = 1; i < 3; i++) {
-        ctx.beginPath(); ctx.moveTo(szX + szW/3*i, szY); ctx.lineTo(szX + szW/3*i, szY+szH); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(szX, szY + szH/3*i); ctx.lineTo(szX+szW, szY+szH/3*i); ctx.stroke();
-    }
-
-    // Home plate hint
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.lineWidth = 1;
-    const px = w/2, py = h*0.95;
-    ctx.beginPath();
-    ctx.moveTo(px-20, py); ctx.lineTo(px+20, py); ctx.lineTo(px+20, py-5);
-    ctx.lineTo(px, py-12); ctx.lineTo(px-20, py-5); ctx.closePath();
-    ctx.stroke();
-
-    // Target crosshair
-    const tx = w/2 + ax * szW/2;
-    const ty = h/2 - ay * szH/2;
-
-    ctx.strokeStyle = '#f59e0b';
-    ctx.lineWidth = 1.5;
-    ctx.globalAlpha = 0.7;
-    ctx.beginPath(); ctx.moveTo(tx-10, ty); ctx.lineTo(tx+10, ty); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(tx, ty-10); ctx.lineTo(tx, ty+10); ctx.stroke();
-    ctx.globalAlpha = 1;
-
-    ctx.beginPath();
-    ctx.arc(tx, ty, 5, 0, Math.PI*2);
-    ctx.fillStyle = '#f59e0b';
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = '#f59e0b';
-    ctx.fill();
-    ctx.shadowBlur = 0;
-}
-
-// ── Timing Gauge ──────────────────────────────────────────────────
-let timingInterval = null;
-function startTimingGauge() {
-    timingValue = 0;
-    timingDir = 1;
-    timingActive = true;
-    const fill = document.getElementById('timing-fill');
-    const val = document.getElementById('timing-val');
-
-    timingInterval = setInterval(() => {
-        timingValue += timingDir * 3;
-        if (timingValue >= 100) { timingValue = 100; timingDir = -1; }
-        if (timingValue <= 0)   { timingValue = 0;   timingDir = 1; }
-        fill.style.width = timingValue + '%';
-        val.textContent = timingValue + '%';
-    }, 16);
-}
-
-function stopTimingGauge() {
-    clearInterval(timingInterval);
-    timingActive = false;
-    const score = timingValue;
-    // Perfect zone: 85~100
-    STATE.timingScore = score;
-    return score;
-}
-
-// ── Power Slider ──────────────────────────────────────────────────
-function initPowerSlider() {
-    const slider = document.getElementById('power-slider');
-    const fill = document.getElementById('power-fill');
-    const val = document.getElementById('power-val');
-    slider.addEventListener('input', () => {
-        STATE.power = +slider.value;
-        fill.style.width = STATE.power + '%';
-        val.textContent = STATE.power + '%';
-    });
-}
-
-// ── Pitch Grid ────────────────────────────────────────────────────
-function buildPitchGrid() {
-    const grid = document.getElementById('pitch-grid');
-    grid.innerHTML = '';
-
-    Object.entries(PITCH_SPECS).forEach(([key, spec]) => {
-        const btn = document.createElement('button');
-        btn.className = 'pitch-btn' + (key === STATE.selectedPitch ? ' active' : '');
-        btn.dataset.key = key;
-        btn.innerHTML = `
-            <div><span class="pitch-dot" style="background:${spec.color}"></span>${spec.name}</div>
-            <div class="pitch-spd">${spec.speedKmh[0]}-${spec.speedKmh[1]} km/h</div>
-        `;
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.pitch-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            STATE.selectedPitch = key;
-        });
-        grid.appendChild(btn);
-    });
-}
-
-// ── Main Pitch Action ─────────────────────────────────────────────
-function executePitch() {
-    if (STATE.isThrowing) return;
-
-    const timing = stopTimingGauge();
-    const powerFactor = (STATE.power / 100) * (0.85 + (timing / 100) * 0.15);
-    const isPerfect = timing >= 85;
-
-    STATE.totalPitches++;
-    updateScoreBoard();
-    document.getElementById('btn-pitch').disabled = true;
-
-    // Slight random offset based on timing quality
-    const jitter = (100 - timing) / 100 * 0.15;
-    const targetX = (STATE.aimX * 0.215) + (Math.random()-0.5) * jitter;
-    const targetY = 0.51 + (1 - (STATE.aimY * 0.5 + 0.5)) * 0.67 + (Math.random()-0.5) * jitter;
-
-    requestPhysicsSimulation(STATE.selectedPitch, {
-        powerFactor,
-        targetX,
-        targetY,
-        id: pendingPitchId + 1,
-    });
-
-    // Restart timing gauge for next pitch (slight delay)
-    setTimeout(startTimingGauge, 2500);
-}
-
-// ── Reset ─────────────────────────────────────────────────────────
-function resetGame() {
-    STATE.balls = STATE.strikes = STATE.outs = 0;
-    STATE.inning = 1; STATE.homeScore = STATE.awayScore = 0; STATE.totalPitches = 0;
-    STATE.isThrowing = false;
-    updateCountDisplay();
-    updateScoreBoard();
-    if (ballMesh) { scene.remove(ballMesh); ballMesh = null; }
-    clearTrail();
-    document.getElementById('pitch-log').innerHTML = '';
-    document.getElementById('pitch-info-hud').style.display = 'none';
-    document.getElementById('btn-pitch').disabled = false;
-    startTimingGauge();
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  UI INIT
-// ══════════════════════════════════════════════════════════════════
-function initUI() {
-    buildPitchGrid();
-    initAimCanvas();
-    initPowerSlider();
-
-    document.getElementById('btn-pitch').addEventListener('click', executePitch);
-    document.getElementById('btn-reset-game').addEventListener('click', resetGame);
-
-    // Start timing gauge
-    startTimingGauge();
-
-    updateCountDisplay();
-    updateScoreBoard();
-}
-
-// ══════════════════════════════════════════════════════════════════
-//  ANIMATE LOOP
-// ══════════════════════════════════════════════════════════════════
-const clock = new THREE.Clock();
-
-function animate() {
-    animReq = requestAnimationFrame(animate);
-    const dt = Math.min(clock.getDelta(), 0.05);
-
-    // Ball animation
-    updateBallAnimation(dt);
-
-    // Dust
-    updateDust(dt);
-
-    // Pitcher arm
-    if (pitcherArmAnim > 0) {
-        const arm = pitcherGroup.getObjectByName('throw-arm');
-        if (arm) {
-            arm.rotation.z = -1.2 + Math.sin(pitcherArmAnim * Math.PI) * 1.8;
-            arm.rotation.x = -0.5 - Math.sin(pitcherArmAnim * Math.PI) * 0.5;
-        }
-        pitcherArmAnim -= dt * 3;
-        if (pitcherArmAnim < 0) pitcherArmAnim = 0;
-    }
-
-    // Camera transition
-    if (camTarget) {
-        camTarget.t += dt * 2.5;
-        if (camTarget.t >= 1) {
-            camera.position.copy(camTarget.pos);
-            camera.fov = camTarget.fov;
-            camera.updateProjectionMatrix();
-            camera.lookAt(0, 1, 0);
-            camTarget = null;
-        } else {
-            camera.position.lerpVectors(camTarget.fromPos, camTarget.pos, camTarget.t);
-            camera.fov = camTarget.fromFov + (camTarget.fov - camTarget.fromFov) * camTarget.t;
-            camera.updateProjectionMatrix();
-        }
-    }
-
-    renderer.render(scene, camera);
-}
-
-// ── Boot ──────────────────────────────────────────────────────────
-window.addEventListener('load', init);
 </script>
 </body>
 </html>
