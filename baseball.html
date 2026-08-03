@@ -447,12 +447,18 @@ scene.add(pitcher);
 const batter = createHuman(true);
 batter.position.set(-1.0, 0, -0.5); // 우타자 위치
 batter.rotation.y = Math.PI / 2; // 투수를 향해 옆으로 섬
-// 배트 쥐어주기
+// 배트 쥐어주기 (손잡이 중심으로 교정)
 const batMat = new THREE.MeshPhysicalMaterial({color: 0x8B4513, roughness: 0.4, clearcoat: 0.5}); // 광택 있는 나무 배트
-const bat = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, 1.1, 16), batMat);
-bat.position.set(0, -0.35, 0); // 오른손 위치 (elbow 그룹 내부)
-bat.rotation.x = Math.PI/2 - 0.2; // 어깨 뒤로 살짝 눕힘
-batter.rArm.elbow.add(bat); // 팔꿈치/손 그룹에 직접 연결
+const batGroup = new THREE.Group();
+batGroup.position.set(0, -0.35, 0); // 오른손 정중앙
+
+const bat = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.04, 0.9, 16), batMat);
+bat.position.set(0, 0.45, 0); // 배트 기둥을 위로 올려 0,0,0이 손잡이가 되게 함
+batGroup.add(bat);
+
+batGroup.rotation.x = Math.PI - 0.4; // 팔뚝 방향에서 등 뒤쪽으로 비스듬히 눕힘
+batGroup.rotation.z = 0.2; // 살짝 바깥쪽으로
+batter.rArm.elbow.add(batGroup);
 scene.add(batter);
 
 const catcher = createHuman(false);
@@ -621,43 +627,45 @@ function update3DAnimations() {
     const waggle = Math.sin(now * 0.008) * 0.1; // 배트 흔들기 (대기 자세)
 
     if (G.ba === 'ready') {
-        batter.pelvis.position.y = 0.92 + breath; // 숨쉬며 약간씩 움직임
+        batter.pelvis.position.y = 0.92 + breath;
         batter.lLeg.rotation.x = -0.2; batter.rLeg.rotation.x = -0.2;
-        batter.lLeg.knee.rotation.x = 0.4; batter.rLeg.knee.rotation.x = 0.4; // 기마자세
+        batter.lLeg.knee.rotation.x = 0.4; batter.rLeg.knee.rotation.x = 0.4;
+        
+        // 투수(좌측, -X)를 노려보며 상체를 우측 뒤(+Z)로 꼬아줌
         batter.pelvis.rotation.y = 0;
-        batter.torso.rotation.y = -Math.PI / 6; // 투수 반대편으로 몸을 비틀어 힘을 모음
+        batter.torso.rotation.y = -Math.PI / 4; 
         batter.torso.rotation.z = 0.1;
+        batter.torso.rotation.x = 0.1;
         
-        // 왼팔 (가슴 앞으로 당겨 손잡이 잡기)
-        batter.lArm.rotation.set(-0.3, -0.6, -0.5);
-        batter.lArm.elbow.rotation.x = -1.8;
+        // 왼팔 (가슴 앞으로 깊게 당겨 배트 아랫부분을 쥠)
+        batter.lArm.rotation.set(0.4, 0.2, -1.3);
+        batter.lArm.elbow.rotation.set(0, 0, -1.6);
         
-        // 오른팔 (어깨 뒤쪽으로 높이 들어올려 배트를 쥠)
-        batter.rArm.rotation.set(1.0, 0.5, 0.5);
-        batter.rArm.elbow.rotation.x = -2.2 + waggle; // 손목/팔꿈치를 까딱거리며 타이밍 잼
-        batter.rArm.rotation.z = 0;
+        // 오른팔 (어깨 바깥으로 높이 치켜들고 팔꿈치를 굽혀 배트 윗부분을 쥠)
+        batter.rArm.rotation.set(-0.2, 0, 1.4);
+        batter.rArm.elbow.rotation.set(0, 0, 2.2 + waggle);
     } else if (G.ba === 'swing') {
-        // 자연스러운 스윙 애니메이션 (Easing: EaseInOutQuad 사용)
-        const t = Math.min(1, G.bf / 22); // 프레임을 22로 하여 여유있게 진행
+        const t = Math.min(1, G.bf / 22);
         const t_ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
         
         batter.pelvis.position.y = 0.92;
-        batter.pelvis.rotation.y = -Math.PI * 0.4 * t_ease; // 골반 회전
-        batter.torso.rotation.y = -Math.PI / 6 - (Math.PI * 0.6 * t_ease); // 몸통 강하게 회전
+        batter.pelvis.rotation.y = -Math.PI * 0.4 * t_ease;
+        batter.torso.rotation.y = -Math.PI / 4 - (Math.PI * 0.6 * t_ease);
         batter.torso.rotation.z = 0.1 * (1 - t_ease);
+        batter.torso.rotation.x = 0.1 * (1 - t_ease);
         
-        // 하체 중심 이동 (앞다리는 펴고 뒷다리는 굽힘)
+        // 하체 회전
         batter.lLeg.rotation.x = -0.2 - (0.2 * t_ease);
         batter.lLeg.knee.rotation.x = 0.4 * (1 - t_ease); 
         batter.rLeg.rotation.x = -0.2 + (0.2 * t_ease);
         batter.rLeg.knee.rotation.x = 0.4 + (0.3 * t_ease);
         
-        // 팔꿈치가 펴지면서 팔을 뻗는 릴리스 스윙 로직
-        batter.lArm.rotation.set(-0.3 + (0.5 * t_ease), -0.6 + (0.6 * t_ease), -0.5 + (0.3 * t_ease));
-        batter.lArm.elbow.rotation.x = -1.8 * (1 - t_ease) - 0.2;
+        // 팔 스윙: 투수 쪽(-X)으로 강하게 뻗어 던짐
+        batter.lArm.rotation.set(0.4 - (0.8 * t_ease), 0.2 + (0.8 * t_ease), -1.3 + (1.5 * t_ease));
+        batter.lArm.elbow.rotation.set(0, 0, -1.6 * (1 - t_ease));
         
-        batter.rArm.rotation.set(1.0 - (0.8 * t_ease), 0.5 - (0.5 * t_ease), 0.5 - (0.5 * t_ease));
-        batter.rArm.elbow.rotation.x = -2.2 * (1 - t_ease) - 0.2;
+        batter.rArm.rotation.set(-0.2 + (0.6 * t_ease), 0, 1.4 - (1.0 * t_ease));
+        batter.rArm.elbow.rotation.set(0, 0, 2.2 * (1 - t_ease));
     }
 
     // 공 궤적 연산
