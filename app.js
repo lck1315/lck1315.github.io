@@ -790,6 +790,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function createDayCell(dateObj, isCurrentMonth) {
         const dayCell = document.createElement('div');
         dayCell.className = 'calendar-day';
+        dayCell.style.cssText = "min-height: 80px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px; padding: 5px; position: relative; cursor: pointer; display: flex; flex-direction: column; gap: 4px;";
         
         const year = dateObj.getFullYear();
         const month = String(dateObj.getMonth() + 1).padStart(2, '0');
@@ -798,50 +799,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!isCurrentMonth) dayCell.classList.add('other-month');
 
+        let dateColor = "var(--text-color)";
         const dayOfWeek = dateObj.getDay();
-        if (dayOfWeek === 0) dayCell.classList.add('sun');
-        if (dayOfWeek === 6) dayCell.classList.add('sat');
+        if (dayOfWeek === 0) { dayCell.classList.add('sun'); dateColor = "#ff4757"; }
+        if (dayOfWeek === 6) { dayCell.classList.add('sat'); dateColor = "#3742fa"; }
 
         const today = new Date();
         if (dateObj.getFullYear() === today.getFullYear() &&
             dateObj.getMonth() === today.getMonth() &&
             dateObj.getDate() === today.getDate()) {
             dayCell.classList.add('today');
+            dateColor = "var(--primary-color)";
+            dayCell.style.border = "2px solid var(--primary-color)";
         }
 
-        dayCell.innerHTML = `<span class="day-number">${dateObj.getDate()}</span>`;
+        const dateSpan = document.createElement('span');
+        dateSpan.className = 'day-number';
+        dateSpan.style.cssText = `font-size: 0.85rem; font-weight: bold; color: ${dateColor}; align-self: flex-start; margin-bottom: 2px;`;
+        dateSpan.innerText = dateObj.getDate();
+        dayCell.appendChild(dateSpan);
 
         let combinedEvents = [];
         if (familyEvents[dateStr]) combinedEvents = combinedEvents.concat(familyEvents[dateStr]);
         if (googleEvents[dateStr]) combinedEvents = combinedEvents.concat(googleEvents[dateStr]);
 
-        if (combinedEvents.length > 0) {
-            const eventsWrapper = document.createElement('div');
-            eventsWrapper.className = 'day-events-list';
+        combinedEvents.forEach(evt => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'schedule-item';
             
-            const maxVisibleEvents = 2; 
-            const eventsToShow = combinedEvents.slice(0, maxVisibleEvents);
-            
-            eventsToShow.forEach(event => {
-                const eventBar = document.createElement('div');
-                eventBar.className = 'calendar-event-bar';
-                eventBar.style.backgroundColor = event.color;
-                eventBar.innerHTML = (event.isGoogle ? '<i class="fa-brands fa-google"></i> ' : '') + escapeHTML(event.title);
-                eventBar.title = event.title; 
-                eventsWrapper.appendChild(eventBar);
-            });
-            
-            if (combinedEvents.length > maxVisibleEvents) {
-                const moreText = document.createElement('div');
-                moreText.className = 'calendar-event-more';
-                moreText.textContent = `+${combinedEvents.length - maxVisibleEvents}`;
-                eventsWrapper.appendChild(moreText);
+            if (evt.isGoogle) {
+                itemDiv.style.cssText = `font-size: 0.75rem; padding: 4px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: ${evt.color || '#4285F4'}40; color: ${evt.color || '#4285F4'}; cursor: default; border-left: 3px solid ${evt.color || '#4285F4'};`;
+                itemDiv.innerHTML = `<i class="fa-brands fa-google"></i> ${escapeHTML(evt.title)}`;
+            } else {
+                itemDiv.style.cssText = `font-size: 0.75rem; padding: 4px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgba(0, 206, 201, 0.2); color: #00cec9;`;
+                itemDiv.innerText = evt.title;
             }
-            
-            dayCell.appendChild(eventsWrapper);
-        }
+            itemDiv.title = evt.title;
+            dayCell.appendChild(itemDiv);
+        });
 
-        dayCell.addEventListener('click', () => {
+        dayCell.addEventListener('click', (e) => {
+            // Prevent modal if clicked specifically on an item if needed, but original behavior opens modal for the date
             openEventModal(dateStr);
         });
 
