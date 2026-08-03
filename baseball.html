@@ -703,6 +703,12 @@ function updateCamAnim() {
         // 안타: 공을 바라보며 살짝 따라가기
         if (hitBall.active) {
             camera.lookAt(hitBall.pos.x, Math.max(hitBall.pos.y, 1), hitBall.pos.z);
+        } else {
+            // 공이 사라지면 카메라 즉시 복귀
+            camAnim.active = false;
+            camera.position.set(CAM_DEFAULT.x, CAM_DEFAULT.y, CAM_DEFAULT.z);
+            camera.lookAt(CAM_DEFAULT.lx, CAM_DEFAULT.ly, CAM_DEFAULT.lz);
+            return;
         }
     }
     if (t >= 1) {
@@ -861,47 +867,43 @@ function update3DAnimations() {
         batter.lLeg.rotation.x = -0.2; batter.rLeg.rotation.x = -0.2;
         batter.lLeg.knee.rotation.x = 0.4; batter.rLeg.knee.rotation.x = 0.4;
         
-        // 상체를 투수 반대쪽으로 꼬아 힘을 모음
         batter.pelvis.rotation.y = 0;
         batter.torso.rotation.y = -Math.PI / 4; 
         batter.torso.rotation.z = 0.05;
         batter.torso.rotation.x = 0.05;
         
-        // === 두 손으로 배트를 함께 쥐기 ===
-        // 오른팔 (배트가 달려있음) - 어깨 뒤 위쪽으로 배트를 세움
-        batter.rArm.rotation.set(-0.8, 0.3, 1.2);
-        batter.rArm.elbow.rotation.set(-1.8 + waggle, 0, 0);
+        // === 양손이 오른어깨 앞에서 함께 모여 배트를 쥠 ===
+        // 오른팔: 어깨에서 들어올리고 팔꿈치 굽혀서 배트를 어깨 뒤로
+        batter.rArm.rotation.set(-1.2, 0, 0.4);
+        batter.rArm.elbow.rotation.set(-2.0 + waggle, 0, 0);
         
-        // 왼팔 - 오른손 옆에 모아서 함께 배트를 쥐는 자세
-        batter.lArm.rotation.set(-0.8, -0.3, -1.2);
-        batter.lArm.elbow.rotation.set(-1.8 + waggle, 0, 0);
+        // 왼팔: 오른팔 손잡이 위치로 모아서 함께 쥠
+        batter.lArm.rotation.set(-1.0, 0.5, -0.2);
+        batter.lArm.elbow.rotation.set(-2.0 + waggle, 0, 0);
     } else if (G.ba === 'swing') {
         const t = Math.min(1, G.bf / 22);
         const t_ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
         
         batter.pelvis.position.y = 0.92;
-        batter.pelvis.rotation.y = Math.PI * 0.4 * t_ease; // 투수 쪽으로 골반 회전
-        batter.torso.rotation.y = -Math.PI / 4 + (Math.PI * 0.7 * t_ease); // 꼬인 몸통을 투수 방향으로 풀기
+        batter.pelvis.rotation.y = Math.PI * 0.4 * t_ease;
+        batter.torso.rotation.y = -Math.PI / 4 + (Math.PI * 0.7 * t_ease);
         batter.torso.rotation.z = 0.05 * (1 - t_ease);
-        batter.torso.rotation.x = 0.05 + (0.15 * t_ease); // 살짝 앞으로 숙임
+        batter.torso.rotation.x = 0.05 + (0.15 * t_ease);
         
-        // 하체 회전
         batter.lLeg.rotation.x = -0.2 - (0.2 * t_ease);
         batter.lLeg.knee.rotation.x = 0.4 * (1 - t_ease); 
         batter.rLeg.rotation.x = -0.2 + (0.2 * t_ease);
         batter.rLeg.knee.rotation.x = 0.4 + (0.3 * t_ease);
         
-        // === 두 팔이 함께 배트를 휘두르기 ===
-        // 오른팔: 어깨 뒤에서 앞으로 크게 호를 그리며 내려침
-        const rArmX = -0.8 + (1.2 * t_ease);   // 뒤에서 앞으로
-        const rArmY = 0.3 - (0.6 * t_ease);     // 안쪽으로 모아짐
-        const rArmZ = 1.2 - (2.0 * t_ease);     // 위에서 수평으로
-        batter.rArm.rotation.set(rArmX, rArmY, rArmZ);
-        batter.rArm.elbow.rotation.set(-1.8 + (1.5 * t_ease), 0, 0); // 팔꿈치 펴짐
+        // === 양팔이 함께 스윙 ===
+        const armX = -1.2 + (1.6 * t_ease); // 뒤에서 앞으로
+        const elbowX = -2.0 + (1.8 * t_ease); // 팔꿈치 펴짐
         
-        // 왼팔: 오른팔을 따라 함께 움직임 (두 손이 배트에 붙어있으므로)
-        batter.lArm.rotation.set(rArmX, -rArmY, -rArmZ);
-        batter.lArm.elbow.rotation.set(-1.8 + (1.5 * t_ease), 0, 0);
+        batter.rArm.rotation.set(armX, 0, 0.4 - (0.8 * t_ease));
+        batter.rArm.elbow.rotation.set(elbowX, 0, 0);
+        
+        batter.lArm.rotation.set(armX, 0.5 - (0.5 * t_ease), -0.2 + (0.2 * t_ease));
+        batter.lArm.elbow.rotation.set(elbowX, 0, 0);
     }
 
     // 공 궤적 연산
