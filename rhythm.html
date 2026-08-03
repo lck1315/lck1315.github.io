@@ -330,6 +330,7 @@ function gameOver(msg) {
     document.getElementById('overlay').style.display = 'flex';
     document.getElementById('overlay').querySelector('h2').textContent = msg;
     document.getElementById('overlay').querySelector('p').innerHTML = `SCORE: ${score}<br>MAX COMBO: ${maxCombo}`;
+    if(window.submitGameScore) window.submitGameScore('rhythm', score);
 }
 
 function startGame() {
@@ -341,5 +342,9 @@ function startGame() {
 resize();
 loop();
 </script>
+<!-- Firebase Score Submission -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+<script src="firebase_score.js"></script>
 </body>
 </html>

@@ -212,6 +212,7 @@ function gameOver() {
     document.getElementById('overlay').querySelector('h2').style.textShadow = '0 0 30px rgba(239,68,68,0.8)';
     document.getElementById('overlay').querySelector('p').textContent = 'FINAL SCORE: ' + Math.floor(score);
     document.getElementById('overlay').querySelector('.btn').textContent = 'RESTART';
+    if(window.submitGameScore) window.submitGameScore('car', Math.floor(score));
 }
 
 // 메인 루프
@@ -289,6 +290,10 @@ window.addEventListener('resize', () => {
 });
 
 animate();
-</script>
+    </script>
+    <!-- Firebase Score Submission -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="firebase_score.js"></script>
 </body>
 </html>

@@ -1226,6 +1226,51 @@ body::after {
 
     </div><!-- /game-grid -->
 
+    <!-- ════════════════════════════════════════════════
+         COMMUNITY & RANKING
+         ════════════════════════════════════════════════ -->
+    <div class="community-section" id="community-section" style="margin-top: 4rem; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; max-width: 1200px; margin-left: auto; margin-right: auto; padding-bottom: 4rem;">
+        
+        <!-- 랭킹 (Leaderboard) -->
+        <div class="ranking-board game-card" style="padding: 1.5rem; display: flex; flex-direction: column;">
+            <div class="section-title-group" style="margin-bottom: 1.5rem; text-align: left;">
+                <span class="section-eyebrow">Hall of Fame</span>
+                <h2 class="section-title" style="font-size: 1.8rem; justify-content: flex-start;">🏆 명예의 전당</h2>
+            </div>
+            
+            <div class="ranking-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1rem; overflow-x: auto; padding-bottom: 0.5rem;">
+                <button class="filter-tab active" onclick="loadRanking('car')">레이싱</button>
+                <button class="filter-tab" onclick="loadRanking('baseball')">야구</button>
+                <button class="filter-tab" onclick="loadRanking('tetris')">테트리스</button>
+                <button class="filter-tab" onclick="loadRanking('rhythm')">리듬게임</button>
+            </div>
+            
+            <div class="ranking-list" id="ranking-list" style="display: flex; flex-direction: column; gap: 0.8rem; flex: 1; min-height: 250px;">
+                <!-- 랭킹 아이템들이 여기에 로드됨 -->
+                <div style="text-align:center; color:var(--game-muted); padding: 2rem;">데이터를 불러오는 중...</div>
+            </div>
+        </div>
+
+        <!-- 커뮤니티 (Community Chat) -->
+        <div class="community-chat game-card" style="padding: 1.5rem; display: flex; flex-direction: column;">
+            <div class="section-title-group" style="margin-bottom: 1.5rem; text-align: left;">
+                <span class="section-eyebrow">DODO Game Lounge</span>
+                <h2 class="section-title" style="font-size: 1.8rem; justify-content: flex-start;">💬 게임 커뮤니티</h2>
+            </div>
+            
+            <div class="chat-messages" id="chat-messages" style="flex: 1; min-height: 250px; max-height: 350px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem; border: 1px solid var(--game-border);">
+                <!-- 채팅 메시지들이 여기에 로드됨 -->
+            </div>
+            
+            <form id="chat-form" style="display: flex; gap: 0.5rem;">
+                <input type="text" id="chat-nickname" placeholder="닉네임" required style="width: 80px; padding: 0.8rem; background: rgba(0,0,0,0.3); border: 1px solid var(--game-border); color: #fff; border-radius: 8px; font-family: 'Outfit', sans-serif;">
+                <input type="text" id="chat-input" placeholder="메시지를 입력하세요..." required style="flex: 1; padding: 0.8rem; background: rgba(0,0,0,0.3); border: 1px solid var(--game-border); color: #fff; border-radius: 8px; font-family: 'Outfit', sans-serif;">
+                <button type="submit" class="btn" style="padding: 0.8rem 1.5rem;"><i class="fa-solid fa-paper-plane"></i></button>
+            </form>
+        </div>
+
+    </div>
+
     <!-- 출시 예정 배너 -->
     <div class="coming-soon-banner">
         <div class="coming-soon-icon">🚀</div>
@@ -1403,5 +1448,12 @@ window.addEventListener('scroll', () => {
     }
 });
 </script>
+
+    <!-- Firebase SDK (재사용) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    
+    <script src="game.js"></script>
+    <script src="game_firebase.js"></script>
 </body>
 </html>

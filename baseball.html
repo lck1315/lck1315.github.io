@@ -117,6 +117,14 @@ canvas{display:block;position:absolute;top:0;left:0}
 <div id="game-container"></div>
 <canvas id="gc"></canvas>
 <div class="ui">
+  <div id="gacha-ui" style="position:absolute; top:20px; right:20px; z-index:10; display:flex; flex-direction:column; align-items:flex-end;">
+      <div style="background:rgba(0,0,0,0.5); padding:10px 15px; border-radius:10px; color:#fff; font-weight:bold; margin-bottom:10px; font-family:'Orbitron', sans-serif;">
+          🪙 코인: <span id="coin-disp" style="color:#fbbf24; font-size:1.2rem;">0</span>
+      </div>
+      <button onclick="if(window.openGacha) window.openGacha()" style="padding:10px 20px; background:linear-gradient(45deg, #f59e0b, #d97706); border:none; border-radius:10px; color:white; font-weight:bold; cursor:pointer; box-shadow:0 4px 15px rgba(245,158,11,0.4); font-family:'Noto Sans KR', sans-serif;">
+          🎁 선수 뽑기 (100 코인)
+      </button>
+  </div>
   <div id="role-badge">🎮 현재 플레이어: 투수</div>
   <div id="help-panel">
     <h3>⚾ 플레이 방법</h3>
@@ -147,6 +155,7 @@ canvas{display:block;position:absolute;top:0;left:0}
   <div id="gov"><div class="gov-t">GAME OVER</div><div class="gov-r" id="gr"></div><div class="gov-s" id="gs"></div><button class="gov-b" onclick="location.reload()">다시 하기</button></div>
 </div>
 
+<script src="baseball_gacha.js"></script>
 <script>
 // ═══════════════════════════════════════════
 // 1. THREE.JS 3D SCENE SETUP
@@ -345,12 +354,24 @@ scene.add(crowdMesh);
 // ═══════════════════════════════════════════
 function createHuman(isAway) {
     const group = new THREE.Group();
-    const uniColor = isAway ? 0x1e40af : 0x991b1b;
+    
+    let charData = { color: 0x991b1b, skin: 0xf5c69a, pants: 0xe2e8f0, scale: 1.0 };
+    if (!isAway && typeof CHARACTERS !== 'undefined' && typeof currentChar !== 'undefined') {
+        charData = CHARACTERS[currentChar] || charData;
+    }
+    
+    const uniColor = isAway ? 0x1e40af : charData.color;
+    const skinC = isAway ? 0xf5c69a : charData.skin;
+    const pantsC = isAway ? 0xe2e8f0 : charData.pants;
+    
     const mat = new THREE.MeshPhysicalMaterial({ color: uniColor, roughness: 0.8, metalness: 0.1 }); // 유니폼(천)
-    const skinMat = new THREE.MeshPhysicalMaterial({ color: 0xf5c69a, roughness: 0.4, metalness: 0.0, clearcoat: 0.1 }); // 피부 (약간의 광택)
-    const pantsMat = new THREE.MeshPhysicalMaterial({ color: 0xe2e8f0, roughness: 0.9, metalness: 0.0 }); // 바지
+    const skinMat = new THREE.MeshPhysicalMaterial({ color: skinC, roughness: 0.4, metalness: 0.0, clearcoat: 0.1 }); // 피부
+    const pantsMat = new THREE.MeshPhysicalMaterial({ color: pantsC, roughness: 0.9, metalness: 0.0 }); // 바지
     const shoeMat = new THREE.MeshPhysicalMaterial({ color: 0x111111, roughness: 0.5, metalness: 0.2 }); // 야구화
-    const helmetMat = new THREE.MeshPhysicalMaterial({ color: uniColor, roughness: 0.2, metalness: 0.1, clearcoat: 0.8, clearcoatRoughness: 0.1 }); // 반짝이는 플라스틱 헬멧
+    const helmetMat = new THREE.MeshPhysicalMaterial({ color: uniColor, roughness: 0.2, metalness: 0.1, clearcoat: 0.8, clearcoatRoughness: 0.1 }); // 헬멧
+
+    const charScale = isAway ? 1.0 : charData.scale;
+    group.scale.set(charScale, charScale, charScale);
 
     // 골반(Root)
     const pelvis = new THREE.Group();
@@ -645,18 +666,25 @@ function launchHitBall(type) {
     hitBall.pos.set(0, 1.0, 0); // 홈플레이트 위치
     ballMesh.visible = true;
     const angle = (Math.random() - 0.5) * 1.2; // 좌우 각도
+    
+    let powMultiplier = 1.0;
+    if (G.hf === 'bottom' && typeof CHARACTERS !== 'undefined' && typeof currentChar !== 'undefined') {
+        const cd = CHARACTERS[currentChar] || CHARACTERS['default'];
+        powMultiplier = cd.power || 1.0;
+    }
+    
     if (type === 'HR') {
-        hitBall.vel.set(Math.sin(angle) * 18, 16, -25); // 높고 멀리
+        hitBall.vel.set(Math.sin(angle) * 18 * powMultiplier, 16 * powMultiplier, -25 * powMultiplier); // 높고 멀리
     } else if (type === 'TRIPLE') {
-        hitBall.vel.set(Math.sin(angle) * 20, 8, -22);
+        hitBall.vel.set(Math.sin(angle) * 20 * powMultiplier, 8 * powMultiplier, -22 * powMultiplier);
     } else if (type === 'DOUBLE') {
-        hitBall.vel.set(Math.sin(angle) * 16, 6, -18);
+        hitBall.vel.set(Math.sin(angle) * 16 * powMultiplier, 6 * powMultiplier, -18 * powMultiplier);
     } else if (type === 'HIT') {
-        hitBall.vel.set(Math.sin(angle) * 12, 4, -14);
+        hitBall.vel.set(Math.sin(angle) * 12 * powMultiplier, 4 * powMultiplier, -14 * powMultiplier);
     } else if (type === 'FLY') {
-        hitBall.vel.set(Math.sin(angle) * 10, 10, -15);
+        hitBall.vel.set(Math.sin(angle) * 10 * powMultiplier, 10 * powMultiplier, -15 * powMultiplier);
     } else if (type === 'GND') {
-        hitBall.vel.set(Math.sin(angle) * 8, 0.5, -10);
+        hitBall.vel.set(Math.sin(angle) * 8 * powMultiplier, 0.5, -10 * powMultiplier);
     } else if (type === 'FOUL') {
         const foulAngle = (Math.random() > 0.5 ? 1 : -1) * (1.2 + Math.random() * 0.5);
         hitBall.vel.set(Math.sin(foulAngle) * 12, 8, -8);
@@ -1102,15 +1130,19 @@ function proc(tp){
       spawnParticles(new THREE.Vector3(0, 1, 0), 8, 0xffffff, 3, 30); break;
     case'HIT':{m='안타!';c='#22c55e';const r=advR(1);s=r>0?`+${r} 득점!`:'출루!';G.shk=2;
       SFX.play('hit'); SFX.play('cheer'); launchHitBall('HIT'); startRunner(1); startCamAnim('hit_watch', 80);
+      if(G.hf==='bottom' && window.addCoins) window.addCoins(10);
       spawnParticles(new THREE.Vector3(0, 1, 0), 15, 0xcd853f, 4, 40); break;}
     case'DOUBLE':{m='2루타!';c='#3b82f6';const r=advR(2);s=r>0?`+${r} 득점!`:'장타!';G.shk=3;
       SFX.play('hit'); SFX.play('cheer'); launchHitBall('DOUBLE'); startRunner(2); startCamAnim('hit_watch', 90);
+      if(G.hf==='bottom' && window.addCoins) window.addCoins(20);
       spawnParticles(new THREE.Vector3(0, 1, 0), 20, 0xcd853f, 5, 45); break;}
     case'TRIPLE':{m='3루타!!';c='#8b5cf6';const r=advR(3);s=r>0?`+${r} 득점!`:'';G.shk=4;
       SFX.play('hit'); SFX.play('cheer'); launchHitBall('TRIPLE'); startRunner(3); startCamAnim('hit_watch', 100);
+      if(G.hf==='bottom' && window.addCoins) window.addCoins(30);
       spawnParticles(new THREE.Vector3(0, 1, 0), 25, 0x8b5cf6, 6, 50); break;}
     case'HR':{m='홈런!!!';c='#f59e0b';const r=advR(4);s=`+${r} 득점!!`;G.shk=6;
       SFX.play('hit'); SFX.play('cheer'); launchHitBall('HR'); startRunner(4); startCamAnim('hr_follow', 120);
+      if(G.hf==='bottom' && window.addCoins) window.addCoins(50);
       // 홈런 불꽃 파티클
       spawnParticles(new THREE.Vector3(0, 1, 0), 40, 0xf59e0b, 8, 60);
       spawnParticles(new THREE.Vector3(0, 1, 0), 20, 0xef4444, 6, 50);
@@ -1129,7 +1161,7 @@ function proc(tp){
   if(G.bal>=4){G.str=0;G.bal=0;m='볼넷';s='WALK';c='#3b82f6';advR(1); startRunner(1);}
   if(['HIT','DOUBLE','TRIPLE','HR','OUT','FLY','GND'].includes(tp)){G.str=0;G.bal=0;G.bi++;}
   hud();
-  showR(m,s,spd,c,2200,()=>{if(G.out>=3){G.out=0;G.str=0;G.bal=0;G.bs=[0,0,0];if(G.hf==='top'){G.hf='bottom';}else{G.inn++;G.hf='top';if(G.inn>9){const e=document.getElementById('gov');let r='DRAW';if(G.hs>G.as){r='DODO WIN! 🏆';document.getElementById('gr').style.color='#f59e0b';}else if(G.hs<G.as){r='DODO LOSE...';document.getElementById('gr').style.color='#94a3b8';}document.getElementById('gr').textContent=r;document.getElementById('gs').textContent=`${G.as} : ${G.hs}`;e.classList.add('show');return;}}hud();showI(()=>turn());}else turn();});
+  showR(m,s,spd,c,2200,()=>{if(G.out>=3){G.out=0;G.str=0;G.bal=0;G.bs=[0,0,0];if(G.hf==='top'){G.hf='bottom';}else{G.inn++;G.hf='top';if(G.inn>9){const e=document.getElementById('gov');let r='DRAW';if(G.hs>G.as){r='DODO WIN! 🏆';document.getElementById('gr').style.color='#f59e0b';}else if(G.hs<G.as){r='DODO LOSE...';document.getElementById('gr').style.color='#94a3b8';}document.getElementById('gr').textContent=r;document.getElementById('gs').textContent=`${G.as} : ${G.hs}`;e.classList.add('show');if(window.submitGameScore) window.submitGameScore('baseball', G.hs);return;}}hud();showI(()=>turn());}else turn();});
 }
 
 function turn(){
@@ -1173,7 +1205,13 @@ C.addEventListener('pointerdown',e=>{
     
     G.bl.a=false;G.ph='RESULT';G.bc.v=false;
     
-    if (distZ < 0.4) {
+    let hbMult = 1.0;
+    if (G.hf === 'bottom' && typeof CHARACTERS !== 'undefined' && typeof currentChar !== 'undefined') {
+        const cd = CHARACTERS[currentChar] || CHARACTERS['default'];
+        hbMult = cd.hitbox || 1.0;
+    }
+    
+    if (distZ < 0.4 * hbMult) {
         // 완벽한 타이밍
         if (inZ) {
             const r = Math.random();
@@ -1240,5 +1278,9 @@ function onArrive(pos){
 
 hud();showI(()=>turn());requestAnimationFrame(loop);
 </script>
+<!-- Firebase Score Submission -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+<script src="firebase_score.js"></script>
 </body>
 </html>
