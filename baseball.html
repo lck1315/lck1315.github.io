@@ -104,12 +104,29 @@ canvas{display:block;position:absolute;top:0;left:0}
 .sd-v{font-family:'Oswald';font-size:4.5rem;font-weight:900;color:#f59e0b;line-height:1;text-shadow:0 0 15px rgba(245,158,11,0.4)}
 .sd-u{font-size:1.2rem;color:#64748b}
 .sd-tp{font-size:1rem;color:#60a5fa;font-weight:700}
+/* ══════ 도움말 & 역할 패널 ══════ */
+#role-badge{position:absolute;top:20px;left:50%;transform:translateX(-50%);background:rgba(37,99,235,0.9);padding:6px 24px;border-radius:20px;font-weight:700;color:#fff;letter-spacing:1px;box-shadow:0 4px 10px rgba(0,0,0,0.5);z-index:100;pointer-events:none;font-size:1.1rem;border:2px solid rgba(255,255,255,0.2)}
+#help-panel{position:absolute;top:100px;right:20px;width:240px;background:rgba(15,23,42,0.85);border:1px solid rgba(255,255,255,0.2);border-radius:12px;padding:16px;color:#cbd5e1;font-size:0.9rem;box-shadow:0 4px 15px rgba(0,0,0,0.5);pointer-events:none;z-index:100;backdrop-filter:blur(4px)}
+#help-panel h3{color:#facc15;font-size:1.1rem;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.2);padding-bottom:8px}
+#help-panel ol{padding-left:22px;margin:0}
+#help-panel li{margin-bottom:10px;line-height:1.5}
+#help-panel li b{color:#60a5fa}
 </style>
 </head>
 <body>
 <div id="game-container"></div>
 <canvas id="gc"></canvas>
 <div class="ui">
+  <div id="role-badge">🎮 현재 플레이어: 투수</div>
+  <div id="help-panel">
+    <h3>⚾ 플레이 방법</h3>
+    <ol>
+      <li>하단 메뉴에서 <b>구종</b>을 선택하세요.</li>
+      <li>스트라이크 존을 클릭하여 <b>투구 위치</b>를 지정하세요.</li>
+      <li>원형 커서가 축소될 때 <b>초록색 영역</b>에 맞춰 화면을 탭/클릭하세요!</li>
+      <li>타자와 수비수의 움직임을 감상하세요.</li>
+    </ol>
+  </div>
   <div id="scoreboard">
     <div class="sb-t aw"><div class="sb-logo al">A</div><div><div class="sb-nm">STARS</div><div class="sb-sc" id="sa">0</div></div></div>
     <div class="sb-m"><div class="sb-in" id="si">1회초</div><div class="sb-bso"><div class="bso-g"><span class="bso-l">B</span><div class="bso-d" id="b1"></div><div class="bso-d" id="b2"></div><div class="bso-d" id="b3"></div></div><div class="bso-g"><span class="bso-l">S</span><div class="bso-d" id="s1"></div><div class="bso-d" id="s2"></div></div><div class="bso-g"><span class="bso-l">O</span><div class="bso-d" id="o1"></div><div class="bso-d" id="o2"></div></div></div></div>
@@ -136,8 +153,8 @@ canvas{display:block;position:absolute;top:0;left:0}
 // 1. THREE.JS 3D SCENE SETUP
 // ═══════════════════════════════════════════
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#030712'); // 밤하늘 배경
-scene.fog = new THREE.Fog('#030712', 30, 80);
+scene.background = new THREE.Color('#0a1128'); // 밤하늘 스카이박스 색상
+scene.fog = new THREE.FogExp2('#0a1128', 0.007); // 원경이 자연스럽게 가려지는 안개
 
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 // 컴투스 프로야구 숄더뷰 스타일: 공격수(타자) 뒤쪽 포수 위치에서 투수를 바라봄
@@ -164,12 +181,34 @@ scene.add(dirLight);
 
 // 경기장 생성
 const texLoader = new THREE.TextureLoader();
-// 잔디
+// 잔디 (전체 그라운드)
 const grassMat = new THREE.MeshLambertMaterial({ color: 0x145e35 });
-const grass = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), grassMat);
+const grass = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), grassMat);
 grass.rotation.x = -Math.PI / 2;
 grass.receiveShadow = true;
 scene.add(grass);
+
+// 내야 흙 영역 (다이아몬드)
+const infieldGeo = new THREE.PlaneGeometry(39, 39);
+const infield = new THREE.Mesh(infieldGeo, new THREE.MeshLambertMaterial({ color: 0x7c4a1a }));
+infield.rotation.x = -Math.PI / 2;
+infield.rotation.z = Math.PI / 4;
+infield.position.set(0, 0.01, -19.4);
+infield.receiveShadow = true;
+scene.add(infield);
+
+// 파울 라인 (홈 ~ 외야)
+const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+const leftLine = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 120), lineMat);
+leftLine.rotation.x = -Math.PI / 2;
+leftLine.rotation.z = -Math.PI / 4;
+leftLine.position.set(-42, 0.02, -42);
+scene.add(leftLine);
+const rightLine = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 120), lineMat);
+rightLine.rotation.x = -Math.PI / 2;
+rightLine.rotation.z = Math.PI / 4;
+rightLine.position.set(42, 0.02, -42);
+scene.add(rightLine);
 
 // 흙 (마운드, 홈)
 const dirtMat = new THREE.MeshLambertMaterial({ color: 0x7c4a1a });
@@ -194,8 +233,54 @@ scene.add(pPlate);
 
 const hPlate = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.4), plateMat);
 hPlate.rotation.x = -Math.PI / 2;
+hPlate.rotation.z = Math.PI / 4;
 hPlate.position.set(0, 0.03, 0);
 scene.add(hPlate);
+
+// 1, 2, 3루 베이스 (27.4m 다이아몬드)
+const baseGeo = new THREE.BoxGeometry(0.5, 0.1, 0.5);
+const base1 = new THREE.Mesh(baseGeo, plateMat);
+base1.position.set(19.4, 0.05, -19.4);
+base1.rotation.y = Math.PI / 4;
+scene.add(base1);
+
+const base2 = new THREE.Mesh(baseGeo, plateMat);
+base2.position.set(0, 0.05, -38.8);
+base2.rotation.y = Math.PI / 4;
+scene.add(base2);
+
+const base3 = new THREE.Mesh(baseGeo, plateMat);
+base3.position.set(-19.4, 0.05, -19.4);
+base3.rotation.y = Math.PI / 4;
+scene.add(base3);
+
+// 외야 펜스
+const fenceGeo = new THREE.CylinderGeometry(100, 100, 6, 64, 1, true, Math.PI, Math.PI);
+const fenceMat = new THREE.MeshLambertMaterial({ color: 0x0f3b20, side: THREE.DoubleSide });
+const fence = new THREE.Mesh(fenceGeo, fenceMat);
+fence.position.set(0, 3, 0);
+scene.add(fence);
+
+// 관중석 (외야 펜스 뒤)
+const standGeo = new THREE.CylinderGeometry(120, 100, 30, 64, 1, true, Math.PI, Math.PI);
+const standMat = new THREE.MeshLambertMaterial({ color: 0x1e3a8a, side: THREE.DoubleSide });
+const stand = new THREE.Mesh(standGeo, standMat);
+stand.position.set(0, 15, 0);
+scene.add(stand);
+
+// 관중 (파티클)
+const crowdGeo = new THREE.BufferGeometry();
+const crowdPos = [];
+for (let i = 0; i < 4000; i++) {
+    const angle = Math.PI + (Math.random() * Math.PI);
+    const r = 101 + Math.random() * 20;
+    const h = 6 + (r - 100) * 1.0 + (Math.random() * 2);
+    crowdPos.push(Math.cos(angle) * r, h, Math.sin(angle) * r);
+}
+crowdGeo.setAttribute('position', new THREE.Float32BufferAttribute(crowdPos, 3));
+const crowdMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.8, transparent: true, opacity: 0.7 });
+const crowd = new THREE.Points(crowdGeo, crowdMat);
+scene.add(crowd);
 
 // ═══════════════════════════════════════════
 // 2. 3D 캐릭터 빌더 (다관절 사람 형태)
@@ -297,6 +382,33 @@ catcher.rLeg.rotation.x = -Math.PI/2;
 catcher.lArm.rotation.x = -Math.PI/3;
 catcher.rArm.rotation.x = -Math.PI/3;
 scene.add(catcher);
+
+// 수비수(야수) 7명 배치 (1B, 2B, 3B, SS, LF, CF, RF)
+const fielders = [];
+const fielderPositions = [
+    [21, -21],   // 1B
+    [10, -35],   // 2B
+    [-21, -21],  // 3B
+    [-10, -35],  // SS
+    [-35, -70],  // LF
+    [0, -90],    // CF
+    [35, -70]    // RF
+];
+fielderPositions.forEach(pos => {
+    const f = createHuman(false); // 수비수는 투수와 유사한 회색 유니폼
+    f.position.set(pos[0], 0, pos[1]);
+    f.lookAt(0, 0, 0); // 홈을 바라봄
+    
+    // 수비 기본 자세 (무릎 굽히고 팔 내림)
+    f.pelvis.position.y = 0.6;
+    f.lLeg.rotation.x = -0.3;
+    f.rLeg.rotation.x = -0.3;
+    f.lArm.rotation.x = -0.4;
+    f.rArm.rotation.x = -0.4;
+    
+    scene.add(f);
+    fielders.push(f);
+});
 
 /*
 // 🚀 외부 고퀄리티 3D 모델(GLTF) 적용 예시 코드 (현재는 주석 처리됨)
@@ -513,9 +625,9 @@ function loop() {
     // 화면 쉐이크
     if (G.shk > 0) {
         camera.position.x = 0 + (Math.random() - 0.5) * G.shk * 0.1;
-        camera.position.y = 1.8 + (Math.random() - 0.5) * G.shk * 0.1;
+        camera.position.y = 1.5 + (Math.random() - 0.5) * G.shk * 0.1;
         G.shk *= 0.9;
-        if (G.shk < 0.1) { G.shk = 0; camera.position.set(0, 1.8, 4.0); }
+        if (G.shk < 0.1) { G.shk = 0; camera.position.set(0, 1.5, 0.5); }
     }
 
     renderer.render(scene, camera);
