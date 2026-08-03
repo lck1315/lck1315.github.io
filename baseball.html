@@ -549,6 +549,211 @@ ballMesh.visible = false;
 scene.add(ballMesh);
 
 // ═══════════════════════════════════════════
+// 2-A. 사운드 FX 시스템 (Web Audio API)
+// ═══════════════════════════════════════════
+const SFX = {
+  ctx: null,
+  init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+  play(type) {
+    this.init();
+    const c = this.ctx;
+    const g = c.createGain();
+    g.connect(c.destination);
+    if (type === 'hit') {
+      // 타격음: 짧고 날카로운 나무 충격음
+      const o = c.createOscillator(); o.type = 'square'; o.frequency.setValueAtTime(800, c.currentTime); o.frequency.exponentialRampToValueAtTime(200, c.currentTime + 0.1);
+      g.gain.setValueAtTime(0.4, c.currentTime); g.gain.exponentialRampToValueAtTime(0.01, c.currentTime + 0.15);
+      o.connect(g); o.start(c.currentTime); o.stop(c.currentTime + 0.15);
+      // 크랙 노이즈
+      const buf = c.createBuffer(1, c.sampleRate * 0.08, c.sampleRate); const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      const n = c.createBufferSource(); n.buffer = buf; const ng = c.createGain(); ng.gain.setValueAtTime(0.3, c.currentTime); ng.gain.exponentialRampToValueAtTime(0.01, c.currentTime + 0.08);
+      n.connect(ng); ng.connect(c.destination); n.start(c.currentTime); n.stop(c.currentTime + 0.08);
+    } else if (type === 'mitt') {
+      // 미트 소리: 둡 하는 가죽 충격
+      const o = c.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(300, c.currentTime); o.frequency.exponentialRampToValueAtTime(80, c.currentTime + 0.12);
+      g.gain.setValueAtTime(0.25, c.currentTime); g.gain.exponentialRampToValueAtTime(0.01, c.currentTime + 0.12);
+      o.connect(g); o.start(c.currentTime); o.stop(c.currentTime + 0.12);
+    } else if (type === 'cheer') {
+      // 관중 환호: 화이트 노이즈 리버브
+      const buf = c.createBuffer(1, c.sampleRate * 1.5, c.sampleRate); const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(i / d.length * Math.PI);
+      const n = c.createBufferSource(); n.buffer = buf; g.gain.setValueAtTime(0.15, c.currentTime); g.gain.linearRampToValueAtTime(0.25, c.currentTime + 0.3); g.gain.exponentialRampToValueAtTime(0.01, c.currentTime + 1.5);
+      n.connect(g); n.start(c.currentTime); n.stop(c.currentTime + 1.5);
+    } else if (type === 'strikeout') {
+      // 삼진 후 훘 소리
+      const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(600, c.currentTime); o.frequency.exponentialRampToValueAtTime(100, c.currentTime + 0.4);
+      g.gain.setValueAtTime(0.2, c.currentTime); g.gain.exponentialRampToValueAtTime(0.01, c.currentTime + 0.4);
+      o.connect(g); o.start(c.currentTime); o.stop(c.currentTime + 0.4);
+    }
+  }
+};
+
+// ═══════════════════════════════════════════
+// 2-B. 3D 파티클 이펙트 시스템 (먼지/불꽃)
+// ═══════════════════════════════════════════
+const particles = [];
+function spawnParticles(pos, count, color, speed, life) {
+    for (let i = 0; i < count; i++) {
+        const geo = new THREE.SphereGeometry(0.04 + Math.random() * 0.04, 8, 8);
+        const mat = new THREE.MeshBasicMaterial({ color: color || 0xcd853f, transparent: true, opacity: 1 });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(pos);
+        scene.add(mesh);
+        particles.push({
+            mesh,
+            vx: (Math.random() - 0.5) * speed,
+            vy: Math.random() * speed * 0.8 + speed * 0.3,
+            vz: (Math.random() - 0.5) * speed,
+            life: life || 60,
+            maxLife: life || 60
+        });
+    }
+}
+function updateParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.mesh.position.x += p.vx * 0.016;
+        p.mesh.position.y += p.vy * 0.016;
+        p.mesh.position.z += p.vz * 0.016;
+        p.vy -= 4.0 * 0.016; // 중력
+        p.life--;
+        p.mesh.material.opacity = p.life / p.maxLife;
+        if (p.life <= 0) {
+            scene.remove(p.mesh);
+            p.mesh.geometry.dispose(); p.mesh.material.dispose();
+            particles.splice(i, 1);
+        }
+    }
+}
+
+// ═══════════════════════════════════════════
+// 2-C. 타구 후 공 비행 시스템
+// ═══════════════════════════════════════════
+const hitBall = { active: false, pos: new THREE.Vector3(), vel: new THREE.Vector3(), time: 0 };
+function launchHitBall(type) {
+    hitBall.active = true;
+    hitBall.time = 0;
+    hitBall.pos.set(0, 1.0, 0); // 홈플레이트 위치
+    ballMesh.visible = true;
+    const angle = (Math.random() - 0.5) * 1.2; // 좌우 각도
+    if (type === 'HR') {
+        hitBall.vel.set(Math.sin(angle) * 18, 16, -25); // 높고 멀리
+    } else if (type === 'TRIPLE') {
+        hitBall.vel.set(Math.sin(angle) * 20, 8, -22);
+    } else if (type === 'DOUBLE') {
+        hitBall.vel.set(Math.sin(angle) * 16, 6, -18);
+    } else if (type === 'HIT') {
+        hitBall.vel.set(Math.sin(angle) * 12, 4, -14);
+    } else if (type === 'FLY') {
+        hitBall.vel.set(Math.sin(angle) * 10, 10, -15);
+    } else if (type === 'GND') {
+        hitBall.vel.set(Math.sin(angle) * 8, 0.5, -10);
+    } else if (type === 'FOUL') {
+        const foulAngle = (Math.random() > 0.5 ? 1 : -1) * (1.2 + Math.random() * 0.5);
+        hitBall.vel.set(Math.sin(foulAngle) * 12, 8, -8);
+    } else {
+        hitBall.active = false; return;
+    }
+}
+function updateHitBall() {
+    if (!hitBall.active) return;
+    hitBall.pos.x += hitBall.vel.x * 0.016;
+    hitBall.pos.y += hitBall.vel.y * 0.016;
+    hitBall.pos.z += hitBall.vel.z * 0.016;
+    hitBall.vel.y -= 9.8 * 0.016; // 중력
+    hitBall.time++;
+    ballMesh.position.copy(hitBall.pos);
+    if (hitBall.pos.y < 0 || hitBall.time > 180) {
+        hitBall.active = false;
+        ballMesh.visible = false;
+    }
+}
+
+// ═══════════════════════════════════════════
+// 2-D. 카메라 연출 시스템
+// ═══════════════════════════════════════════
+const CAM_DEFAULT = { x: 0, y: 1.8, z: 4.0, lx: 0, ly: 1.0, lz: -18.5 };
+const camAnim = { active: false, time: 0, dur: 0, type: '' };
+function startCamAnim(type, dur) {
+    camAnim.active = true; camAnim.time = 0; camAnim.dur = dur || 90; camAnim.type = type;
+}
+function updateCamAnim() {
+    if (!camAnim.active) return;
+    camAnim.time++;
+    const t = camAnim.time / camAnim.dur;
+    if (camAnim.type === 'hr_follow' && hitBall.active) {
+        // 홈런: 공을 따라가며 줄 아웃
+        const bpos = hitBall.pos;
+        camera.position.set(
+            THREE.MathUtils.lerp(CAM_DEFAULT.x, bpos.x * 0.3, Math.min(t * 2, 1)),
+            THREE.MathUtils.lerp(CAM_DEFAULT.y, bpos.y * 0.5 + 2, Math.min(t * 2, 1)),
+            THREE.MathUtils.lerp(CAM_DEFAULT.z, bpos.z * 0.1 + 3, Math.min(t * 2, 1))
+        );
+        camera.lookAt(bpos.x, bpos.y, bpos.z);
+    } else if (camAnim.type === 'strikeout_zoom') {
+        // 삼진: 투수 줄인
+        camera.position.set(
+            THREE.MathUtils.lerp(CAM_DEFAULT.x, 0.5, t),
+            THREE.MathUtils.lerp(CAM_DEFAULT.y, 1.5, t),
+            THREE.MathUtils.lerp(CAM_DEFAULT.z, -14, t)
+        );
+        camera.lookAt(0, 1.2, -18.5);
+    } else if (camAnim.type === 'hit_watch') {
+        // 안타: 공을 바라보며 살짝 따라가기
+        if (hitBall.active) {
+            camera.lookAt(hitBall.pos.x, Math.max(hitBall.pos.y, 1), hitBall.pos.z);
+        }
+    }
+    if (t >= 1) {
+        camAnim.active = false;
+        camera.position.set(CAM_DEFAULT.x, CAM_DEFAULT.y, CAM_DEFAULT.z);
+        camera.lookAt(CAM_DEFAULT.lx, CAM_DEFAULT.ly, CAM_DEFAULT.lz);
+    }
+}
+
+// ═══════════════════════════════════════════
+// 2-E. 주루 애니메이션 시스템
+// ═══════════════════════════════════════════
+const runner = { active: false, time: 0, dur: 0, startPos: new THREE.Vector3(), endPos: new THREE.Vector3() };
+function startRunner(bases) {
+    runner.active = true; runner.time = 0; runner.dur = 90;
+    runner.startPos.set(-1.0, 0, -0.5); // 홈플레이트
+    if (bases >= 4) runner.endPos.set(-1.0, 0, -0.5); // 홈런: 복귀
+    else if (bases === 3) runner.endPos.set(-19.4, 0, -19.4); // 3루
+    else if (bases === 2) runner.endPos.set(0, 0, -38.8); // 2루
+    else runner.endPos.set(19.4, 0, -19.4); // 1루
+}
+function updateRunner() {
+    if (!runner.active) return;
+    runner.time++;
+    const t = Math.min(1, runner.time / runner.dur);
+    const t_ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    
+    // 타자 위치 이동
+    batter.position.lerpVectors(runner.startPos, runner.endPos, t_ease);
+    batter.rotation.y = Math.PI / 2 + (Math.PI * t_ease); // 달리는 방향으로 회전
+    
+    // 달리기 다리 애니메이션
+    const legSwing = Math.sin(runner.time * 0.3) * 0.8;
+    batter.lLeg.rotation.x = legSwing;
+    batter.rLeg.rotation.x = -legSwing;
+    batter.lLeg.knee.rotation.x = Math.max(0, -legSwing * 0.6);
+    batter.rLeg.knee.rotation.x = Math.max(0, legSwing * 0.6);
+    batter.lArm.rotation.set(-legSwing * 0.5, 0, -0.3);
+    batter.lArm.elbow.rotation.set(-0.5, 0, 0);
+    batter.rArm.rotation.set(legSwing * 0.5, 0, 0.3);
+    batter.rArm.elbow.rotation.set(-0.5, 0, 0);
+    
+    if (t >= 1) {
+        runner.active = false;
+        // 리셋
+        batter.position.set(-1.0, 0, -0.5);
+        batter.rotation.y = Math.PI / 2;
+    }
+}
+
+// ═══════════════════════════════════════════
 // 3. 2D 오버레이 캔버스 (UI, 커서 등)
 // ═══════════════════════════════════════════
 const C = document.getElementById('gc'), X = C.getContext('2d');
@@ -799,14 +1004,18 @@ function loop() {
     else if (G.pa === 'throw') { G.pf += 0.4; if (G.pf > 6) { G.pa = 'follow'; G.pf = 0; } }
     else if (G.pa === 'follow') { G.pf += 0.1; if (G.pf > 3) { G.pa = 'idle'; G.pf = 0; } }
     
-    if (G.ba === 'swing') { G.bf += 0.5; if (G.bf > 30) { G.ba = 'ready'; G.bf = 0; } } // 완전히 감속하고 길게 유지
+    if (G.ba === 'swing') { G.bf += 0.5; if (G.bf > 30) { if(!runner.active) { G.ba = 'ready'; G.bf = 0; } } }
     
     if (G.ph === 'PITCH_TIMING') { G.tgs -= 2.2; if (G.tgs < 12) G.tgs = 110; }
 
     update3DAnimations();
+    updateParticles();
+    updateHitBall();
+    updateCamAnim();
+    updateRunner();
     
     // 화면 쉐이크
-    if (G.shk > 0) {
+    if (G.shk > 0 && !camAnim.active) {
         camera.position.x = 0 + (Math.random() - 0.5) * G.shk * 0.1;
         camera.position.y = 1.8 + (Math.random() - 0.5) * G.shk * 0.1;
         G.shk *= 0.9;
@@ -853,19 +1062,40 @@ function advR(b){let r=0;if(b===4){r=1;for(let i=2;i>=0;i--){if(G.bs[i]){r++;G.b
 function proc(tp){
   let m='',s='',c='#fff',spd=G.ls;
   switch(tp){
-    case'STRIKE':G.str++;m='STRIKE';c='#ef4444';s=`S${G.str}-B${G.bal}`;break;
-    case'BALL':G.bal++;m='BALL';c='#3b82f6';s=`B${G.bal}-S${G.str}`;break;
-    case'FOUL':if(G.str<2)G.str++;m='FOUL';c='#94a3b8';s=`S${G.str}-B${G.bal}`;break;
-    case'HIT':{m='안타!';c='#22c55e';const r=advR(1);s=r>0?`+${r} 득점!`:'출루!';G.shk=2;break;}
-    case'DOUBLE':{m='2루타!';c='#3b82f6';const r=advR(2);s=r>0?`+${r} 득점!`:'장타!';G.shk=3;break;}
-    case'TRIPLE':{m='3루타!!';c='#8b5cf6';const r=advR(3);s=r>0?`+${r} 득점!`:'';G.shk=4;break;}
-    case'HR':{m='홈런!!!';c='#f59e0b';const r=advR(4);s=`+${r} 득점!!`;G.shk=6;break;}
-    case'OUT':G.out++;m='아웃!';c='#94a3b8';break;
-    case'FLY':G.out++;m='플라이 아웃!';c='#94a3b8';break;
-    case'GND':G.out++;m='땅볼 아웃!';c='#94a3b8';break;
+    case'STRIKE':G.str++;m='STRIKE';c='#ef4444';s=`S${G.str}-B${G.bal}`;
+      SFX.play('mitt'); break;
+    case'BALL':G.bal++;m='BALL';c='#3b82f6';s=`B${G.bal}-S${G.str}`;
+      SFX.play('mitt'); break;
+    case'FOUL':if(G.str<2)G.str++;m='FOUL';c='#94a3b8';s=`S${G.str}-B${G.bal}`;
+      SFX.play('hit'); launchHitBall('FOUL');
+      spawnParticles(new THREE.Vector3(0, 1, 0), 8, 0xffffff, 3, 30); break;
+    case'HIT':{m='안타!';c='#22c55e';const r=advR(1);s=r>0?`+${r} 득점!`:'출루!';G.shk=2;
+      SFX.play('hit'); SFX.play('cheer'); launchHitBall('HIT'); startRunner(1); startCamAnim('hit_watch', 80);
+      spawnParticles(new THREE.Vector3(0, 1, 0), 15, 0xcd853f, 4, 40); break;}
+    case'DOUBLE':{m='2루타!';c='#3b82f6';const r=advR(2);s=r>0?`+${r} 득점!`:'장타!';G.shk=3;
+      SFX.play('hit'); SFX.play('cheer'); launchHitBall('DOUBLE'); startRunner(2); startCamAnim('hit_watch', 90);
+      spawnParticles(new THREE.Vector3(0, 1, 0), 20, 0xcd853f, 5, 45); break;}
+    case'TRIPLE':{m='3루타!!';c='#8b5cf6';const r=advR(3);s=r>0?`+${r} 득점!`:'';G.shk=4;
+      SFX.play('hit'); SFX.play('cheer'); launchHitBall('TRIPLE'); startRunner(3); startCamAnim('hit_watch', 100);
+      spawnParticles(new THREE.Vector3(0, 1, 0), 25, 0x8b5cf6, 6, 50); break;}
+    case'HR':{m='홈런!!!';c='#f59e0b';const r=advR(4);s=`+${r} 득점!!`;G.shk=6;
+      SFX.play('hit'); SFX.play('cheer'); launchHitBall('HR'); startRunner(4); startCamAnim('hr_follow', 120);
+      // 홈런 불꽃 파티클
+      spawnParticles(new THREE.Vector3(0, 1, 0), 40, 0xf59e0b, 8, 60);
+      spawnParticles(new THREE.Vector3(0, 1, 0), 20, 0xef4444, 6, 50);
+      spawnParticles(new THREE.Vector3(0, 1, 0), 15, 0xffffff, 7, 55); break;}
+    case'OUT':G.out++;m='아웃!';c='#94a3b8';
+      SFX.play('mitt'); break;
+    case'FLY':G.out++;m='플라이 아웃!';c='#94a3b8';
+      SFX.play('hit'); launchHitBall('FLY');
+      spawnParticles(new THREE.Vector3(0, 1, 0), 10, 0xcd853f, 3, 35); break;
+    case'GND':G.out++;m='땅볼 아웃!';c='#94a3b8';
+      SFX.play('hit'); launchHitBall('GND');
+      spawnParticles(new THREE.Vector3(0, 0.2, -2), 12, 0xcd853f, 2, 30); break;
   }
-  if(G.str>=3){G.out++;G.str=0;G.bal=0;G.tk++;m='삼진!';s='STRIKE OUT';c='#ef4444';}
-  if(G.bal>=4){G.str=0;G.bal=0;m='볼넷';s='WALK';c='#3b82f6';advR(1);}
+  if(G.str>=3){G.out++;G.str=0;G.bal=0;G.tk++;m='삼진!';s='STRIKE OUT';c='#ef4444';
+    SFX.play('strikeout'); startCamAnim('strikeout_zoom', 60);}
+  if(G.bal>=4){G.str=0;G.bal=0;m='볼넷';s='WALK';c='#3b82f6';advR(1); startRunner(1);}
   if(['HIT','DOUBLE','TRIPLE','HR','OUT','FLY','GND'].includes(tp)){G.str=0;G.bal=0;G.bi++;}
   hud();
   showR(m,s,spd,c,2200,()=>{if(G.out>=3){G.out=0;G.str=0;G.bal=0;G.bs=[0,0,0];if(G.hf==='top'){G.hf='bottom';}else{G.inn++;G.hf='top';if(G.inn>9){const e=document.getElementById('gov');let r='DRAW';if(G.hs>G.as){r='DODO WIN! 🏆';document.getElementById('gr').style.color='#f59e0b';}else if(G.hs<G.as){r='DODO LOSE...';document.getElementById('gr').style.color='#94a3b8';}document.getElementById('gr').textContent=r;document.getElementById('gs').textContent=`${G.as} : ${G.hs}`;e.classList.add('show');return;}}hud();showI(()=>turn());}else turn();});
