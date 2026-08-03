@@ -215,12 +215,16 @@ function releaseLane(l) {
 }
 
 // Input
+const codeKeys = ['KeyD', 'KeyF', 'KeyJ', 'KeyK'];
 window.addEventListener('keydown', (e) => {
-    let idx = keys.indexOf(e.key.toLowerCase());
+    let idx = codeKeys.indexOf(e.code);
+    // fallback for older browsers or specific keyboards
+    if(idx === -1) idx = keys.indexOf(e.key.toLowerCase());
     if(idx !== -1 && !activeKeys[idx]) hitLane(idx);
 });
 window.addEventListener('keyup', (e) => {
-    let idx = keys.indexOf(e.key.toLowerCase());
+    let idx = codeKeys.indexOf(e.code);
+    if(idx === -1) idx = keys.indexOf(e.key.toLowerCase());
     if(idx !== -1) releaseLane(idx);
 });
 canvas.addEventListener('touchstart', (e) => {
