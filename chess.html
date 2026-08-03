@@ -9,7 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;user-select:none}
-body{background:#050505;color:#e2e8f0;font-family:'Outfit',sans-serif;overflow:hidden;margin:0}
+body{background:#1e293b;color:#e2e8f0;font-family:'Outfit',sans-serif;overflow:hidden;margin:0}
 #ui-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;display:flex;flex-direction:column;align-items:center;padding:20px;z-index:10}
 h1{font-family:'Orbitron',sans-serif;font-size:2.5rem;font-weight:900;background:linear-gradient(135deg,#f59e0b,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px;text-shadow:0 4px 20px rgba(245,158,11,0.3)}
 .status{font-size:1.2rem;margin-bottom:12px;padding:10px 24px;background:rgba(10,10,10,0.8);border:1px solid rgba(245,158,11,0.3);border-radius:30px;backdrop-filter:blur(10px);pointer-events:auto;box-shadow:0 10px 30px rgba(0,0,0,0.5)}
@@ -176,10 +176,10 @@ function aiMove(){
 
 // --- THREE.JS 3D RENDERER ---
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x050505, 0.02);
+scene.fog = new THREE.FogExp2(0x1e293b, 0.02);
 
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 100);
-camera.position.set(0, 10, 12);
+camera.position.set(0, 12, 14);
 
 const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -195,12 +195,12 @@ controls.minDistance = 5;
 controls.maxDistance = 25;
 
 // Lights
-const ambLight = new THREE.AmbientLight(0xffffff, 0.4);
+const ambLight = new THREE.AmbientLight(0xffffff, 0.7);
 scene.add(ambLight);
 
-const spotLight = new THREE.SpotLight(0xfff0dd, 2.5);
+const spotLight = new THREE.SpotLight(0xfff0dd, 2.0);
 spotLight.position.set(5, 15, 5);
-spotLight.angle = Math.PI/4;
+spotLight.angle = Math.PI/3;
 spotLight.penumbra = 0.5;
 spotLight.castShadow = true;
 spotLight.shadow.mapSize.width = 2048;
@@ -208,19 +208,23 @@ spotLight.shadow.mapSize.height = 2048;
 spotLight.shadow.bias = -0.0001;
 scene.add(spotLight);
 
-const fillLight = new THREE.DirectionalLight(0xaaccff, 0.5);
+const topLight = new THREE.DirectionalLight(0xffffff, 0.5);
+topLight.position.set(0, 20, 0);
+scene.add(topLight);
+
+const fillLight = new THREE.DirectionalLight(0xaaccff, 0.3);
 fillLight.position.set(-10, 5, -10);
 scene.add(fillLight);
 
-// Materials
-const matWhiteSq = new THREE.MeshStandardMaterial({color: 0xdddddd, metalness: 0.1, roughness: 0.1}); // 대리석 느낌
-const matBlackSq = new THREE.MeshStandardMaterial({color: 0x1a1a1a, metalness: 0.1, roughness: 0.1});
-const matHighlight = new THREE.MeshStandardMaterial({color: 0x22c55e, metalness: 0.4, roughness: 0.2, transparent: true, opacity: 0.8});
-const matSelected = new THREE.MeshStandardMaterial({color: 0xf59e0b, metalness: 0.4, roughness: 0.2});
+// Materials (Classic Wood Board)
+const matWhiteSq = new THREE.MeshStandardMaterial({color: 0xf0d9b5, metalness: 0.1, roughness: 0.8}); // 밝은 나무
+const matBlackSq = new THREE.MeshStandardMaterial({color: 0xb58863, metalness: 0.1, roughness: 0.8}); // 어두운 나무
+const matHighlight = new THREE.MeshStandardMaterial({color: 0x22c55e, metalness: 0.2, roughness: 0.4, transparent: true, opacity: 0.8});
+const matSelected = new THREE.MeshStandardMaterial({color: 0xf59e0b, metalness: 0.2, roughness: 0.4});
 
-// 고급스러운 금/은 메탈릭 재질
-const matPieceW = new THREE.MeshStandardMaterial({color: 0xffd700, metalness: 0.9, roughness: 0.15}); // Gold
-const matPieceB = new THREE.MeshStandardMaterial({color: 0x222233, metalness: 0.8, roughness: 0.25}); // Dark Metal
+// 고급스러운 아이보리 / 흑단 기물 재질
+const matPieceW = new THREE.MeshStandardMaterial({color: 0xffffff, metalness: 0.1, roughness: 0.2}); // Ivory
+const matPieceB = new THREE.MeshStandardMaterial({color: 0x222222, metalness: 0.2, roughness: 0.2}); // Ebony
 
 const boardGroup = new THREE.Group();
 scene.add(boardGroup);
@@ -237,7 +241,7 @@ for(let r=0; r<8; r++) {
     squares.push(sq);
   }
 }
-const border = new THREE.Mesh(new THREE.BoxGeometry(8.6, 0.4, 8.6), new THREE.MeshStandardMaterial({color: 0x2a1a0a, metalness:0.3, roughness:0.8}));
+const border = new THREE.Mesh(new THREE.BoxGeometry(8.6, 0.4, 8.6), new THREE.MeshStandardMaterial({color: 0x3d2314, metalness:0.1, roughness:0.9}));
 border.position.y = -0.2;
 border.receiveShadow = true;
 boardGroup.add(border);
