@@ -239,9 +239,11 @@ for(let r=0; r<8; r++){
   }
 }
 const boardTex = new THREE.CanvasTexture(boardCanvas);
+boardTex.anisotropy = 4; // Sharp textures
+boardTex.needsUpdate = true;
 const visualBoard = new THREE.Mesh(
     new THREE.BoxGeometry(8, 0.2, 8), 
-    new THREE.MeshStandardMaterial({map: boardTex, metalness: 0.1, roughness: 0.8})
+    new THREE.MeshStandardMaterial({map: boardTex, color: 0xffffff, metalness: 0.1, roughness: 0.8})
 );
 visualBoard.position.y = -0.1;
 visualBoard.receiveShadow = true;
