@@ -167,6 +167,8 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; // 영화 같은 사실적인 색조 매핑
+renderer.outputEncoding = THREE.sRGBEncoding; // 정확한 색상 출력
 document.getElementById('game-container').appendChild(renderer.domElement);
 
 const ambLight = new THREE.AmbientLight(0xffffff, 0.7); // 밝고 자연스러운 환경광
@@ -300,16 +302,23 @@ scene.add(crowdMesh);
 function createHuman(isAway) {
     const group = new THREE.Group();
     const uniColor = isAway ? 0x1e40af : 0x991b1b;
-    const mat = new THREE.MeshLambertMaterial({ color: uniColor });
-    const skinMat = new THREE.MeshLambertMaterial({ color: 0xf5c69a });
-    const pantsMat = new THREE.MeshLambertMaterial({ color: 0xe2e8f0 });
-    const shoeMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+    const mat = new THREE.MeshPhysicalMaterial({ color: uniColor, roughness: 0.8, metalness: 0.1 }); // 유니폼(천)
+    const skinMat = new THREE.MeshPhysicalMaterial({ color: 0xf5c69a, roughness: 0.4, metalness: 0.0, clearcoat: 0.1 }); // 피부 (약간의 광택)
+    const pantsMat = new THREE.MeshPhysicalMaterial({ color: 0xe2e8f0, roughness: 0.9, metalness: 0.0 }); // 바지
+    const shoeMat = new THREE.MeshPhysicalMaterial({ color: 0x111111, roughness: 0.5, metalness: 0.2 }); // 야구화
+    const helmetMat = new THREE.MeshPhysicalMaterial({ color: uniColor, roughness: 0.2, metalness: 0.1, clearcoat: 0.8, clearcoatRoughness: 0.1 }); // 반짝이는 플라스틱 헬멧
 
     // 골반(Root)
     const pelvis = new THREE.Group();
     pelvis.position.y = 1.0;
     group.add(pelvis);
     group.pelvis = pelvis;
+
+    // 벨트 디테일
+    const beltMat = new THREE.MeshPhysicalMaterial({ color: 0x111111, roughness: 0.6 });
+    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.31, 0.08, 16), beltMat);
+    belt.position.y = 0.05;
+    pelvis.add(belt);
 
     // 상체 (몸통)
     const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.3, 0.7, 16), mat);
@@ -328,11 +337,23 @@ function createHuman(isAway) {
     neck.add(head);
     group.head = head;
     
+    // 얼굴 이목구비 디테일 (눈, 코)
+    const eyeMat = new THREE.MeshPhysicalMaterial({ color: 0x111111, roughness: 0.1, clearcoat: 1.0 });
+    const lEye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 16, 16), eyeMat);
+    lEye.position.set(-0.08, 0.05, 0.19);
+    head.add(lEye);
+    const rEye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 16, 16), eyeMat);
+    rEye.position.set(0.08, 0.05, 0.19);
+    head.add(rEye);
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(0.04, 16, 16), skinMat);
+    nose.position.set(0, 0, 0.22);
+    head.add(nose);
+    
     // 모자/헬멧
-    const hat = new THREE.Mesh(new THREE.SphereGeometry(0.23, 32, 16, 0, Math.PI*2, 0, Math.PI/2), mat);
+    const hat = new THREE.Mesh(new THREE.SphereGeometry(0.23, 32, 16, 0, Math.PI*2, 0, Math.PI/2), helmetMat);
     hat.position.y = 0.05;
     head.add(hat);
-    const brim = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.25), mat);
+    const brim = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.25), helmetMat);
     brim.position.set(0, 0, 0.25); // 앞쪽을 향함
     hat.add(brim);
 
@@ -427,7 +448,7 @@ const batter = createHuman(true);
 batter.position.set(-1.0, 0, -0.5); // 우타자 위치
 batter.rotation.y = Math.PI / 2; // 투수를 향해 옆으로 섬
 // 배트 쥐어주기
-const batMat = new THREE.MeshLambertMaterial({color: 0x8B4513});
+const batMat = new THREE.MeshPhysicalMaterial({color: 0x8B4513, roughness: 0.4, clearcoat: 0.5}); // 광택 있는 나무 배트
 const bat = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, 1.1, 16), batMat);
 bat.position.set(0, -0.35, 0); // 오른손 위치 (elbow 그룹 내부)
 bat.rotation.x = Math.PI/2 - 0.2; // 어깨 뒤로 살짝 눕힘
