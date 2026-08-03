@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>DODO Baseball | 프로야구 V26 스타일</title>
+<title>DODO Baseball | 프로야구 V26 에디션</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -11,217 +11,160 @@
 * { box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
 body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Noto Sans KR', sans-serif; }
 
-/* ─── 3D 원근감 씬 ─── */
+/* ─── 고해상도 게임 씬 배경 ─── */
 #game-scene {
     position: relative;
     width: 100%;
     height: 100%;
-    background: linear-gradient(to bottom, #0a1930 0%, #173663 30%, #2e4c25 30.5%, #183313 100%);
+    background-image: url('assets/stadium_bg.png');
+    background-size: cover;
+    background-position: center bottom;
+    background-repeat: no-repeat;
     overflow: hidden;
-    perspective: 1000px;
 }
 
-/* ─── 야구장 배경 레이어 ─── */
-.stadium-lights {
-    position: absolute; top: 0; left: 0; width: 100%; height: 30%;
-    background: radial-gradient(circle at 20% 10%, rgba(255,255,255,0.15) 0%, transparent 40%),
-                radial-gradient(circle at 80% 10%, rgba(255,255,255,0.15) 0%, transparent 40%);
-}
-.field-lines {
-    position: absolute; top: 30.5%; left: 0; width: 100%; height: 70%;
-    background-image: 
-        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-    background-size: 50px 20px;
-    transform: perspective(500px) rotateX(60deg);
-    transform-origin: top center;
-}
-.dirt-mound {
+/* 어두운 오버레이 (UI 가독성 향상) */
+.scene-overlay {
     position: absolute;
-    top: 42%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 200px; height: 60px;
-    background: #6b4c3a;
-    border-radius: 50%;
-    box-shadow: inset 0 5px 15px rgba(0,0,0,0.5);
-}
-.pitcher-plate {
-    position: absolute;
-    top: 42%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 40px; height: 6px;
-    background: #fff;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-}
-.dirt-home {
-    position: absolute;
-    bottom: -15%; left: 50%;
-    transform: translateX(-50%);
-    width: 600px; height: 300px;
-    background: #6b4c3a;
-    border-radius: 50%;
-    box-shadow: inset 0 20px 50px rgba(0,0,0,0.5);
-}
-.home-plate {
-    position: absolute;
-    bottom: 80px; left: 50%;
-    transform: translateX(-50%) rotate(45deg);
-    width: 60px; height: 60px;
-    background: #fff;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-    z-index: 10;
-}
-.home-plate::before {
-    content: ''; position: absolute;
-    top: -5px; left: -5px; right: -5px; bottom: -5px;
-    border: 2px solid rgba(255,255,255,0.5);
+    inset: 0;
+    background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.6) 100%);
+    pointer-events: none;
 }
 
-/* ─── 캐릭터 ─── */
-.character { position: absolute; background-size: contain; background-repeat: no-repeat; background-position: center bottom; }
-
-/* 투수 (마운드 위) */
-#pitcher {
-    width: 140px; height: 200px;
-    top: 42%; left: 50%;
-    transform: translate(-50%, -100%);
-    /* 고퀄리티 실루엣 이미지 (SVG 데이터 URL 대체) */
-    background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg"><path d="M45,20 C45,10 55,10 55,20 C60,25 65,35 60,45 L75,70 L65,80 L55,55 L50,85 L60,140 L45,140 L40,95 L30,140 L15,140 L30,75 L15,60 L20,45 L35,55 C35,40 40,30 45,20 Z" fill="%23e2e8f0"/><circle cx="50" cy="15" r="10" fill="%230f172a"/><path d="M30,55 L15,40 L10,50 L25,65 Z" fill="%2394a3b8"/><circle cx="10" cy="50" r="6" fill="%23b45309"/></svg>');
-    z-index: 5;
-    transition: transform 0.1s;
+/* 카메라 쉐이크 이펙트 */
+@keyframes shake {
+    0% { transform: translate(0px, 0px); }
+    20% { transform: translate(-10px, 10px) rotate(-1deg); }
+    40% { transform: translate(10px, -10px) rotate(1deg); }
+    60% { transform: translate(-10px, -10px); }
+    80% { transform: translate(10px, 10px) rotate(-1deg); }
+    100% { transform: translate(0px, 0px); }
 }
+.shake { animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both; }
 
-/* 타자 (홈플레이트 왼쪽/오른쪽) */
-#batter {
-    width: 300px; height: 450px;
-    bottom: 20px; left: 10%;
-    background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg"><path d="M80,50 C80,30 120,30 120,50 C130,60 140,80 130,100 L160,150 L140,170 L120,120 L110,180 L130,290 L90,290 L80,200 L60,290 L20,290 L50,160 L20,130 L30,100 L60,120 C60,90 70,70 80,50 Z" fill="%23f8fafc"/><circle cx="100" cy="40" r="22" fill="%23b91c1c"/><path d="M120,40 L160,30 L165,40 L120,50 Z" fill="%23b91c1c"/><rect x="110" y="80" width="10" height="120" transform="rotate(-30 110 80)" fill="%23f59e0b" rx="5"/></svg>');
-    z-index: 20;
-}
-
-/* 포수 (홈플레이트 뒤, 투명도 있음) */
-#catcher {
-    width: 250px; height: 250px;
-    bottom: -40px; left: 50%;
-    transform: translateX(-50%);
-    background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg"><path d="M40,140 C40,90 50,60 75,60 C100,60 110,90 110,140 Z" fill="%231e293b"/><circle cx="75" cy="50" r="25" fill="%230f172a"/><rect x="55" y="35" width="40" height="30" fill="%23333" rx="5"/><circle cx="30" cy="100" r="15" fill="%23b45309"/></svg>');
-    z-index: 25;
-    opacity: 0.85;
-}
-
-/* ─── UI 오버레이 ─── */
+/* ─── Glassmorphism UI 오버레이 ─── */
 .ui-layer { position: absolute; inset: 0; z-index: 100; pointer-events: none; }
 .pointer-events-auto { pointer-events: auto; }
 
-/* 상단 스코어보드 (컴프야 스타일) */
+/* 상단 스코어보드 (Glassmorphism) */
 #scoreboard {
-    position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
-    display: flex; background: rgba(0,0,0,0.8); border: 2px solid #334155; border-radius: 8px;
+    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: stretch;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
     color: #fff; font-family: 'Oswald', sans-serif;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     overflow: hidden;
 }
-.sb-team { padding: 8px 15px; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-.sb-team.away { background: linear-gradient(135deg, #1e293b, #0f172a); border-right: 1px solid #333; }
-.sb-team.home { background: linear-gradient(135deg, #b91c1c, #7f1d1d); border-left: 1px solid #333; }
-.sb-score { font-size: 1.8rem; font-weight: 700; width: 40px; text-align: center; }
-.sb-center { padding: 5px 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #0f172a; min-width: 120px; }
-.sb-inning { font-size: 0.8rem; color: #cbd5e1; letter-spacing: 1px; }
-.sb-count { display: flex; gap: 8px; margin-top: 4px; }
-.cnt-lbl { font-size: 0.7rem; color: #94a3b8; font-family: 'Noto Sans KR', sans-serif; font-weight: 700; }
-.cnt-dots { display: flex; gap: 3px; align-items: center; }
-.dot { width: 10px; height: 10px; border-radius: 50%; background: #334155; }
-.dot.b.lit { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
-.dot.s.lit { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
-.dot.o.lit { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+.sb-team { padding: 10px 20px; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 12px; }
+.sb-team.away { background: rgba(30, 41, 59, 0.6); }
+.sb-team.home { background: rgba(185, 28, 28, 0.6); }
+.sb-score { font-size: 2rem; font-weight: 700; width: 40px; text-align: center; text-shadow: 0 2px 5px rgba(0,0,0,0.8); }
+.sb-center { padding: 8px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 140px; }
+.sb-inning { font-size: 0.9rem; color: #cbd5e1; letter-spacing: 2px; }
+.sb-count { display: flex; gap: 12px; margin-top: 6px; }
+.cnt-lbl { font-size: 0.8rem; color: #94a3b8; font-family: 'Noto Sans KR', sans-serif; font-weight: 700; margin-right: 4px;}
+.cnt-dots { display: flex; gap: 4px; align-items: center; }
+.dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); }
+.dot.b.lit { background: #22c55e; border-color: #22c55e; box-shadow: 0 0 10px #22c55e; }
+.dot.s.lit { background: #ef4444; border-color: #ef4444; box-shadow: 0 0 10px #ef4444; }
+.dot.o.lit { background: #f59e0b; border-color: #f59e0b; box-shadow: 0 0 10px #f59e0b; }
 
 /* ─── 스트라이크 존 ─── */
 #strike-zone {
     position: absolute;
-    bottom: 180px; left: 50%;
+    /* 이미지 내 포수의 미트 위치 부근으로 조정 (우하단 쪽 홈플레이트) */
+    bottom: 25%; left: 78%;
     transform: translateX(-50%);
-    width: 150px; height: 200px;
-    border: 3px solid rgba(255,255,255,0.7);
+    width: 160px; height: 220px;
+    border: 2px solid rgba(255,255,255,0.6);
+    background: rgba(59, 130, 246, 0.1);
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
     z-index: 50;
-    box-shadow: inset 0 0 20px rgba(59,130,246,0.2), 0 0 20px rgba(59,130,246,0.2);
+    box-shadow: inset 0 0 20px rgba(59,130,246,0.2), 0 0 20px rgba(59,130,246,0.3);
     display: none; /* 피치 선택 후 표시 */
 }
 #strike-zone.active { display: grid; }
 .sz-cell {
-    border: 1px dashed rgba(255,255,255,0.3);
+    border: 1px dashed rgba(255,255,255,0.2);
     pointer-events: auto;
     cursor: crosshair;
-    transition: 0.1s;
+    transition: 0.2s;
 }
-.sz-cell:hover { background: rgba(59,130,246,0.4); }
-/* 타겟 마커 */
+.sz-cell:hover { background: rgba(59,130,246,0.5); }
 #aim-target {
     position: absolute;
-    width: 30px; height: 30px;
-    border: 2px solid #ef4444;
+    width: 34px; height: 34px;
+    border: 3px solid #ef4444;
     border-radius: 50%;
     transform: translate(-50%, -50%);
     pointer-events: none;
     display: none;
     z-index: 51;
-    box-shadow: 0 0 10px #ef4444, inset 0 0 10px #ef4444;
+    box-shadow: 0 0 15px #ef4444, inset 0 0 15px #ef4444;
 }
 #aim-target::after {
     content: '+'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    color: #ef4444; font-size: 20px; font-weight: bold;
+    color: #ef4444; font-size: 24px; font-weight: bold;
 }
 
 /* ─── 피칭 컨트롤 UI (하단) ─── */
 #pitch-controls {
-    position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-    display: flex; gap: 10px; z-index: 100;
+    position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 15px; z-index: 100;
 }
 .pitch-btn {
-    background: linear-gradient(to bottom, #1e293b, #0f172a);
-    border: 2px solid #334155; border-radius: 12px;
-    color: #fff; padding: 12px 20px;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 16px;
+    color: #fff; padding: 15px 25px;
     font-family: 'Oswald', 'Noto Sans KR', sans-serif;
-    font-size: 1.1rem; font-weight: 700;
+    font-size: 1.2rem; font-weight: 700;
     cursor: pointer; pointer-events: auto;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-    transition: 0.2s;
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-    min-width: 90px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    min-width: 110px;
 }
-.pitch-btn .spd { font-size: 0.7rem; color: #94a3b8; }
-.pitch-btn:hover { border-color: #3b82f6; transform: translateY(-3px); }
+.pitch-btn .spd { font-size: 0.8rem; color: #94a3b8; font-family: 'Noto Sans KR', sans-serif; font-weight: 400;}
+.pitch-btn:hover { border-color: #3b82f6; transform: translateY(-5px) scale(1.05); background: rgba(30, 58, 138, 0.8); }
 .pitch-btn.selected {
-    background: linear-gradient(to bottom, #2563eb, #1d4ed8);
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
     border-color: #60a5fa;
-    box-shadow: 0 0 20px rgba(59,130,246,0.6);
+    box-shadow: 0 0 30px rgba(59,130,246,0.8);
+    transform: translateY(-5px);
 }
 
 /* ─── 원형 타이밍 게이지 (컴프야 스타일) ─── */
 #timing-ui {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: 250px; height: 250px;
+    width: 300px; height: 300px;
     pointer-events: auto; z-index: 200;
-    display: none; /* 조준 완료 후 표시 */
+    display: none;
 }
 #timing-ui.active { display: block; }
 .t-circle {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
     border-radius: 50%;
 }
-.t-perfect { width: 80px; height: 80px; border: 4px solid #22c55e; background: rgba(34,197,94,0.2); box-shadow: 0 0 15px #22c55e; }
-.t-good { width: 140px; height: 140px; border: 3px dashed #f59e0b; }
+.t-perfect { width: 90px; height: 90px; border: 4px solid #22c55e; background: rgba(34,197,94,0.3); box-shadow: 0 0 25px #22c55e; }
+.t-good { width: 150px; height: 150px; border: 3px dashed rgba(245, 158, 11, 0.8); }
 .t-shrinking { 
-    width: 250px; height: 250px; border: 6px solid #fff; 
+    width: 300px; height: 300px; border: 6px solid #fff; 
     box-shadow: 0 0 20px #fff, inset 0 0 20px #fff;
-    transition: width linear, height linear;
 }
 .t-hint {
-    position: absolute; top: -40px; left: 50%; transform: translateX(-50%);
-    color: #fff; font-size: 1.2rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    position: absolute; top: -50px; left: 50%; transform: translateX(-50%);
+    color: #fff; font-size: 1.4rem; font-weight: 900;
+    text-shadow: 0 2px 10px rgba(0,0,0,1);
     white-space: nowrap; width: 100%; text-align: center;
+    background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px;
 }
 #btn-throw {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -229,95 +172,105 @@ body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
     background: transparent; border: none; cursor: pointer;
 }
 
-/* ─── 날아가는 공 ─── */
+/* ─── 리얼한 야구공 (3D 효과) ─── */
 #baseball {
     position: absolute;
-    width: 20px; height: 20px;
-    background: radial-gradient(circle at 30% 30%, #fff, #cbd5e1);
+    width: 24px; height: 24px;
+    background: radial-gradient(circle at 30% 30%, #fff 20%, #cbd5e1 80%, #64748b 100%);
     border-radius: 50%;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-    z-index: 60; display: none;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.6);
+    z-index: 150; display: none;
     pointer-events: none;
 }
-/* 실밥 */
 #baseball::before, #baseball::after {
     content: ''; position: absolute;
-    width: 16px; height: 10px; border-radius: 50%;
+    width: 20px; height: 12px; border-radius: 50%;
     border-top: 2px solid #ef4444; border-bottom: 2px transparent;
 }
-#baseball::before { top: 2px; left: 0; transform: rotate(30deg); }
-#baseball::after { bottom: 2px; right: 0; transform: rotate(210deg); }
+#baseball::before { top: 3px; left: 0; transform: rotate(30deg); }
+#baseball::after { bottom: 3px; right: 0; transform: rotate(210deg); }
 
-/* ─── 결과 텍스트 ─── */
-#result-msg {
-    position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0);
-    font-family: 'Oswald', 'Noto Sans KR', sans-serif;
-    font-size: 5rem; font-weight: 900;
-    color: #fff; text-shadow: 0 5px 20px rgba(0,0,0,0.8), 2px 2px 0 #000;
-    z-index: 300; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    text-align: center; line-height: 1.1;
+/* 잔상 (Trail) */
+.trail {
+    position: absolute;
+    width: 24px; height: 24px;
+    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%);
+    border-radius: 50%;
     pointer-events: none;
+    z-index: 149;
+    animation: fadeOut 0.2s linear forwards;
 }
-#result-msg.show { transform: translate(-50%, -50%) scale(1); }
-#result-sub { font-size: 1.5rem; color: #cbd5e1; }
-#result-speed { font-size: 2rem; color: #f59e0b; margin-top: 10px; }
+@keyframes fadeOut { to { opacity: 0; transform: scale(0.5); } }
+
+/* ─── 결과 텍스트 (화려한 팝업) ─── */
+#result-msg {
+    position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.5);
+    font-family: 'Oswald', 'Noto Sans KR', sans-serif;
+    text-align: center;
+    opacity: 0; pointer-events: none; z-index: 300;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+#result-msg.show { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+#result-main {
+    font-size: 6rem; font-weight: 900; line-height: 1;
+    color: #fff;
+    -webkit-text-stroke: 2px #000;
+    text-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 20px currentColor;
+}
+#result-sub {
+    font-size: 2rem; font-weight: 700; margin-top: 10px;
+    background: rgba(0,0,0,0.6); padding: 5px 20px; border-radius: 30px; display: inline-block;
+}
+#result-speed {
+    font-size: 2.5rem; color: #f59e0b; margin-top: 15px; font-weight: 900;
+    text-shadow: 0 4px 10px rgba(0,0,0,1);
+}
 
 /* ─── 미니맵 / 구속 표시 (좌측 상단) ─── */
 #pitch-info {
-    position: absolute; top: 120px; left: 20px;
-    background: rgba(0,0,0,0.6); padding: 15px; border-radius: 10px;
-    border: 1px solid #334155; color: #fff;
+    position: absolute; top: 120px; left: 30px;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(10px);
+    padding: 20px; border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.1); color: #fff;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     pointer-events: none;
 }
-.pi-speed { font-family: 'Oswald', sans-serif; font-size: 2.5rem; font-weight: 700; color: #f59e0b; line-height: 1; }
-.pi-type { font-size: 1rem; color: #94a3b8; font-weight: 700; margin-bottom: 10px; }
+.pi-speed { font-family: 'Oswald', sans-serif; font-size: 3.5rem; font-weight: 700; color: #f59e0b; line-height: 1; text-shadow: 0 0 15px rgba(245, 158, 11, 0.5); }
+.pi-type { font-size: 1.2rem; color: #cbd5e1; font-weight: 700; margin-bottom: 10px; margin-top: 5px; }
 
 /* 단계별 안내 */
 #guide-text {
-    position: absolute; top: 180px; left: 50%; transform: translateX(-50%);
-    font-size: 1.5rem; font-weight: 700; color: #60a5fa;
-    text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+    position: absolute; top: 25%; left: 50%; transform: translateX(-50%);
+    font-size: 2rem; font-weight: 900; color: #fff;
+    text-shadow: 0 4px 15px rgba(0,0,0,1);
     pointer-events: none; animation: pulse 1.5s infinite;
+    background: rgba(0,0,0,0.4); padding: 10px 30px; border-radius: 30px;
 }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+@keyframes pulse { 0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); } 50% { opacity: 0.7; transform: translateX(-50%) scale(0.95); } }
 
-/* 카메라 쉐이크 */
-@keyframes shake {
-    0% { transform: translate(1px, 1px) rotate(0deg); }
-    10% { transform: translate(-1px, -2px) rotate(-1deg); }
-    20% { transform: translate(-3px, 0px) rotate(1deg); }
-    30% { transform: translate(3px, 2px) rotate(0deg); }
-    40% { transform: translate(1px, -1px) rotate(1deg); }
-    50% { transform: translate(-1px, 2px) rotate(-1deg); }
-    60% { transform: translate(-3px, 1px) rotate(0deg); }
-    70% { transform: translate(3px, 1px) rotate(-1deg); }
-    80% { transform: translate(-1px, -1px) rotate(1deg); }
-    90% { transform: translate(1px, 2px) rotate(0deg); }
-    100% { transform: translate(1px, -2px) rotate(-1deg); }
+/* 로딩 오버레이 */
+#loading {
+    position: absolute; inset: 0; background: #000; z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: #fff; font-size: 1.5rem; font-weight: bold;
+    transition: opacity 0.5s;
 }
-.shake { animation: shake 0.5s; }
+.spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.3); border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 </style>
 </head>
 <body>
 
+<!-- 로딩 화면 -->
+<div id="loading">
+    <div class="spinner"></div>
+    <div>고해상도 에셋 로딩 중...</div>
+</div>
+
 <div id="game-scene">
-    <!-- 배경 -->
-    <div class="stadium-lights"></div>
-    <div class="field-lines"></div>
-    
-    <!-- 그라운드 -->
-    <div class="dirt-mound"></div>
-    <div class="pitcher-plate"></div>
-    
-    <div class="dirt-home"></div>
-    <div class="home-plate"></div>
-
-    <!-- 캐릭터 -->
-    <div id="pitcher" class="character"></div>
-    <div id="batter" class="character"></div>
-    <div id="catcher" class="character"></div>
-
+    <div class="scene-overlay"></div>
     <!-- 야구공 -->
     <div id="baseball"></div>
 </div>
@@ -331,15 +284,15 @@ body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
         <div class="sb-center">
             <div class="sb-inning"><span id="inning-val">1</span>회초</div>
             <div class="sb-count">
-                <div class="cnt-group">
+                <div class="cnt-group" style="display:flex; align-items:center;">
                     <span class="cnt-lbl">B</span>
                     <div class="cnt-dots"><div class="dot b" id="b1"></div><div class="dot b" id="b2"></div><div class="dot b" id="b3"></div></div>
                 </div>
-                <div class="cnt-group" style="margin-left: 8px;">
+                <div class="cnt-group" style="display:flex; align-items:center;">
                     <span class="cnt-lbl">S</span>
                     <div class="cnt-dots"><div class="dot s" id="s1"></div><div class="dot s" id="s2"></div></div>
                 </div>
-                <div class="cnt-group" style="margin-left: 8px;">
+                <div class="cnt-group" style="display:flex; align-items:center;">
                     <span class="cnt-lbl">O</span>
                     <div class="cnt-dots"><div class="dot o" id="o1"></div><div class="dot o" id="o2"></div></div>
                 </div>
@@ -352,9 +305,9 @@ body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 
     <!-- 좌측 정보 -->
     <div id="pitch-info">
-        <div class="pi-speed"><span id="info-speed">000</span> <span style="font-size:1.2rem;color:#cbd5e1">km/h</span></div>
+        <div class="pi-speed"><span id="info-speed">000</span> <span style="font-size:1.5rem;color:#94a3b8">km/h</span></div>
         <div class="pi-type" id="info-type">-</div>
-        <div style="font-size:0.8rem; color:#94a3b8">투구수: <span id="info-count" style="color:#fff">0</span>개</div>
+        <div style="font-size:0.9rem; color:#94a3b8; font-weight:bold;">투구수: <span id="info-count" style="color:#fff">0</span>개</div>
     </div>
 
     <!-- 안내 텍스트 -->
@@ -362,7 +315,6 @@ body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 
     <!-- 스트라이크 존 -->
     <div id="strike-zone" class="pointer-events-auto">
-        <!-- 9구역 -->
         <div class="sz-cell" data-r="0" data-c="0"></div><div class="sz-cell" data-r="0" data-c="1"></div><div class="sz-cell" data-r="0" data-c="2"></div>
         <div class="sz-cell" data-r="1" data-c="0"></div><div class="sz-cell" data-r="1" data-c="1"></div><div class="sz-cell" data-r="1" data-c="2"></div>
         <div class="sz-cell" data-r="2" data-c="0"></div><div class="sz-cell" data-r="2" data-c="1"></div><div class="sz-cell" data-r="2" data-c="2"></div>
@@ -388,21 +340,35 @@ body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
     <!-- 하단 구종 선택 -->
     <div id="pitch-controls">
         <button class="pitch-btn" data-pitch="4S">
-            <div>포심</div><div class="spd">148-155</div>
+            <div>포심</div><div class="spd">148-155 km/h</div>
         </button>
         <button class="pitch-btn" data-pitch="SL">
-            <div>슬라이더</div><div class="spd">135-142</div>
+            <div>슬라이더</div><div class="spd">135-142 km/h</div>
         </button>
         <button class="pitch-btn" data-pitch="CU">
-            <div>커브</div><div class="spd">120-128</div>
+            <div>커브</div><div class="spd">120-128 km/h</div>
         </button>
         <button class="pitch-btn" data-pitch="CH">
-            <div>체인지업</div><div class="spd">130-138</div>
+            <div>체인지업</div><div class="spd">130-138 km/h</div>
         </button>
     </div>
 </div>
 
 <script>
+// 이미지 로딩 처리
+window.onload = () => {
+    const img = new Image();
+    img.src = 'assets/stadium_bg.png';
+    img.onload = () => {
+        document.getElementById('loading').style.opacity = '0';
+        setTimeout(() => document.getElementById('loading').style.display = 'none', 500);
+    };
+    img.onerror = () => {
+        // 이미지가 없을 경우 대비
+        document.getElementById('loading').style.display = 'none';
+    }
+};
+
 // ─── 상태 머신 ───
 const state = {
     phase: 'SELECT_PITCH', // SELECT_PITCH -> AIM -> TIMING -> THROWING -> RESULT
@@ -410,19 +376,17 @@ const state = {
     target: { x: 0, y: 0, rawX:0, rawY:0 },
     timingScore: 0, // 0 (bad) ~ 1 (perfect)
     
-    // 게임 데이터
     balls: 0, strikes: 0, outs: 0, pitches: 0,
     awayScore: 0, homeScore: 0, inning: 1
 };
 
 const PITCHES = {
     '4S': { name: '포심 패스트볼', min: 148, max: 155, drop: 0, curve: 0, color: '#ef4444' },
-    'SL': { name: '슬라이더', min: 135, max: 142, drop: 15, curve: 25, color: '#06b6d4' },
-    'CU': { name: '커브볼', min: 120, max: 128, drop: 40, curve: 10, color: '#3b82f6' },
-    'CH': { name: '체인지업', min: 130, max: 138, drop: 25, curve: -15, color: '#22c55e' }
+    'SL': { name: '슬라이더', min: 135, max: 142, drop: 15, curve: -25, color: '#06b6d4' },
+    'CU': { name: '커브볼', min: 120, max: 128, drop: 40, curve: -10, color: '#3b82f6' },
+    'CH': { name: '체인지업', min: 130, max: 138, drop: 25, curve: 20, color: '#22c55e' }
 };
 
-// ─── UI 엘리먼트 ───
 const els = {
     guide: document.getElementById('guide-text'),
     pitchBtns: document.querySelectorAll('.pitch-btn'),
@@ -432,8 +396,6 @@ const els = {
     tShrink: document.getElementById('t-shrinking'),
     btnThrow: document.getElementById('btn-throw'),
     ball: document.getElementById('baseball'),
-    pitcher: document.getElementById('pitcher'),
-    batter: document.getElementById('batter'),
     resMsg: document.getElementById('result-msg'),
     resMain: document.getElementById('result-main'),
     resSub: document.getElementById('result-sub'),
@@ -452,12 +414,11 @@ els.pitchBtns.forEach(btn => {
         state.pitch = PITCHES[btn.dataset.pitch];
         state.phase = 'AIM';
         
-        // UI 업데이트
         document.getElementById('info-type').textContent = state.pitch.name;
         document.getElementById('info-speed').textContent = state.pitch.max;
         document.getElementById('info-speed').style.color = state.pitch.color;
         
-        els.guide.textContent = "스트라이크 존을 터치하여 위치를 지정하세요";
+        els.guide.textContent = "스트라이크 존을 터치하여 위치 지정 🎯";
         els.strikeZone.classList.add('active');
         els.aimTarget.style.display = 'none';
     });
@@ -467,19 +428,14 @@ els.pitchBtns.forEach(btn => {
 els.strikeZone.addEventListener('pointerdown', (e) => {
     if (state.phase !== 'AIM') return;
     
-    // 존 내의 클릭 좌표 계산 (0~100%)
     const rect = els.strikeZone.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
-    // 중앙 타겟 마커 표시
     els.aimTarget.style.display = 'block';
     els.aimTarget.style.left = (rect.left + x) + 'px';
     els.aimTarget.style.top = (rect.top + y) + 'px';
     
-    // 투구 좌표 저장 (-1 ~ 1 맵핑)
-    state.target.x = (x / rect.width) * 2 - 1;
-    state.target.y = (y / rect.height) * 2 - 1;
     state.target.rawX = x;
     state.target.rawY = y;
     
@@ -492,22 +448,19 @@ els.strikeZone.addEventListener('pointerdown', (e) => {
 
 // ─── 3. 타이밍 게이지 ───
 let timingAnim;
-let gaugeSize = 250;
+let gaugeSize = 300;
 let shrinkSpeed = 3;
 
 function startTimingGauge() {
     els.timingUI.classList.add('active');
-    gaugeSize = 250;
-    
-    // 구속에 따른 게이지 속도 조절
-    shrinkSpeed = state.pitch.max > 145 ? 4.5 : 3.5;
+    gaugeSize = 300;
+    shrinkSpeed = state.pitch.max > 145 ? 6 : 4.5; // 속도 대폭 상향 (긴장감)
     
     function animate() {
         if (state.phase !== 'TIMING') return;
         gaugeSize -= shrinkSpeed;
-        if (gaugeSize < 20) {
-            gaugeSize = 250; // 리셋 (계속 돎)
-        }
+        if (gaugeSize < 20) gaugeSize = 300; 
+        
         els.tShrink.style.width = gaugeSize + 'px';
         els.tShrink.style.height = gaugeSize + 'px';
         timingAnim = requestAnimationFrame(animate);
@@ -524,12 +477,12 @@ els.btnThrow.addEventListener('pointerdown', () => {
     els.aimTarget.style.display = 'none';
     state.phase = 'THROWING';
     
-    // 타이밍 판정 (퍼펙트=80, 굿=140)
     let quality = '';
     let qColor = '';
-    if (gaugeSize >= 70 && gaugeSize <= 90) {
+    // Perfect: 70~110, Good: 40~160
+    if (gaugeSize >= 70 && gaugeSize <= 110) {
         quality = 'PERFECT'; qColor = '#22c55e'; state.timingScore = 1;
-    } else if (gaugeSize >= 50 && gaugeSize <= 130) {
+    } else if (gaugeSize >= 40 && gaugeSize <= 160) {
         quality = 'GOOD'; qColor = '#f59e0b'; state.timingScore = 0.6;
     } else {
         quality = 'BAD'; qColor = '#ef4444'; state.timingScore = 0.2;
@@ -537,8 +490,8 @@ els.btnThrow.addEventListener('pointerdown', () => {
     
     els.resSub.textContent = quality + " TIMING!";
     els.resSub.style.color = qColor;
+    els.resSub.style.textShadow = `0 0 15px ${qColor}`;
     
-    // 애니메이션 시작
     executePitchAnimation(quality);
 });
 
@@ -546,140 +499,131 @@ function executePitchAnimation(quality) {
     state.pitches++;
     document.getElementById('info-count').textContent = state.pitches;
     
-    // 실제 투구 속도 계산
     const spd = Math.floor(state.pitch.min + (state.pitch.max - state.pitch.min) * state.timingScore);
     document.getElementById('info-speed').textContent = spd;
     
-    // 1. 투수 와인드업 애니메이션
-    els.pitcher.style.transform = 'translate(-50%, -100%) scale(1.1)';
+    // 이미지 내 투수의 위치 (대략 중앙 상단)
+    const startX = window.innerWidth * 0.65;
+    const startY = window.innerHeight * 0.45;
     
-    setTimeout(() => {
-        // 투구 릴리즈
-        els.pitcher.style.transform = 'translate(-50%, -100%) scale(1.0)';
+    const zRect = els.strikeZone.getBoundingClientRect();
+    const jitterX = (1 - state.timingScore) * (Math.random() - 0.5) * 150;
+    const jitterY = (1 - state.timingScore) * (Math.random() - 0.5) * 150;
+    
+    const endX = zRect.left + state.target.rawX + jitterX + state.pitch.curve;
+    const endY = zRect.top + state.target.rawY + jitterY + state.pitch.drop;
+    
+    els.ball.style.display = 'block';
+    
+    const duration = 160 / spd * 700; // 빠른 속도감
+    const startTime = performance.now();
+    
+    let lastTrailTime = 0;
+    
+    function fly(now) {
+        let t = (now - startTime) / duration;
+        if (t > 1) t = 1;
         
-        // 2. 공 날아가기
-        els.ball.style.display = 'block';
+        const easeIn = t * t * t; // 점점 빠르게 다가오는 3D 원근감
         
-        const duration = 160 / spd * 1000; // 속도 비례 비행 시간 (약 1초)
-        const startX = window.innerWidth / 2;
-        const startY = window.innerHeight * 0.4;
+        const curX = startX + (endX - startX) * t + Math.sin(t * Math.PI) * state.pitch.curve;
+        const curY = startY + (endY - startY) * t + Math.sin(t * Math.PI) * state.pitch.drop;
         
-        // 존의 중심점
-        const zRect = els.strikeZone.getBoundingClientRect();
+        // 크기 스케일 (투수쪽은 아주 작고 홈플레이트는 큼)
+        const scale = 0.15 + (easeIn * 1.5);
         
-        // 타이밍 미스시 제구 흔들림
-        const jitterX = (1 - state.timingScore) * (Math.random() - 0.5) * 100;
-        const jitterY = (1 - state.timingScore) * (Math.random() - 0.5) * 100;
+        els.ball.style.left = curX + 'px';
+        els.ball.style.top = curY + 'px';
+        els.ball.style.transform = `translate(-50%, -50%) scale(${scale}) rotate(${t*1500}deg)`;
         
-        const endX = zRect.left + state.target.rawX + jitterX + state.pitch.curve;
-        const endY = zRect.top + state.target.rawY + jitterY + state.pitch.drop;
-        
-        const startTime = performance.now();
-        
-        function fly(now) {
-            let t = (now - startTime) / duration;
-            if (t > 1) t = 1;
-            
-            // 3D 느낌을 위한 EaseIn 스케일 커브
-            const easeIn = t * t;
-            
-            // 공 위치 계산 (직선 + 구종별 휨)
-            const curX = startX + (endX - startX) * t + Math.sin(t * Math.PI) * state.pitch.curve;
-            const curY = startY + (endY - startY) * t + Math.sin(t * Math.PI) * state.pitch.drop;
-            
-            // 공 크기 변화 (멀리서 날아옴)
-            const scale = 0.3 + (easeIn * 1.5);
-            
-            els.ball.style.left = curX + 'px';
-            els.ball.style.top = curY + 'px';
-            els.ball.style.transform = `translate(-50%, -50%) scale(${scale}) rotate(${t*1000}deg)`;
-            
-            if (t < 1) {
-                requestAnimationFrame(fly);
-            } else {
-                els.ball.style.display = 'none';
-                judgePitch(endX, endY, zRect, spd);
-            }
+        // 잔상 생성 (60fps 제한으로 너무 많이 안생기게)
+        if (now - lastTrailTime > 30) {
+            createTrail(curX, curY, scale);
+            lastTrailTime = now;
         }
-        requestAnimationFrame(fly);
         
-    }, 400); // 와인드업 시간
+        if (t < 1) {
+            requestAnimationFrame(fly);
+        } else {
+            els.ball.style.display = 'none';
+            judgePitch(endX, endY, zRect, spd);
+        }
+    }
+    requestAnimationFrame(fly);
+}
+
+function createTrail(x, y, scale) {
+    const trail = document.createElement('div');
+    trail.className = 'trail';
+    trail.style.left = x + 'px';
+    trail.style.top = y + 'px';
+    trail.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    els.scene.appendChild(trail);
+    setTimeout(() => trail.remove(), 200);
 }
 
 // ─── 5. 결과 판정 ───
 function judgePitch(endX, endY, zRect, spd) {
-    // 존 내에 들어왔는지 판정
     const inZone = endX > zRect.left && endX < zRect.right && endY > zRect.top && endY < zRect.bottom;
-    
-    // AI 타자 스윙 여부
-    const swingChance = inZone ? 0.7 : 0.2;
-    const swings = Math.random() < swingChance;
+    const swings = Math.random() < (inZone ? 0.7 : 0.2);
     
     let resText = '';
     let resColor = '';
-    let isHit = false;
     
     if (swings) {
-        // 배트 스윙 애니메이션
-        els.batter.style.transform = 'rotate(-10deg) translateX(30px)';
-        
         if (inZone) {
-            // 맞음! 타이밍에 따라 결과 (여기선 심플하게 확률로)
             const hitR = Math.random();
             if (hitR < 0.2) {
-                resText = 'HOME RUN!!'; resColor = '#f59e0b'; isHit = true;
-                state.homeScore++; els.scene.classList.add('shake');
+                resText = 'HOME RUN!!'; resColor = '#f59e0b'; state.homeScore++;
+                els.scene.classList.add('shake'); // 홈런 시 강한 화면 흔들림
             } else if (hitR < 0.6) {
-                resText = 'HIT!'; resColor = '#22c55e'; isHit = true;
-                state.homeScore++;
+                resText = 'HIT!'; resColor = '#22c55e'; state.homeScore++;
+                els.scene.classList.add('shake');
             } else {
                 resText = 'FOUL'; resColor = '#94a3b8';
                 if (state.strikes < 2) state.strikes++;
             }
         } else {
-            resText = 'STRIKE (SWING)'; resColor = '#ef4444';
+            resText = 'STRIKE'; resColor = '#ef4444';
+            els.resSub.textContent = 'SWING AND MISS!'; els.resSub.style.color = '#ef4444';
             state.strikes++;
         }
     } else {
         if (inZone) {
-            resText = 'STRIKE (LOOKING)'; resColor = '#ef4444';
+            resText = 'STRIKE'; resColor = '#ef4444';
+            els.resSub.textContent = 'LOOKING STRIKE!'; els.resSub.style.color = '#ef4444';
             state.strikes++;
         } else {
             resText = 'BALL'; resColor = '#3b82f6';
+            els.resSub.textContent = 'GOOD EYE'; els.resSub.style.color = '#3b82f6';
             state.balls++;
         }
     }
     
-    // 타자 원상복구
-    setTimeout(() => { els.batter.style.transform = 'none'; }, 500);
-    
-    // 화면 출력
     els.resMain.textContent = resText;
     els.resMain.style.color = resColor;
+    els.resMain.style.textShadow = `0 10px 30px rgba(0,0,0,0.8), 0 0 30px ${resColor}`;
     els.resSpd.textContent = `${spd} km/h - ${state.pitch.name}`;
     
     els.resMsg.classList.add('show');
-    
-    // 스코어보드 업데이트
     updateScore();
     
-    // 리셋
     setTimeout(() => {
         els.resMsg.classList.remove('show');
+        els.scene.classList.remove('shake');
         resetTurn();
-    }, 2000);
+    }, 2500);
 }
 
 function updateScore() {
     if (state.strikes >= 3) { state.outs++; state.strikes = 0; state.balls = 0; }
-    if (state.balls >= 4) { state.strikes = 0; state.balls = 0; /* 밀어내기는 생략 */ }
+    if (state.balls >= 4) { state.strikes = 0; state.balls = 0; }
     if (state.outs >= 3) { state.outs = 0; state.inning++; }
     
     document.getElementById('score-home').textContent = state.homeScore;
     document.getElementById('score-away').textContent = state.awayScore;
     document.getElementById('inning-val').textContent = state.inning;
     
-    // 점등
     for(let i=1; i<=3; i++) document.getElementById('b'+i).classList.toggle('lit', i <= state.balls);
     for(let i=1; i<=2; i++) document.getElementById('s'+i).classList.toggle('lit', i <= state.strikes);
     for(let i=1; i<=2; i++) document.getElementById('o'+i).classList.toggle('lit', i <= state.outs);
@@ -691,7 +635,7 @@ function resetTurn() {
     document.getElementById('info-type').textContent = '-';
     document.getElementById('info-speed').textContent = '000';
     document.getElementById('info-speed').style.color = '#f59e0b';
-    els.guide.textContent = "던질 구종을 선택하세요";
+    els.guide.textContent = "던질 구종을 선택하세요 ⚾";
 }
 
 </script>
