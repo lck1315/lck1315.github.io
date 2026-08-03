@@ -196,8 +196,20 @@ scene.add(fillLight);
 
 // 경기장 생성
 const texLoader = new THREE.TextureLoader();
-// 잔디 (전체 그라운드)
-const grassMat = new THREE.MeshLambertMaterial({ color: 0x3cb371 }); // 밝고 싱그러운 잔디색
+// 잔디 (전체 그라운드) - 절차적 텍스처(Procedural Texture)로 체커보드/스트라이프 패턴 생성
+const canvas = document.createElement('canvas');
+canvas.width = 512; canvas.height = 512;
+const ctx = canvas.getContext('2d');
+ctx.fillStyle = '#3cb371';
+ctx.fillRect(0, 0, 512, 512);
+ctx.fillStyle = '#34a062';
+for(let i=0; i<512; i+=64) ctx.fillRect(i, 0, 32, 512);
+const grassTex = new THREE.CanvasTexture(canvas);
+grassTex.wrapS = THREE.RepeatWrapping;
+grassTex.wrapT = THREE.RepeatWrapping;
+grassTex.repeat.set(20, 20); // 20번 반복하여 스트라이프 조밀하게
+
+const grassMat = new THREE.MeshLambertMaterial({ map: grassTex });
 const grass = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), grassMat);
 grass.rotation.x = -Math.PI / 2;
 grass.receiveShadow = true;
@@ -860,14 +872,12 @@ function update3DAnimations() {
         batter.torso.rotation.z = 0.05;
         batter.torso.rotation.x = 0.05;
         
-        // === 양손이 오른어깨 앞에서 함께 모여 배트를 쥠 ===
-        // 오른팔: 어깨에서 들어올리고 팔꿈치 굽혀서 배트를 어깨 뒤로
-        batter.rArm.rotation.set(-1.2, 0, 0.4);
+        // === 양손이 완벽하게 밀착되어 배트를 쥠 ===
+        batter.rArm.rotation.set(-1.1, 0.1, 0.5);
         batter.rArm.elbow.rotation.set(-2.0 + waggle, 0, 0);
         
-        // 왼팔: 오른팔 손잡이 위치로 모아서 함께 쥠
-        batter.lArm.rotation.set(-1.0, 0.5, -0.2);
-        batter.lArm.elbow.rotation.set(-2.0 + waggle, 0, 0);
+        batter.lArm.rotation.set(-1.1, 0.7, -0.3);
+        batter.lArm.elbow.rotation.set(-2.0 + waggle, 0.1, 0);
     } else if (G.ba === 'swing') {
         const t = Math.min(1, G.bf / 22);
         const t_ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
@@ -883,15 +893,15 @@ function update3DAnimations() {
         batter.rLeg.rotation.x = -0.2 + (0.2 * t_ease);
         batter.rLeg.knee.rotation.x = 0.4 + (0.3 * t_ease);
         
-        // === 양팔이 함께 스윙 ===
-        const armX = -1.2 + (1.6 * t_ease); // 뒤에서 앞으로
-        const elbowX = -2.0 + (1.8 * t_ease); // 팔꿈치 펴짐
+        // === 양팔이 자연스럽게 스윙 ===
+        const armX = -1.1 + (1.6 * t_ease);
+        const elbowX = -2.0 + (1.8 * t_ease);
         
-        batter.rArm.rotation.set(armX, 0, 0.4 - (0.8 * t_ease));
+        batter.rArm.rotation.set(armX, 0.1, 0.5 - (0.9 * t_ease));
         batter.rArm.elbow.rotation.set(elbowX, 0, 0);
         
-        batter.lArm.rotation.set(armX, 0.5 - (0.5 * t_ease), -0.2 + (0.2 * t_ease));
-        batter.lArm.elbow.rotation.set(elbowX, 0, 0);
+        batter.lArm.rotation.set(armX, 0.7 - (0.7 * t_ease), -0.3 + (0.3 * t_ease));
+        batter.lArm.elbow.rotation.set(elbowX, 0.1 - (0.1 * t_ease), 0);
     }
 
     // 공 궤적 연산
