@@ -299,73 +299,102 @@ function createHuman(isAway) {
     group.add(pelvis);
     group.pelvis = pelvis;
 
-    // 상체
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.7, 0.3), mat);
+    // 상체 (몸통)
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.3, 0.7, 16), mat);
     torso.position.y = 0.35;
     torso.castShadow = true;
     pelvis.add(torso);
     group.torso = torso;
 
-    // 머리
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.4, 0.35), skinMat);
-    head.position.y = 0.55;
+    // 목과 머리
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.15, 16), skinMat);
+    neck.position.y = 0.4;
+    torso.add(neck);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 32, 32), skinMat);
+    head.position.y = 0.15;
     head.castShadow = true;
-    torso.add(head);
+    neck.add(head);
     group.head = head;
     
     // 모자/헬멧
-    const hat = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.15, 0.36), mat);
-    hat.position.y = 0.25;
+    const hat = new THREE.Mesh(new THREE.SphereGeometry(0.23, 32, 16, 0, Math.PI*2, 0, Math.PI/2), mat);
+    hat.position.y = 0.05;
     head.add(hat);
-    const brim = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.05, 0.25), mat);
-    brim.position.set(0, -0.05, 0.3); // 앞쪽을 향함
+    const brim = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.25), mat);
+    brim.position.set(0, 0, 0.25); // 앞쪽을 향함
     hat.add(brim);
 
-    // 팔 생성 헬퍼 (상완 + 하완 + 팔꿈치)
+    // 팔 생성 헬퍼 (어깨 + 상완 + 팔꿈치 + 하완 + 손)
     function createArm(isLeft) {
         const armPivot = new THREE.Group();
-        armPivot.position.set(isLeft ? -0.38 : 0.38, 0.3, 0);
-        const upperArm = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.35, 0.18), skinMat);
-        upperArm.position.y = -0.15;
+        armPivot.position.set(isLeft ? -0.4 : 0.4, 0.25, 0);
+        
+        // 어깨 관절
+        const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), mat);
+        armPivot.add(shoulder);
+        
+        // 상완
+        const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.08, 0.35, 16), skinMat);
+        upperArm.position.y = -0.175;
         upperArm.castShadow = true;
         armPivot.add(upperArm);
         
+        // 팔꿈치 관절
         const elbow = new THREE.Group();
         elbow.position.y = -0.35;
+        const elbowJoint = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 16), skinMat);
+        elbow.add(elbowJoint);
         armPivot.add(elbow);
         armPivot.elbow = elbow;
         
-        const foreArm = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.35, 0.16), skinMat);
-        foreArm.position.y = -0.15;
+        // 하완
+        const foreArm = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.35, 16), skinMat);
+        foreArm.position.y = -0.175;
         foreArm.castShadow = true;
         elbow.add(foreArm);
+        
+        // 손
+        const hand = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 16), skinMat);
+        hand.position.y = -0.35;
+        elbow.add(hand);
+        
         return armPivot;
     }
     const lArm = createArm(true); torso.add(lArm); group.lArm = lArm;
     const rArm = createArm(false); torso.add(rArm); group.rArm = rArm;
 
-    // 다리 생성 헬퍼 (허벅지 + 종아리 + 무릎)
+    // 다리 생성 헬퍼 (골반조인트 + 허벅지 + 무릎 + 종아리 + 발)
     function createLeg(isLeft) {
         const legPivot = new THREE.Group();
         legPivot.position.set(isLeft ? -0.2 : 0.2, 0, 0);
         
-        const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.45, 0.22), pantsMat);
-        thigh.position.y = -0.2;
+        // 골반 관절
+        const hip = new THREE.Mesh(new THREE.SphereGeometry(0.15, 16, 16), pantsMat);
+        legPivot.add(hip);
+        
+        // 허벅지
+        const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.11, 0.45, 16), pantsMat);
+        thigh.position.y = -0.225;
         thigh.castShadow = true;
         legPivot.add(thigh);
         
+        // 무릎 관절
         const knee = new THREE.Group();
         knee.position.y = -0.45;
+        const kneeJoint = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), pantsMat);
+        knee.add(kneeJoint);
         legPivot.add(knee);
         legPivot.knee = knee;
         
-        const calf = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.45, 0.20), pantsMat);
-        calf.position.y = -0.2;
+        // 종아리
+        const calf = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.09, 0.45, 16), pantsMat);
+        calf.position.y = -0.225;
         calf.castShadow = true;
         knee.add(calf);
         
-        const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.15, 0.3), shoeMat);
-        shoe.position.set(0, -0.45, 0.05);
+        // 신발(발)
+        const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.15, 0.28), shoeMat);
+        shoe.position.set(0, -0.48, 0.05);
         knee.add(shoe);
         
         return legPivot;
@@ -560,21 +589,24 @@ function update3DAnimations() {
         batter.rArm.elbow.rotation.x = -1.5;
         batter.rArm.rotation.z = Math.PI/4;
     } else if (G.ba === 'swing') {
-        const t = Math.min(1, G.bf / 18); // 스윙을 18 프레임에 걸쳐 묵직하게 진행
-        batter.pelvis.rotation.y = -Math.PI * 0.4 * t; // 골반 회전
-        batter.torso.rotation.y = -Math.PI * 0.6 * t; // 몸통 강하게 회전
+        // 자연스러운 스윙 애니메이션 (Easing: EaseInOutQuad 사용)
+        const t = Math.min(1, G.bf / 22); // 프레임을 22로 하여 여유있게 진행
+        const t_ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // 서서히 시작해서 임팩트 때 빠르게, 이후 부드럽게 감속
+        
+        batter.pelvis.rotation.y = -Math.PI * 0.4 * t_ease; // 골반 회전
+        batter.torso.rotation.y = -Math.PI * 0.6 * t_ease; // 몸통 강하게 회전
         
         // 하체 중심 이동 (앞다리는 펴고 뒷다리는 굽힘)
-        batter.lLeg.rotation.x = -0.2 - (0.2 * t);
-        batter.lLeg.knee.rotation.x = 0.4 * (1 - t); 
-        batter.rLeg.rotation.x = -0.2 + (0.2 * t);
-        batter.rLeg.knee.rotation.x = 0.4 + (0.2 * t);
+        batter.lLeg.rotation.x = -0.2 - (0.2 * t_ease);
+        batter.lLeg.knee.rotation.x = 0.4 * (1 - t_ease); 
+        batter.rLeg.rotation.x = -0.2 + (0.2 * t_ease);
+        batter.rLeg.knee.rotation.x = 0.4 + (0.3 * t_ease);
         
         // 팔꿈치가 펴지면서 팔을 뻗는 스윙 로직
-        batter.lArm.rotation.x = 0.2 - (Math.PI/1.8 * t);
-        batter.lArm.elbow.rotation.x = -1.2 * (1 - t);
-        batter.rArm.rotation.x = 0.2 - (Math.PI/1.8 * t);
-        batter.rArm.elbow.rotation.x = -1.5 * (1 - t);
+        batter.lArm.rotation.x = 0.2 - (Math.PI/1.8 * t_ease);
+        batter.lArm.elbow.rotation.x = -1.2 * (1 - t_ease);
+        batter.rArm.rotation.x = 0.2 - (Math.PI/1.8 * t_ease);
+        batter.rArm.elbow.rotation.x = -1.5 * (1 - t_ease);
     }
 
     // 공 궤적 연산
@@ -669,7 +701,7 @@ function loop() {
     else if (G.pa === 'throw') { G.pf += 0.4; if (G.pf > 6) { G.pa = 'follow'; G.pf = 0; } }
     else if (G.pa === 'follow') { G.pf += 0.1; if (G.pf > 3) { G.pa = 'idle'; G.pf = 0; } }
     
-    if (G.ba === 'swing') { G.bf += 0.7; if (G.bf > 26) { G.ba = 'ready'; G.bf = 0; } }
+    if (G.ba === 'swing') { G.bf += 0.5; if (G.bf > 30) { G.ba = 'ready'; G.bf = 0; } } // 완전히 감속하고 길게 유지
     
     if (G.ph === 'PITCH_TIMING') { G.tgs -= 2.2; if (G.tgs < 12) G.tgs = 110; }
 
