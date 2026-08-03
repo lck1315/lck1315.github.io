@@ -534,20 +534,26 @@ const G = {
   tgs: 120, shk: 0
 };
 
-// 스트라이크 존 2D 투영 영역 (카메라가 고정이므로 높이 H를 기준으로 비율 고정)
+// 스트라이크 존 크기 (화면 높이 비례)
 const VIEW = {
   zone: { 
     w: () => H * 0.18, 
-    h: () => H * 0.24,
-    x: () => W * 0.5 - (H * 0.09), 
-    y: () => H * 0.55 - (H * 0.12)
+    h: () => H * 0.24
   }
 };
 
 function getZone() {
+  // 실제 3D 홈플레이트 위 스트라이크 존 중심점(0, 1.05, 0)을 2D 화면으로 투영
+  const target = new THREE.Vector3(0, 1.05, 0);
+  target.project(camera);
+  
+  const cx = (target.x * 0.5 + 0.5) * W;
+  const cy = (-(target.y) * 0.5 + 0.5) * H;
+  
   const w = VIEW.zone.w(), h = VIEW.zone.h();
-  const x = VIEW.zone.x(), y = VIEW.zone.y();
-  return { x, y, w, h, cx: x + w / 2, cy: y + h / 2 };
+  const x = cx - w / 2;
+  const y = cy - h / 2;
+  return { x, y, w, h, cx, cy };
 }
 
 // ═══════════════════════════════════════════
@@ -695,11 +701,19 @@ function renderOverlay() {
     }
     
     // 타이밍 링
-    if (G.ph === 'PITCH_TIMING') {
+    if (G.ph === 'PITCH_TIMING' || G.ph === 'PITCH_WINDUP') {
         const gx = W * 0.5, gy = H * 0.4;
         X.strokeStyle = '#22c55e'; X.lineWidth = 3.5; X.beginPath(); X.arc(gx, gy, 32, 0, Math.PI * 2); X.stroke();
         X.strokeStyle = '#fff'; X.lineWidth = 4; X.beginPath(); X.arc(gx, gy, G.tgs, 0, Math.PI * 2); X.stroke();
-        X.fillStyle = '#fff'; X.font = 'bold 16px "Noto Sans KR"'; X.textAlign = 'center'; X.fillText('초록 원에 맞춰 클릭!', gx, gy - G.tgs - 20);
+        
+        if (G.ph === 'PITCH_TIMING') {
+            X.fillStyle = '#fff'; X.font = 'bold 16px "Noto Sans KR"'; X.textAlign = 'center'; X.fillText('초록 원에 맞춰 클릭!', gx, gy - G.tgs - 20);
+        } else if (G.ph === 'PITCH_WINDUP') {
+            const d = G.tgs_result;
+            const fbText = d<8 ? 'PERFECT!' : d<25 ? 'GOOD!' : 'BAD...';
+            const fbColor = d<8 ? '#f59e0b' : d<25 ? '#22c55e' : '#ef4444';
+            X.fillStyle = fbColor; X.font = 'bold 24px "Noto Sans KR"'; X.textAlign = 'center'; X.fillText(fbText, gx, gy - 50);
+        }
     }
 
     // 미니맵 업데이트
@@ -820,7 +834,9 @@ C.addEventListener('pointerdown',e=>{
     G.ph='PITCH_TIMING';G.tgs=110;document.getElementById('gd').textContent='⏱️ 초록 원에 맞춰 클릭!';
   }else if(G.ph==='PITCH_TIMING'){
     const d=Math.abs(G.tgs-32);G.ts=d<8?1:d<25?0.6:0.2;document.getElementById('gd').textContent='';
-    G.cnt++;G.pa='windup';G.pf=0;setTimeout(()=>fire(false),500);
+    G.ph='PITCH_WINDUP';
+    G.tgs_result=d;
+    G.cnt++;G.pa='windup';G.pf=0;setTimeout(()=>fire(false),700);
   }else if(G.ph==='BAT_READY'||G.ph==='BALL_FLY'){
     if(!G.bl.a)return;G.ba='swing';G.bf=0;
     
