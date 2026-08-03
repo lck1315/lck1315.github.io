@@ -153,8 +153,8 @@ canvas{display:block;position:absolute;top:0;left:0}
 // 1. THREE.JS 3D SCENE SETUP
 // ═══════════════════════════════════════════
 const scene = new THREE.Scene();
-scene.background = new THREE.Color('#87CEEB'); // 밝은 낮 하늘
-scene.fog = new THREE.FogExp2('#87CEEB', 0.007); // 밝은 안개
+scene.background = new THREE.Color('#6CB4EE'); // 화창한 낮 하늘
+scene.fog = new THREE.FogExp2('#6CB4EE', 0.004); // 멀리까지 보이게 안개 약하게
 
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 // 컴투스 프로야구 숄더뷰 스타일: 공격수(타자) 뒤쪽 포수 위치에서 투수를 바라봄
@@ -171,15 +171,28 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping; // 영화 같은 사실적�
 renderer.outputEncoding = THREE.sRGBEncoding; // 정확한 색상 출력
 document.getElementById('game-container').appendChild(renderer.domElement);
 
-const ambLight = new THREE.AmbientLight(0xffffff, 0.7); // 밝고 자연스러운 환경광
+const ambLight = new THREE.AmbientLight(0xffffff, 0.4);
 scene.add(ambLight);
 
-const dirLight = new THREE.DirectionalLight(0xffffff, 1.2); // 밝은 태양광
-dirLight.position.set(20, 50, 20);
+// 하늘-땅 그라데이션 조명 (위에서는 하늘색, 아래에서는 잔디색 반사)
+const hemiLight = new THREE.HemisphereLight(0x87CEEB, 0x3cb371, 0.6);
+scene.add(hemiLight);
+
+const dirLight = new THREE.DirectionalLight(0xfffaf0, 1.4); // 따뜻한 태양광
+dirLight.position.set(30, 60, 25);
 dirLight.castShadow = true;
 dirLight.shadow.mapSize.width = 2048;
 dirLight.shadow.mapSize.height = 2048;
+dirLight.shadow.camera.left = -50;
+dirLight.shadow.camera.right = 50;
+dirLight.shadow.camera.top = 50;
+dirLight.shadow.camera.bottom = -50;
 scene.add(dirLight);
+
+// 역광 (반대쪽에서 은은하게 비춰 어두운 부분 완화)
+const fillLight = new THREE.DirectionalLight(0xb0d4f1, 0.3);
+fillLight.position.set(-20, 30, -20);
+scene.add(fillLight);
 
 // 경기장 생성
 const texLoader = new THREE.TextureLoader();
@@ -213,12 +226,17 @@ rightLine.position.set(42, 0.02, -42);
 scene.add(rightLine);
 
 // 흙 (마운드, 홈)
-const dirtMat = new THREE.MeshLambertMaterial({ color: 0xcd853f }); // 마운드/홈 밝은 흙색
+const dirtMat = new THREE.MeshLambertMaterial({ color: 0xcd853f });
 const mound = new THREE.Mesh(new THREE.CircleGeometry(3, 32), dirtMat);
 mound.rotation.x = -Math.PI / 2;
 mound.position.set(0, 0.02, -18.5);
 mound.receiveShadow = true;
 scene.add(mound);
+
+// 마운드 구르마 (높이 0.25m 실제 구디 높이)
+const moundHill = new THREE.Mesh(new THREE.ConeGeometry(3, 0.25, 32), new THREE.MeshLambertMaterial({ color: 0xcd853f }));
+moundHill.position.set(0, 0.12, -18.5);
+scene.add(moundHill);
 
 const homeArea = new THREE.Mesh(new THREE.CircleGeometry(4, 32), dirtMat);
 homeArea.rotation.x = -Math.PI / 2;
@@ -265,10 +283,17 @@ scene.add(fence);
 
 // 관중석 (외야 펜스 뒤)
 const standGeo = new THREE.CylinderGeometry(120, 100, 30, 64, 1, true, Math.PI, Math.PI);
-const standMat = new THREE.MeshLambertMaterial({ color: 0x1e3a8a, side: THREE.DoubleSide });
+const standMat = new THREE.MeshLambertMaterial({ color: 0x2d4a7a, side: THREE.DoubleSide });
 const stand = new THREE.Mesh(standGeo, standMat);
 stand.position.set(0, 15, 0);
 scene.add(stand);
+
+// 백스크린 (투수 뒤쪽 검정 벽 - 공 시인성 향상)
+const backscreenGeo = new THREE.PlaneGeometry(12, 10);
+const backscreenMat = new THREE.MeshLambertMaterial({ color: 0x0a2e14 });
+const backscreen = new THREE.Mesh(backscreenGeo, backscreenMat);
+backscreen.position.set(0, 10, -95);
+scene.add(backscreen);
 
 // 진짜 사람 같은 관중 (InstancedMesh 사용)
 const spectatorGeo = new THREE.BoxGeometry(0.8, 1.2, 0.8); 
@@ -783,9 +808,9 @@ function loop() {
     // 화면 쉐이크
     if (G.shk > 0) {
         camera.position.x = 0 + (Math.random() - 0.5) * G.shk * 0.1;
-        camera.position.y = 1.5 + (Math.random() - 0.5) * G.shk * 0.1;
+        camera.position.y = 1.8 + (Math.random() - 0.5) * G.shk * 0.1;
         G.shk *= 0.9;
-        if (G.shk < 0.1) { G.shk = 0; camera.position.set(0, 1.5, 0.5); }
+        if (G.shk < 0.1) { G.shk = 0; camera.position.set(0, 1.8, 4.0); }
     }
 
     renderer.render(scene, camera);
@@ -818,6 +843,8 @@ function showI(cb){
   document.getElementById('im').style.color=d?'#ef4444':'#3b82f6';
   document.getElementById('iv').textContent=d?'상대 타자를 잡아내세요!':'AI 투수를 공략하세요!';
   document.getElementById('pn').textContent=d?'DODO 에이스':'AI 투수';
+  document.getElementById('role-badge').textContent=d?'🎨 현재 플레이어: 투수':'🎨 현재 플레이어: 타자';
+  document.getElementById('role-badge').style.background=d?'rgba(220,38,38,0.9)':'rgba(37,99,235,0.9)';
   e.classList.add('show');setTimeout(()=>{e.classList.remove('show');if(cb)cb();},2000);
 }
 
