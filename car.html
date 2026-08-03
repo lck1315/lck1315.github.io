@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DODO Racing | 3D 자동차 레이싱</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none}
+body{background:#050510;color:#e2e8f0;font-family:'Outfit',sans-serif;overflow:hidden;margin:0}
+#ui-layer{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;display:flex;flex-direction:column;padding:20px;z-index:10}
+h1{font-family:'Orbitron',sans-serif;font-size:2rem;font-weight:900;background:linear-gradient(135deg,#06b6d4,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 0 20px rgba(236,72,153,0.5)}
+.top-bar{display:flex;justify-content:space-between;align-items:flex-start}
+.score-board{background:rgba(10,10,20,0.8);border:1px solid rgba(6,182,212,0.5);border-radius:12px;padding:12px 24px;text-align:right;box-shadow:0 0 20px rgba(6,182,212,0.2);backdrop-filter:blur(5px)}
+.score-board .label{font-size:0.8rem;color:#06b6d4;letter-spacing:2px;font-family:'Orbitron',sans-serif}
+.score-board .val{font-size:2rem;font-weight:900;color:#fff;font-family:'Orbitron',sans-serif;text-shadow:0 0 10px #06b6d4}
+#overlay{position:fixed;inset:0;background:rgba(5,5,16,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;pointer-events:auto;backdrop-filter:blur(8px)}
+#overlay h2{font-family:'Orbitron',sans-serif;font-size:4rem;color:#ec4899;text-shadow:0 0 30px rgba(236,72,153,0.8);margin-bottom:10px}
+#overlay p{color:#94a3b8;margin:12px 0 30px;font-size:1.5rem}
+.btn{padding:16px 40px;font-size:1.2rem;font-weight:900;font-family:'Orbitron',sans-serif;border:none;border-radius:30px;cursor:pointer;transition:all 0.2s;background:linear-gradient(135deg,#ec4899,#8b5cf6);color:#fff;box-shadow:0 0 20px rgba(236,72,153,0.6);text-transform:uppercase;letter-spacing:2px}
+.btn:hover{transform:scale(1.05);box-shadow:0 0 30px rgba(236,72,153,0.9)}
+#game-container{position:absolute;top:0;left:0;width:100%;height:100%;z-index:1}
+.touch-zone{position:absolute;top:0;bottom:0;width:50%;z-index:5;pointer-events:auto}
+#touch-left{left:0} #touch-right{right:0}
+</style>
+</head>
+<body>
+<div id="game-container"></div>
+<div class="touch-zone" id="touch-left"></div>
+<div class="touch-zone" id="touch-right"></div>
+<div id="ui-layer">
+    <div class="top-bar">
+        <h1>DODO RACING</h1>
+        <div class="score-board">
+            <div class="label">SCORE</div>
+            <div class="val" id="score">0</div>
+        </div>
+    </div>
+</div>
+<div id="overlay">
+    <h2>CYBER DRIVE</h2>
+    <p>사이버펑크 무한 질주 레이싱</p>
+    <button class="btn" onclick="startGame()">START GAME</button>
+</div>
+
+<script>
+let score = 0, playing = false, speed = 1.0;
+let obstacles = [], particles = [];
+let carX = 0, targetCarX = 0;
+let clock = new THREE.Clock();
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x050510, 0.015);
+
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 300);
+camera.position.set(0, 5, 12);
+camera.lookAt(0, 2, 0);
+
+const renderer = new THREE.WebGLRenderer({antialias:true, alpha:false});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x050510);
+document.getElementById('game-container').appendChild(renderer.domElement);
+
+// 조명 (사이버펑크 네온 느낌)
+const ambLight = new THREE.AmbientLight(0xffffff, 0.2);
+scene.add(ambLight);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+dirLight.position.set(10, 20, 10);
+scene.add(dirLight);
+
+const pinkLight = new THREE.PointLight(0xec4899, 2, 50);
+pinkLight.position.set(-10, 5, 0);
+scene.add(pinkLight);
+
+const cyanLight = new THREE.PointLight(0x06b6d4, 2, 50);
+cyanLight.position.set(10, 5, 0);
+scene.add(cyanLight);
+
+// 바닥 (그리드 와이어프레임)
+const gridHelper = new THREE.GridHelper(200, 50, 0xec4899, 0x8b5cf6);
+gridHelper.position.y = -0.01;
+scene.add(gridHelper);
+
+const plane = new THREE.Mesh(
+    new THREE.PlaneGeometry(200, 200),
+    new THREE.MeshBasicMaterial({color: 0x050510})
+);
+plane.rotation.x = -Math.PI / 2;
+scene.add(plane);
+
+// 플레이어 자동차 생성
+const carGroup = new THREE.Group();
+scene.add(carGroup);
+
+// 차체
+const bodyMat = new THREE.MeshStandardMaterial({color: 0x111111, metalness: 0.8, roughness: 0.2});
+const body = new THREE.Mesh(new THREE.BoxGeometry(2, 0.6, 4), bodyMat);
+body.position.y = 0.5;
+carGroup.add(body);
+
+// 탑승구(캐빈)
+const glassMat = new THREE.MeshStandardMaterial({color: 0x06b6d4, metalness: 0.9, roughness: 0.1, transparent: true, opacity: 0.8});
+const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 2), glassMat);
+cabin.position.set(0, 1.05, -0.2);
+carGroup.add(cabin);
+
+// 네온 트림
+const trimMat = new THREE.MeshBasicMaterial({color: 0xec4899});
+const trim1 = new THREE.Mesh(new THREE.BoxGeometry(2.05, 0.1, 4.05), trimMat);
+trim1.position.y = 0.3;
+carGroup.add(trim1);
+
+// 바퀴
+const wheelMat = new THREE.MeshStandardMaterial({color: 0x222222, metalness:0.3, roughness:0.8});
+const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 16);
+wheelGeo.rotateZ(Math.PI/2);
+const wheels = [];
+const wPos = [[1.1, -1.2], [-1.1, -1.2], [1.1, 1.2], [-1.1, 1.2]];
+wPos.forEach(p => {
+    const w = new THREE.Mesh(wheelGeo, wheelMat);
+    w.position.set(p[0], 0.4, p[1]);
+    carGroup.add(w);
+    wheels.push(w);
+});
+
+// 장애물 생성 함수
+const obsMat1 = new THREE.MeshStandardMaterial({color: 0xef4444, metalness:0.6, roughness:0.3, emissive: 0xef4444, emissiveIntensity: 0.2});
+const obsMat2 = new THREE.MeshStandardMaterial({color: 0xeab308, metalness:0.6, roughness:0.3});
+
+function spawnObstacle() {
+    if(!playing) return;
+    const type = Math.random() > 0.5 ? 1 : 2;
+    const obs = new THREE.Mesh(
+        new THREE.BoxGeometry(2, type===1?1.5:2.5, 2),
+        type===1 ? obsMat1 : obsMat2
+    );
+    // 도로 범위: -6 ~ +6
+    const lane = (Math.floor(Math.random() * 3) - 1) * 4; // -4, 0, 4
+    obs.position.set(lane + (Math.random()*2-1), type===1?0.75:1.25, -100);
+    scene.add(obs);
+    
+    // 네온 테두리
+    const edges = new THREE.EdgesGeometry(obs.geometry);
+    const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({color: type===1?0xff0000:0xffff00}));
+    obs.add(line);
+    
+    obstacles.push(obs);
+}
+
+// 이펙트 (별/먼지)
+const pGeo = new THREE.BufferGeometry();
+const pPos = [];
+for(let i=0; i<300; i++){
+    pPos.push((Math.random()-0.5)*100, Math.random()*20, -Math.random()*100);
+}
+pGeo.setAttribute('position', new THREE.Float32BufferAttribute(pPos, 3));
+const pMat = new THREE.PointsMaterial({color: 0x06b6d4, size: 0.3, transparent: true, opacity: 0.6});
+const pSys = new THREE.Points(pGeo, pMat);
+scene.add(pSys);
+
+// 컨트롤
+let keys = { ArrowLeft: false, ArrowRight: false, a: false, d: false };
+window.addEventListener('keydown', e => { if(keys.hasOwnProperty(e.key)) keys[e.key] = true; });
+window.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.key)) keys[e.key] = false; });
+
+const tl = document.getElementById('touch-left');
+const tr = document.getElementById('touch-right');
+tl.addEventListener('touchstart', (e)=>{e.preventDefault(); keys.ArrowLeft = true;});
+tl.addEventListener('touchend', (e)=>{e.preventDefault(); keys.ArrowLeft = false;});
+tr.addEventListener('touchstart', (e)=>{e.preventDefault(); keys.ArrowRight = true;});
+tr.addEventListener('touchend', (e)=>{e.preventDefault(); keys.ArrowRight = false;});
+
+function startGame() {
+    document.getElementById('overlay').style.display = 'none';
+    obstacles.forEach(o => scene.remove(o));
+    obstacles = [];
+    score = 0;
+    speed = 1.0;
+    carX = 0;
+    targetCarX = 0;
+    carGroup.position.x = 0;
+    document.getElementById('score').textContent = '0';
+    playing = true;
+}
+
+function gameOver() {
+    playing = false;
+    document.getElementById('overlay').style.display = 'flex';
+    document.getElementById('overlay').querySelector('h2').textContent = 'CRASHED!';
+    document.getElementById('overlay').querySelector('h2').style.color = '#ef4444';
+    document.getElementById('overlay').querySelector('h2').style.textShadow = '0 0 30px rgba(239,68,68,0.8)';
+    document.getElementById('overlay').querySelector('p').textContent = 'FINAL SCORE: ' + Math.floor(score);
+    document.getElementById('overlay').querySelector('.btn').textContent = 'RESTART';
+}
+
+// 메인 루프
+let spawnTimer = 0;
+function animate() {
+    requestAnimationFrame(animate);
+    const dt = Math.min(clock.getDelta(), 0.1);
+    
+    if (playing) {
+        // 컨트롤 업데이트
+        if (keys.ArrowLeft || keys.a) targetCarX -= 25 * dt;
+        if (keys.ArrowRight || keys.d) targetCarX += 25 * dt;
+        targetCarX = Math.max(-7, Math.min(7, targetCarX)); // 도로 이탈 방지
+        
+        carX += (targetCarX - carX) * 10 * dt; // 부드러운 이동 (Lerp)
+        carGroup.position.x = carX;
+        
+        // 차체 기울어짐 (Roll)
+        carGroup.rotation.z = -(targetCarX - carX) * 0.1;
+        // 바퀴 회전
+        wheels.forEach(w => w.rotation.x -= 20 * speed * dt);
+        
+        // 속도 증가 및 점수
+        speed += dt * 0.02; 
+        score += speed * dt * 10;
+        document.getElementById('score').textContent = Math.floor(score);
+        
+        // 장애물 이동 및 충돌 체크
+        spawnTimer -= dt;
+        if(spawnTimer <= 0) {
+            spawnObstacle();
+            spawnTimer = (0.5 + Math.random()*1.0) / speed;
+        }
+        
+        const carBox = new THREE.Box3().setFromObject(carGroup);
+        // Hitbox 축소 (관대하게)
+        carBox.expandByScalar(-0.4);
+        
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+            const obs = obstacles[i];
+            obs.position.z += 40 * speed * dt;
+            
+            if (obs.position.z > 20) {
+                scene.remove(obs);
+                obstacles.splice(i, 1);
+                continue;
+            }
+            
+            const obsBox = new THREE.Box3().setFromObject(obs);
+            if (carBox.intersectsBox(obsBox)) {
+                gameOver();
+            }
+        }
+        
+        // 그리드 움직임 (바닥 이동 효과)
+        gridHelper.position.z += 40 * speed * dt;
+        if (gridHelper.position.z > 50) gridHelper.position.z -= 50;
+        
+        // 파티클 이동
+        const pos = pGeo.attributes.position.array;
+        for(let i=2; i<pos.length; i+=3) {
+            pos[i] += 40 * speed * dt;
+            if(pos[i] > 10) pos[i] -= 100;
+        }
+        pGeo.attributes.position.needsUpdate = true;
+    }
+    
+    renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+animate();
+</script>
+</body>
+</html>
