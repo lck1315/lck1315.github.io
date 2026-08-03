@@ -347,8 +347,7 @@ function syncBoardTo3D() {
       
       // Update square materials based on selection
       const sq = squares.find(s => s.userData.r === r && s.userData.c === c);
-      const isLight = (r+c)%2 === 0;
-      sq.material = isLight ? matWhiteSq : matBlackSq;
+      sq.material = matTransparent;
       
       if(selected && selected[0]===r && selected[1]===c) {
         sq.material = matSelected;
