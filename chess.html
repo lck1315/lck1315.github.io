@@ -179,7 +179,7 @@ const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x1e293b, 0.02);
 
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 100);
-camera.position.set(0, 12, 14);
+camera.position.set(0, 16, 10); // 각도를 위로 올려서 체스판이 잘 보이게 함
 
 const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -190,7 +190,7 @@ document.getElementById('game-container').appendChild(renderer.domElement);
 
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.maxPolarAngle = Math.PI/2 - 0.1; // 바닥 밑으로 안가게
+controls.maxPolarAngle = Math.PI/2.5; // 너무 아래로 내려가지 않도록 제한 (약 72도)
 controls.minDistance = 5;
 controls.maxDistance = 25;
 
@@ -225,29 +225,23 @@ const matSelected = new THREE.MeshStandardMaterial({color: 0xf59e0b, metalness: 
 const matPieceW = new THREE.MeshStandardMaterial({color: 0xffffff, metalness: 0.1, roughness: 0.2}); // Ivory
 const matPieceB = new THREE.MeshStandardMaterial({color: 0x222222, metalness: 0.2, roughness: 0.2}); // Ebony
 
+// 고급스러운 체스판 재질
+const matWhiteSq = new THREE.MeshStandardMaterial({color: 0xf0d9b5, metalness: 0.1, roughness: 0.8});
+const matBlackSq = new THREE.MeshStandardMaterial({color: 0xb58863, metalness: 0.1, roughness: 0.8});
+
 const boardGroup = new THREE.Group();
 scene.add(boardGroup);
 
-// Seamless Visual Board
-const boardCanvas = document.createElement('canvas');
-boardCanvas.width = 1024; boardCanvas.height = 1024;
-const bctx = boardCanvas.getContext('2d');
+// 확실하게 눈에 보이는 64개의 개별 박스 타일로 체스판 구성
 for(let r=0; r<8; r++){
   for(let c=0; c<8; c++){
-    bctx.fillStyle = (r+c)%2===0 ? '#f0d9b5' : '#b58863';
-    bctx.fillRect(c*128, r*128, 128, 128);
+    const isLight = (r+c)%2===0;
+    const tile = new THREE.Mesh(new THREE.BoxGeometry(1, 0.2, 1), isLight ? matWhiteSq : matBlackSq);
+    tile.position.set(c - 3.5, -0.1, r - 3.5); // 윗면이 y=0이 되도록
+    tile.receiveShadow = true;
+    boardGroup.add(tile);
   }
 }
-const boardTex = new THREE.CanvasTexture(boardCanvas);
-boardTex.anisotropy = 4; // Sharp textures
-boardTex.needsUpdate = true;
-const visualBoard = new THREE.Mesh(
-    new THREE.BoxGeometry(8, 0.2, 8), 
-    new THREE.MeshStandardMaterial({map: boardTex, color: 0xffffff, metalness: 0.1, roughness: 0.8})
-);
-visualBoard.position.y = -0.1;
-visualBoard.receiveShadow = true;
-boardGroup.add(visualBoard);
 
 const squares = [];
 for(let r=0; r<8; r++) {
