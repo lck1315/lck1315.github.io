@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DODO Janggi | 전통 장기</title>
+    <meta name="description" content="DODO.game - 고품격 웹 장기 게임">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Noto+Serif+KR:wght@400;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #111;
+            color: #fff;
+            font-family: 'Outfit', 'Noto Sans KR', sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .header {
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.5);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: 1.5rem;
+            color: #fff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logo span { background: linear-gradient(135deg, #22c55e, #14b8a6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        .game-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .turn-indicator {
+            padding: 8px 20px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.1);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .turn-color { width: 16px; height: 16px; border-radius: 50%; }
+        .turn-color.han { background: #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.5); }
+        .turn-color.cho { background: #3b82f6; box-shadow: 0 0 10px rgba(59,130,246,0.5); }
+
+        .btn {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: bold;
+        }
+        .btn:hover { background: rgba(255,255,255,0.2); }
+        .btn.primary { background: linear-gradient(135deg, #10b981, #059669); border: none; }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            background: radial-gradient(circle at center, #2a2318 0%, #0d0b08 100%);
+        }
+
+        /* 장기판 컨테이너 */
+        #board-container {
+            position: relative;
+            width: 540px; /* 9줄 * 60px */
+            height: 600px; /* 10줄 * 60px */
+            background: #d4a373; /* 나무색 */
+            border: 12px solid #5c4033; /* 짙은 나무 테두리 */
+            border-radius: 8px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.3);
+            /* 나뭇결 느낌 배경 */
+            background-image: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(0,0,0,0.03) 10px,
+                rgba(0,0,0,0.03) 20px
+            );
+        }
+
+        /* 그리드 선 (배경 캔버스로 처리하거나 SVG로 처리) */
+        #board-lines {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+        }
+
+        /* 기물(Piece) 스타일 */
+        .piece {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            transform: translate(-50%, -50%);
+            border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%; /* 팔각형/타원 느낌 흉내 */
+            background: #fef08a; /* 상아/나무 색 */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5), inset -2px -4px 6px rgba(0,0,0,0.2), inset 2px 2px 4px rgba(255,255,255,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Noto Serif KR', serif;
+            font-weight: 900;
+            cursor: pointer;
+            user-select: none;
+            transition: top 0.2s, left 0.2s, transform 0.1s;
+            z-index: 10;
+        }
+        
+        /* 8각형을 CSS 클리핑으로 제대로 구현 */
+        .piece {
+            clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+            border-radius: 0;
+        }
+
+        .piece.large { width: 56px; height: 56px; font-size: 26px; }
+        .piece.medium { width: 50px; height: 50px; font-size: 22px; }
+        .piece.small { width: 44px; height: 44px; font-size: 18px; }
+
+        .piece.han { color: #dc2626; text-shadow: 1px 1px 0px rgba(255,255,255,0.5); } /* 한나라(빨강) */
+        .piece.cho { color: #16a34a; text-shadow: 1px 1px 0px rgba(255,255,255,0.5); } /* 초나라(초록/파랑) */
+
+        .piece:hover {
+            filter: brightness(1.1);
+            z-index: 20;
+        }
+        .piece.selected {
+            box-shadow: 0 0 15px #fde047, inset -2px -4px 6px rgba(0,0,0,0.2);
+            transform: translate(-50%, -50%) scale(1.1);
+            z-index: 20;
+        }
+
+        /* 이동 가능 표시 (점) */
+        .move-hint {
+            position: absolute;
+            width: 16px; height: 16px;
+            background: rgba(34, 197, 94, 0.7);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            z-index: 5;
+            box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+        }
+        .move-hint.capture {
+            background: rgba(239, 68, 68, 0.7);
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+            width: 54px; height: 54px; /* 테두리 형태로 표시 */
+            background: transparent;
+            border: 4px solid rgba(239, 68, 68, 0.8);
+        }
+
+        #result-modal {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background: rgba(20,15,10,0.95);
+            border: 1px solid rgba(34,197,94,0.3);
+            border-radius: 24px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            backdrop-filter: blur(15px);
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: 0.3s;
+        }
+        #result-modal.show { opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(1); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <a href="game.html" class="logo">
+            <i class="fa-solid fa-gamepad"></i> DODO <span>Janggi</span>
+        </a>
+        <div class="game-info">
+            <div class="turn-indicator">
+                <div id="turn-color" class="turn-color cho"></div>
+                <span id="turn-text">초(楚) 차례</span>
+            </div>
+            <button class="btn primary" onclick="resetGame()"><i class="fa-solid fa-rotate-right"></i> 새 게임</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div id="board-container">
+            <!-- SVG로 판선 그리기 -->
+            <svg id="board-lines" xmlns="http://www.w3.org/2000/svg">
+                <!-- Javascript로 동적 생성 -->
+            </svg>
+            <div id="pieces-container"></div>
+            <div id="hints-container"></div>
+        </div>
+    </div>
+
+    <div id="result-modal">
+        <h2 id="result-title" style="font-size: 2.5rem; color: #4ade80; margin-bottom:10px;">초(楚) 승리!</h2>
+        <p id="result-desc" style="color: #94a3b8; margin-bottom:30px;">외통수입니다.</p>
+        <button class="btn primary" onclick="resetGame()">다시 플레이</button>
+    </div>
+
+    <script>
+        const COLS = 9;
+        const ROWS = 10;
+        const CELL_SIZE = 60; // 540 / 9
+        const OFFSET_X = 30;  // 첫 줄 여백 (60의 절반)
+        const OFFSET_Y = 30;
+
+        // 기물 정의
+        const TYPE = { KUNG: '궁', CHA: '차', PO: '포', MA: '마', SANG: '상', SA: '사', JOL: '졸' };
+        const COLOR = { CHO: 'cho', HAN: 'han' };
+
+        let board = []; // 10x9 2차원 배열. 기물 객체 저장
+        let currentTurn = COLOR.CHO; // 초(파랑/초록) 선공
+        let selectedPiece = null;
+        let isGameOver = false;
+
+        function initBoard() {
+            // 판 선 그리기 (SVG)
+            const svg = document.getElementById('board-lines');
+            let svgContent = '';
+            
+            // 가로선 10개
+            for(let r=0; r<ROWS; r++) {
+                svgContent += `<line x1="${OFFSET_X}" y1="${OFFSET_Y + r*CELL_SIZE}" x2="${OFFSET_X + 8*CELL_SIZE}" y2="${OFFSET_Y + r*CELL_SIZE}" stroke="#3e2723" stroke-width="2"/>`;
+            }
+            // 세로선 9개
+            for(let c=0; c<COLS; c++) {
+                svgContent += `<line x1="${OFFSET_X + c*CELL_SIZE}" y1="${OFFSET_Y}" x2="${OFFSET_X + c*CELL_SIZE}" y2="${OFFSET_Y + 9*CELL_SIZE}" stroke="#3e2723" stroke-width="2"/>`;
+            }
+            
+            // 궁성 X표시 (한)
+            svgContent += `<line x1="${OFFSET_X + 3*CELL_SIZE}" y1="${OFFSET_Y}" x2="${OFFSET_X + 5*CELL_SIZE}" y2="${OFFSET_Y + 2*CELL_SIZE}" stroke="#3e2723" stroke-width="2"/>`;
+            svgContent += `<line x1="${OFFSET_X + 5*CELL_SIZE}" y1="${OFFSET_Y}" x2="${OFFSET_X + 3*CELL_SIZE}" y2="${OFFSET_Y + 2*CELL_SIZE}" stroke="#3e2723" stroke-width="2"/>`;
+            
+            // 궁성 X표시 (초)
+            svgContent += `<line x1="${OFFSET_X + 3*CELL_SIZE}" y1="${OFFSET_Y + 7*CELL_SIZE}" x2="${OFFSET_X + 5*CELL_SIZE}" y2="${OFFSET_Y + 9*CELL_SIZE}" stroke="#3e2723" stroke-width="2"/>`;
+            svgContent += `<line x1="${OFFSET_X + 5*CELL_SIZE}" y1="${OFFSET_Y + 7*CELL_SIZE}" x2="${OFFSET_X + 3*CELL_SIZE}" y2="${OFFSET_Y + 9*CELL_SIZE}" stroke="#3e2723" stroke-width="2"/>`;
+            
+            // 화점 (졸/포 위치 표시 십자가)
+            const drawCross = (c, r) => {
+                const x = OFFSET_X + c*CELL_SIZE;
+                const y = OFFSET_Y + r*CELL_SIZE;
+                const d = 5;
+                return `
+                    <line x1="${x-d}" y1="${y-d}" x2="${x-d}" y2="${y-d*2}" stroke="#3e2723" stroke-width="2"/>
+                    <line x1="${x-d}" y1="${y-d}" x2="${x-d*2}" y2="${y-d}" stroke="#3e2723" stroke-width="2"/>
+                    <line x1="${x+d}" y1="${y-d}" x2="${x+d}" y2="${y-d*2}" stroke="#3e2723" stroke-width="2"/>
+                    <line x1="${x+d}" y1="${y-d}" x2="${x+d*2}" y2="${y-d}" stroke="#3e2723" stroke-width="2"/>
+                    <line x1="${x-d}" y1="${y+d}" x2="${x-d}" y2="${y+d*2}" stroke="#3e2723" stroke-width="2"/>
+                    <line x1="${x-d}" y1="${y+d}" x2="${x-d*2}" y2="${y+d}" stroke="#3e2723" stroke-width="2"/>
+                    <line x1="${x+d}" y1="${y+d}" x2="${x+d}" y2="${y+d*2}" stroke="#3e2723" stroke-width="2"/>
+                    <line x1="${x+d}" y1="${y+d}" x2="${x+d*2}" y2="${y+d}" stroke="#3e2723" stroke-width="2"/>
+                `;
+            };
+            
+            svg.innerHTML = svgContent;
+        }
+
+        function resetGame() {
+            board = Array.from(Array(ROWS), () => new Array(COLS).fill(null));
+            document.getElementById('pieces-container').innerHTML = '';
+            document.getElementById('hints-container').innerHTML = '';
+            
+            // 기물 배치
+            // 한(Han) - 위쪽 (빨강)
+            placePiece(0, 0, COLOR.HAN, TYPE.CHA);
+            placePiece(0, 1, COLOR.HAN, TYPE.MA);
+            placePiece(0, 2, COLOR.HAN, TYPE.SANG);
+            placePiece(0, 3, COLOR.HAN, TYPE.SA);
+            placePiece(1, 4, COLOR.HAN, TYPE.KUNG); // 궁은 중앙
+            placePiece(0, 5, COLOR.HAN, TYPE.SA);
+            placePiece(0, 6, COLOR.HAN, TYPE.SANG);
+            placePiece(0, 7, COLOR.HAN, TYPE.MA);
+            placePiece(0, 8, COLOR.HAN, TYPE.CHA);
+            
+            placePiece(2, 1, COLOR.HAN, TYPE.PO);
+            placePiece(2, 7, COLOR.HAN, TYPE.PO);
+            
+            [0, 2, 4, 6, 8].forEach(c => placePiece(3, c, COLOR.HAN, TYPE.JOL)); // 한은 병(兵)이지만 로직상 졸로 통일, 표기만 다름
+
+            // 초(Cho) - 아래쪽 (파랑/초록)
+            placePiece(9, 0, COLOR.CHO, TYPE.CHA);
+            placePiece(9, 1, COLOR.CHO, TYPE.MA);
+            placePiece(9, 2, COLOR.CHO, TYPE.SANG);
+            placePiece(9, 3, COLOR.CHO, TYPE.SA);
+            placePiece(8, 4, COLOR.CHO, TYPE.KUNG); // 궁은 중앙
+            placePiece(9, 5, COLOR.CHO, TYPE.SA);
+            placePiece(9, 6, COLOR.CHO, TYPE.SANG);
+            placePiece(9, 7, COLOR.CHO, TYPE.MA);
+            placePiece(9, 8, COLOR.CHO, TYPE.CHA);
+            
+            placePiece(7, 1, COLOR.CHO, TYPE.PO);
+            placePiece(7, 7, COLOR.CHO, TYPE.PO);
+            
+            [0, 2, 4, 6, 8].forEach(c => placePiece(6, c, COLOR.CHO, TYPE.JOL));
+
+            currentTurn = COLOR.CHO;
+            isGameOver = false;
+            selectedPiece = null;
+            updateUI();
+            document.getElementById('result-modal').classList.remove('show');
+        }
+
+        function placePiece(r, c, color, type) {
+            let label = type;
+            let sizeClass = 'medium';
+            if (type === TYPE.KUNG) {
+                label = color === COLOR.HAN ? '漢' : '楚';
+                sizeClass = 'large';
+            } else if (type === TYPE.CHA) label = '車';
+            else if (type === TYPE.PO) label = '包';
+            else if (type === TYPE.MA) label = '馬';
+            else if (type === TYPE.SANG) label = '象';
+            else if (type === TYPE.SA) { label = '士'; sizeClass = 'small'; }
+            else if (type === TYPE.JOL) { label = color === COLOR.HAN ? '兵' : '卒'; sizeClass = 'small'; }
+
+            const el = document.createElement('div');
+            el.className = `piece ${color} ${sizeClass}`;
+            el.innerHTML = label;
+            
+            // 초기 위치
+            el.style.left = (OFFSET_X + c * CELL_SIZE) + 'px';
+            el.style.top = (OFFSET_Y + r * CELL_SIZE) + 'px';
+            
+            el.dataset.r = r;
+            el.dataset.c = c;
+            
+            el.onclick = () => onPieceClick(r, c);
+            
+            document.getElementById('pieces-container').appendChild(el);
+            
+            board[r][c] = { r, c, color, type, el };
+        }
+
+        function updateUI() {
+            document.getElementById('turn-color').className = `turn-color ${currentTurn}`;
+            document.getElementById('turn-text').textContent = currentTurn === COLOR.CHO ? '초(楚) 차례' : '한(漢) 차례';
+        }
+
+        function onPieceClick(r, c) {
+            if(isGameOver) return;
+            const target = board[r][c];
+            
+            if (selectedPiece) {
+                if (target && target.color === currentTurn) {
+                    // 내 다른 기물 선택
+                    selectPiece(r, c);
+                } else {
+                    // 이동 시도 (현재 클릭 이벤트는 기물 위. 빈칸은 판 클릭으로 처리해야함. 여기선 적 기물 클릭시)
+                    // 힌트를 띄웠을 때 힌트 클릭으로 이동하도록 분리하는게 편함.
+                }
+            } else {
+                if (target && target.color === currentTurn) {
+                    selectPiece(r, c);
+                }
+            }
+        }
+        
+        // 판의 빈 곳을 클릭할 수 있도록 배경(SVG 영역 위)에 이벤트 추가
+        document.getElementById('board-container').addEventListener('click', function(e) {
+            if(isGameOver) return;
+            if(e.target.classList.contains('piece') || e.target.classList.contains('move-hint')) return;
+            
+            // 좌표 계산
+            const rect = this.getBoundingClientRect();
+            const x = e.clientX - rect.left - OFFSET_X;
+            const y = e.clientY - rect.top - OFFSET_Y;
+            
+            const c = Math.round(x / CELL_SIZE);
+            const r = Math.round(y / CELL_SIZE);
+            
+            if (c >= 0 && c < COLS && r >= 0 && r < ROWS) {
+                if (selectedPiece && !board[r][c]) {
+                    // 빈칸 클릭. 힌트를 직접 누르지 않았지만, 유효하면 이동.
+                    // 현재는 편의상 힌트(move-hint) 클릭으로만 이동하게 설계.
+                    clearSelection();
+                }
+            }
+        });
+
+        function selectPiece(r, c) {
+            clearSelection();
+            selectedPiece = board[r][c];
+            selectedPiece.el.classList.add('selected');
+            
+            const moves = getValidMoves(selectedPiece);
+            showHints(moves);
+        }
+
+        function clearSelection() {
+            if(selectedPiece) {
+                selectedPiece.el.classList.remove('selected');
+                selectedPiece = null;
+            }
+            document.getElementById('hints-container').innerHTML = '';
+        }
+
+        function showHints(moves) {
+            const container = document.getElementById('hints-container');
+            moves.forEach(m => {
+                const hint = document.createElement('div');
+                hint.className = 'move-hint' + (m.capture ? ' capture' : '');
+                hint.style.left = (OFFSET_X + m.c * CELL_SIZE) + 'px';
+                hint.style.top = (OFFSET_Y + m.r * CELL_SIZE) + 'px';
+                hint.onclick = () => doMove(m.r, m.c);
+                container.appendChild(hint);
+            });
+        }
+
+        // ==========================================
+        // 장기 기물 이동 로직 (매우 간략화된 룰셋 적용)
+        // ==========================================
+        function getValidMoves(piece) {
+            let moves = [];
+            const r = piece.r; const c = piece.c;
+            
+            // 1. 차 (Rook)
+            if (piece.type === TYPE.CHA) {
+                const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+                dirs.forEach(d => {
+                    let nr = r + d[0], nc = c + d[1];
+                    while(isInBoard(nr, nc)) {
+                        if (!board[nr][nc]) {
+                            moves.push({r: nr, c: nc});
+                        } else {
+                            if (board[nr][nc].color !== piece.color) moves.push({r: nr, c: nc, capture: true});
+                            break;
+                        }
+                        nr += d[0]; nc += d[1];
+                    }
+                });
+                // 궁성 내 대각선 이동 (단순화: 궁성에 있으면 궁성 모서리로 갈 수 있음)
+                addPalaceDiagonalMoves(r, c, moves, piece.color, true); // true = can slide? 차는 대각선 슬라이드 가능하지만 간략하게 모서리 점프만.
+            }
+            // 2. 포 (Cannon) - 하나를 무조건 넘어야 함
+            else if (piece.type === TYPE.PO) {
+                const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+                dirs.forEach(d => {
+                    let nr = r + d[0], nc = c + d[1];
+                    let jumped = false;
+                    while(isInBoard(nr, nc)) {
+                        const target = board[nr][nc];
+                        if (!jumped) {
+                            if (target) {
+                                if (target.type === TYPE.PO) break; // 포는 포를 넘을 수 없음
+                                jumped = true;
+                            }
+                        } else {
+                            if (!target) {
+                                moves.push({r: nr, c: nc});
+                            } else {
+                                if (target.type !== TYPE.PO && target.color !== piece.color) {
+                                    moves.push({r: nr, c: nc, capture: true}); // 상대 기물 타격 (포 제외)
+                                }
+                                break;
+                            }
+                        }
+                        nr += d[0]; nc += d[1];
+                    }
+                });
+            }
+            // 3. 마 (Horse)
+            else if (piece.type === TYPE.MA) {
+                const movesOffsets = [
+                    {d:[-1,0], j:[-2,-1]}, {d:[-1,0], j:[-2,1]},
+                    {d:[1,0], j:[2,-1]}, {d:[1,0], j:[2,1]},
+                    {d:[0,-1], j:[-1,-2]}, {d:[0,-1], j:[1,-2]},
+                    {d:[0,1], j:[-1,2]}, {d:[0,1], j:[1,2]}
+                ];
+                movesOffsets.forEach(m => {
+                    if (isInBoard(r+m.d[0], c+m.d[1]) && !board[r+m.d[0]][c+m.d[1]]) {
+                        const nr = r+m.j[0], nc = c+m.j[1];
+                        checkAndAddMove(nr, nc, moves, piece);
+                    }
+                });
+            }
+            // 4. 상 (Elephant)
+            else if (piece.type === TYPE.SANG) {
+                const offsets = [
+                    {d:[-1,0], d2:[-2,-1], j:[-3,-2]}, {d:[-1,0], d2:[-2,1], j:[-3,2]},
+                    {d:[1,0], d2:[2,-1], j:[3,-2]}, {d:[1,0], d2:[2,1], j:[3,2]},
+                    {d:[0,-1], d2:[-1,-2], j:[-2,-3]}, {d:[0,-1], d2:[1,-2], j:[2,-3]},
+                    {d:[0,1], d2:[-1,2], j:[-2,3]}, {d:[0,1], d2:[1,2], j:[2,3]}
+                ];
+                offsets.forEach(m => {
+                    if (isInBoard(r+m.d[0], c+m.d[1]) && !board[r+m.d[0]][c+m.d[1]]) {
+                        if (isInBoard(r+m.d2[0], c+m.d2[1]) && !board[r+m.d2[0]][c+m.d2[1]]) {
+                            checkAndAddMove(r+m.j[0], c+m.j[1], moves, piece);
+                        }
+                    }
+                });
+            }
+            // 5. 궁 (King) / 사 (Guard) - 궁성 내에서만 1칸
+            else if (piece.type === TYPE.KUNG || piece.type === TYPE.SA) {
+                const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+                dirs.forEach(d => {
+                    let nr = r + d[0], nc = c + d[1];
+                    if (isInPalace(nr, nc, piece.color)) checkAndAddMove(nr, nc, moves, piece);
+                });
+                addPalaceDiagonalMoves(r, c, moves, piece.color, false);
+            }
+            // 6. 졸/병 (Soldier) - 전진 및 양옆. 뒤로 못감
+            else if (piece.type === TYPE.JOL) {
+                const forward = piece.color === COLOR.HAN ? 1 : -1; // 한은 아래로, 초는 위로
+                checkAndAddMove(r+forward, c, moves, piece);
+                checkAndAddMove(r, c+1, moves, piece);
+                checkAndAddMove(r, c-1, moves, piece);
+                
+                // 궁성 내 대각선 전진 (단순화: 궁성 대각선 방향으로만)
+                if (isInPalace(r, c, opponentColor(piece.color))) {
+                    if (c===3) checkAndAddMove(r+forward, 4, moves, piece);
+                    if (c===5) checkAndAddMove(r+forward, 4, moves, piece);
+                    if (c===4) {
+                        checkAndAddMove(r+forward, 3, moves, piece);
+                        checkAndAddMove(r+forward, 5, moves, piece);
+                    }
+                }
+            }
+
+            // 필터: 내 궁이 먹히는 수(자충수, 장군 방치)는 제외 (이 버전에서는 체크만 로직 복잡하므로 생략하거나 최소화. 편의상 그대로 허용하고 따이면 지는걸로)
+            return moves;
+        }
+        
+        function isInBoard(r, c) { return r>=0 && r<ROWS && c>=0 && c<COLS; }
+        
+        function isInPalace(r, c, color) {
+            if (c < 3 || c > 5) return false;
+            if (color === COLOR.HAN) return r >= 0 && r <= 2;
+            if (color === COLOR.CHO) return r >= 7 && r <= 9;
+            return false;
+        }
+
+        function opponentColor(color) { return color === COLOR.HAN ? COLOR.CHO : COLOR.HAN; }
+
+        function checkAndAddMove(nr, nc, moves, piece) {
+            if (isInBoard(nr, nc)) {
+                if (!board[nr][nc]) moves.push({r: nr, c: nc});
+                else if (board[nr][nc].color !== piece.color) moves.push({r: nr, c: nc, capture: true});
+            }
+        }
+        
+        // 궁성 대각선 이동 로직 (간단화)
+        function addPalaceDiagonalMoves(r, c, moves, color, isSliding) {
+            // 한나라 궁성: (0,3)-(2,5), (0,5)-(2,3). 중앙은 (1,4)
+            // 초나라 궁성: (7,3)-(9,5), (7,5)-(9,3). 중앙은 (8,4)
+            const pal = color === COLOR.HAN ? {y:1} : {y:8};
+            
+            if (r === pal.y-1 && c === 3) checkAndAddMove(pal.y, 4, moves, board[r][c]); // 좌상단 -> 중앙
+            if (r === pal.y-1 && c === 5) checkAndAddMove(pal.y, 4, moves, board[r][c]); // 우상단 -> 중앙
+            if (r === pal.y+1 && c === 3) checkAndAddMove(pal.y, 4, moves, board[r][c]); // 좌하단 -> 중앙
+            if (r === pal.y+1 && c === 5) checkAndAddMove(pal.y, 4, moves, board[r][c]); // 우하단 -> 중앙
+            
+            if (r === pal.y && c === 4) { // 중앙에서 각 모서리로
+                checkAndAddMove(pal.y-1, 3, moves, board[r][c]);
+                checkAndAddMove(pal.y-1, 5, moves, board[r][c]);
+                checkAndAddMove(pal.y+1, 3, moves, board[r][c]);
+                checkAndAddMove(pal.y+1, 5, moves, board[r][c]);
+            }
+            
+            if (isSliding && r === pal.y-1 && c === 3) checkAndAddMove(pal.y+1, 5, moves, board[r][c]); // 끝까지 슬라이딩 (차) - 단, 중앙에 기물이 없어야함
+            // (간단화를 위해 슬라이딩 통과 제어는 생략, 이 버전에서는 1칸 점프 위주로 허용)
+        }
+
+        function doMove(nr, nc) {
+            const p = selectedPiece;
+            const target = board[nr][nc];
+            
+            let isWin = false;
+            if (target) {
+                // 상대 기물 따냄
+                target.el.remove();
+                if (target.type === TYPE.KUNG) {
+                    isWin = true; // 궁을 잡으면 승리
+                }
+            }
+            
+            // 이동
+            board[p.r][p.c] = null;
+            p.r = nr; p.c = nc;
+            board[nr][nc] = p;
+            
+            // DOM 위치 업데이트
+            p.el.style.left = (OFFSET_X + nc * CELL_SIZE) + 'px';
+            p.el.style.top = (OFFSET_Y + nr * CELL_SIZE) + 'px';
+            p.el.dataset.r = nr; p.el.dataset.c = nc;
+            
+            clearSelection();
+            
+            if (isWin) {
+                endGame(p.color);
+            } else {
+                currentTurn = currentTurn === COLOR.CHO ? COLOR.HAN : COLOR.CHO;
+                updateUI();
+            }
+        }
+        
+        function endGame(winnerColor) {
+            isGameOver = true;
+            const modal = document.getElementById('result-modal');
+            const title = document.getElementById('result-title');
+            
+            const winnerName = winnerColor === COLOR.CHO ? '초(楚)' : '한(漢)';
+            title.textContent = `${winnerName} 승리!`;
+            title.style.color = winnerColor === COLOR.CHO ? '#4ade80' : '#f87171';
+            
+            modal.classList.add('show');
+            
+            if (window.submitGameScore) {
+                window.submitGameScore('chess', 100); // 랭킹에 승점 100점 등록 (장기는 체스와 통합 관리 또는 개별 관리)
+            }
+        }
+
+        window.onload = () => {
+            initBoard();
+            resetGame();
+        };
+    </script>
+
+    <!-- Firebase Score Script (히스토리/랭킹 로깅용) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="firebase_score.js"></script>
+</body>
+</html>
