@@ -1408,16 +1408,36 @@ body::after {
                 <h2 class="section-title" style="font-size: 1.8rem; justify-content: flex-start;">🏆 명예의 전당</h2>
             </div>
             
-            <div class="ranking-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1rem; overflow-x: auto; padding-bottom: 0.5rem;">
-                <button class="filter-tab active" onclick="loadRanking('car')">레이싱</button>
-                <button class="filter-tab" onclick="loadRanking('baseball')">야구</button>
-                <button class="filter-tab" onclick="loadRanking('tetris')">테트리스</button>
-                <button class="filter-tab" onclick="loadRanking('rhythm')">리듬게임</button>
+            <div class="ranking-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1rem; overflow-x: auto; padding-bottom: 0.5rem; white-space: nowrap; scrollbar-width: thin; scrollbar-color: var(--game-primary) transparent;">
+                <button class="filter-tab active" onclick="loadRanking('car')">🏎️ 레이싱</button>
+                <button class="filter-tab" onclick="loadRanking('baseball')">⚾ 야구</button>
+                <button class="filter-tab" onclick="loadRanking('tetris')">🧱 테트리스</button>
+                <button class="filter-tab" onclick="loadRanking('rhythm')">🎹 리듬게임</button>
+                <button class="filter-tab" onclick="loadRanking('omok')">⚫⚪ 오목</button>
+                <button class="filter-tab" onclick="loadRanking('baduk')">☯️ 바둑</button>
+                <button class="filter-tab" onclick="loadRanking('janggi')">🏯 장기</button>
+                <button class="filter-tab" onclick="loadRanking('onecard')">🃏 원카드</button>
+                <button class="filter-tab" onclick="loadRanking('chess')">♟️ 체스</button>
+                <button class="filter-tab" onclick="loadRanking('soccer')">⚽ 축구</button>
+                <button class="filter-tab" onclick="loadRanking('puzzle')">🧩 퍼즐</button>
+                <button class="filter-tab" onclick="loadRanking('balloon')">🎈 풍선</button>
+                <button class="filter-tab" onclick="loadRanking('brick')">🟦 벽돌</button>
             </div>
             
-            <div class="ranking-list" id="ranking-list" style="display: flex; flex-direction: column; gap: 0.8rem; flex: 1; min-height: 250px;">
-                <!-- 랭킹 아이템들이 여기에 로드됨 -->
-                <div style="text-align:center; color:var(--game-muted); padding: 2rem;">데이터를 불러오는 중...</div>
+            <div class="ranking-list" id="ranking-list" style="display: flex; flex-direction: column; gap: 0.8rem; flex: 1; min-height: 250px; max-height: 300px; overflow-y: auto; padding-right: 5px;">
+                <div style="text-align:center; color:var(--game-muted); padding: 2rem;">데이터를 불러오는 중... <i class="fa-solid fa-spinner fa-spin"></i></div>
+            </div>
+
+            <!-- 최근 활동 내역 (Global History Feed) -->
+            <div style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem;">
+                <div class="section-title-group" style="margin-bottom: 1rem; text-align: left;">
+                    <h3 style="font-size: 1.2rem; display: flex; align-items: center; gap: 10px;">
+                        <i class="fa-solid fa-bolt" style="color:#facc15;"></i> 실시간 플레이 내역
+                    </h3>
+                </div>
+                <div id="history-feed" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 150px; overflow-y: auto; padding-right: 5px; font-size: 0.9rem;">
+                    <div style="text-align:center; color:var(--game-muted); padding: 1rem;">히스토리 불러오는 중...</div>
+                </div>
             </div>
         </div>
 

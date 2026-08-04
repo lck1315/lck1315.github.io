@@ -77,6 +77,49 @@ window.loadRanking = function(gameId, btnElement = null) {
 };
 
 // ==========================================
+// 1.5. Global History Feed
+// ==========================================
+window.loadHistoryFeed = function() {
+    const feedEl = document.getElementById('history-feed');
+    if (!feedEl) return;
+    
+    db.ref('game_history').orderByChild('timestamp').limitToLast(10).on('value', snapshot => {
+        const data = snapshot.val();
+        if (!data) {
+            feedEl.innerHTML = '<div style="text-align:center; color:var(--game-muted); padding: 1rem;">아직 기록이 없습니다.</div>';
+            return;
+        }
+        
+        feedEl.innerHTML = '';
+        const sorted = Object.values(data).sort((a, b) => b.timestamp - a.timestamp); // 최신이 위로
+        
+        sorted.forEach(item => {
+            const timeDiff = Math.floor((Date.now() - item.timestamp) / 60000); // 분 단위
+            let timeText = timeDiff < 1 ? '방금 전' : (timeDiff < 60 ? `${timeDiff}분 전` : `${Math.floor(timeDiff/60)}시간 전`);
+            
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.alignItems = 'center';
+            row.style.padding = '0.5rem 0.8rem';
+            row.style.background = 'rgba(255,255,255,0.03)';
+            row.style.borderRadius = '6px';
+            row.style.justifyContent = 'space-between';
+            
+            row.innerHTML = `
+                <div style="display:flex; align-items:center; gap: 8px;">
+                    <span style="color:var(--game-primary); font-weight:bold;">${escapeHtml(item.nickname)}</span>님이
+                    <span style="color:#cbd5e1; background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; font-size:0.8rem;">${item.gameName}</span> 플레이 완료
+                </div>
+                <div style="font-size:0.8rem; color:var(--game-muted); text-align:right;">
+                    <span style="color:#4ade80; font-weight:bold;">+${item.score}</span><br>${timeText}
+                </div>
+            `;
+            feedEl.appendChild(row);
+        });
+    });
+};
+
+// ==========================================
 // 2. Community Chat
 // ==========================================
 function initChat() {
@@ -173,5 +216,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 100);
     
+    if (window.loadHistoryFeed) {
+        window.loadHistoryFeed();
+    }
     initChat();
 });
