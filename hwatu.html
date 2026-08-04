@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DODO 맞고 (Go-Stop)</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body {
+            background: #1a0b02; /* 다크 우드 */
+            background-image: repeating-linear-gradient(45deg, #1f0f04, #1f0f04 10px, #1a0b02 10px, #1a0b02 20px);
+            color: #fff;
+            font-family: 'Noto Sans KR', sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .header {
+            padding: 10px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(0,0,0,0.8);
+            border-bottom: 2px solid #b45309;
+            z-index: 100;
+        }
+        .logo {
+            font-weight: 900; font-size: 1.5rem; color: #fff; text-decoration: none;
+            display: flex; align-items: center; gap: 10px; font-family: 'Jua', sans-serif;
+        }
+        .logo span { color: #facc15; }
+        
+        .btn { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-weight: bold; }
+        .btn:hover { background: rgba(255,255,255,0.2); }
+        .btn.primary { background: linear-gradient(135deg, #ef4444, #b91c1c); border: none; box-shadow: 0 4px 10px rgba(239,68,68,0.3); }
+
+        /* 테이블 (모포) */
+        .board {
+            flex: 1; display: flex; flex-direction: column; position: relative;
+            background: radial-gradient(circle at center, #064e3b 0%, #022c22 100%);
+            border-top: 5px solid #78350f; border-bottom: 5px solid #78350f;
+            overflow: hidden;
+        }
+
+        /* 공통 화투패 디자인 */
+        .hwatu {
+            width: 50px; height: 75px; background: #dc2626; border-radius: 4px;
+            position: relative; box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+            border: 2px solid #fff; display: flex; align-items: center; justify-content: center;
+            font-family: 'Jua', sans-serif; font-size: 1rem; flex-direction: column;
+            cursor: pointer; transition: transform 0.2s, top 0.2s;
+            transform-origin: center center;
+            background-image: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+        }
+        .hwatu::before { /* 패 뒷면 텍스처 느낌 */
+            content: ''; position: absolute; inset: 2px; border: 1px solid rgba(255,255,255,0.3); border-radius: 2px; pointer-events: none;
+        }
+        .hwatu.hidden {
+            background: #b91c1c; background-image: repeating-linear-gradient(45deg, #991b1b, #991b1b 5px, #7f1d1d 5px, #7f1d1d 10px);
+            color: transparent; border-color: #ef4444; cursor: default;
+        }
+        .hwatu.playable:hover { transform: translateY(-10px) scale(1.1); box-shadow: 0 10px 20px rgba(0,0,0,0.5); border-color: #facc15; z-index: 10; }
+        
+        /* 화투 내용 표시 */
+        .h-month { position: absolute; top: 2px; left: 4px; font-size: 0.8rem; color: #fff; text-shadow: 1px 1px 2px #000; }
+        .h-type { font-size: 1.2rem; font-weight: bold; text-shadow: 1px 1px 2px #000; }
+        .h-badge { position: absolute; bottom: 2px; right: 4px; font-size: 0.7rem; padding: 2px; border-radius: 2px; background: rgba(0,0,0,0.6); }
+        
+        .type-kwang .h-type { color: #facc15; font-size: 1.8rem; }
+        .type-yul .h-type { color: #60a5fa; }
+        .type-tti .h-type { color: #fca5a5; }
+        .type-pi .h-type { color: #d1d5db; }
+        
+        .badge-hong { background: #ef4444; color: white; }
+        .badge-cheong { background: #3b82f6; color: white; }
+        .badge-cho { background: #22c55e; color: white; }
+        .badge-ssang { background: #f59e0b; color: black; font-weight: bold; }
+        .badge-godori { background: #eab308; color: black; font-weight: bold; }
+
+        /* 레이아웃 영역 */
+        .opponent-area { height: 35%; border-bottom: 1px dashed rgba(255,255,255,0.2); display: flex; flex-direction: column; justify-content: space-between; padding: 10px; position: relative; }
+        .field-area { height: 30%; display: flex; justify-content: center; align-items: center; position: relative; }
+        .player-area { height: 35%; border-top: 1px dashed rgba(255,255,255,0.2); display: flex; flex-direction: column; justify-content: space-between; padding: 10px; position: relative; }
+
+        /* 먹은 패 정렬 */
+        .eaten-cards { display: flex; gap: 20px; align-items: flex-end; }
+        .eaten-group { display: flex; position: relative; min-width: 50px; min-height: 75px; background: rgba(0,0,0,0.2); border-radius: 4px; border: 1px dashed rgba(255,255,255,0.1); }
+        .eaten-group .hwatu { position: absolute; }
+        /* 패 간격 조정 */
+        .eaten-kwang .hwatu { margin-left: 20px; }
+        
+        .hand-cards { display: flex; justify-content: center; gap: 5px; }
+
+        /* 바닥 패 */
+        .field-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 60%; }
+        .field-month-group { display: flex; gap: 2px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 8px; min-width: 55px; min-height: 85px; }
+
+        /* 더미 (가운데 덱) */
+        .deck-area { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); }
+        .deck-card { width: 50px; height: 75px; background: #991b1b; border: 2px solid #ef4444; border-radius: 4px; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); position: absolute; }
+
+        /* 점수판 */
+        .score-board { position: absolute; width: 150px; background: rgba(0,0,0,0.8); border: 2px solid #b45309; border-radius: 8px; padding: 10px; font-family: 'Jua', sans-serif; z-index: 50; }
+        .score-board.op { top: 10px; left: 10px; }
+        .score-board.pl { bottom: 10px; right: 10px; }
+        .score-title { color: #fcd34d; font-size: 1.2rem; margin-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px; }
+        .score-item { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 3px; }
+        .score-total { font-size: 1.5rem; color: #4ade80; text-align: center; margin-top: 5px; font-weight: bold; }
+        
+        /* 고스톱 모달 */
+        .modal {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(10,10,10,0.95); border: 3px solid #facc15; padding: 30px 50px;
+            border-radius: 20px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            z-index: 200; display: none; font-family: 'Jua', sans-serif;
+        }
+        .modal h2 { color: #ef4444; font-size: 3rem; margin-bottom: 20px; text-shadow: 2px 2px 0 #000; }
+        .modal .btn-group { display: flex; gap: 20px; justify-content: center; }
+        .modal .btn-gs { font-size: 1.5rem; padding: 15px 40px; border-radius: 12px; border: none; font-family: 'Jua', sans-serif; cursor: pointer; transition: 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.5); color: #fff; }
+        .modal .btn-go { background: #3b82f6; }
+        .modal .btn-stop { background: #ef4444; }
+        .modal .btn-gs:hover { transform: scale(1.1); }
+
+        /* 결과 화면 */
+        #result-modal { display: none; }
+        .toast {
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.85); color: #fff; padding: 20px 40px; border-radius: 30px;
+            font-family: 'Jua', sans-serif; font-size: 2rem; pointer-events: none;
+            opacity: 0; transition: 0.3s; z-index: 300; border: 2px solid #ef4444;
+            box-shadow: 0 0 30px rgba(239,68,68,0.5); text-shadow: 2px 2px 5px #000;
+        }
+        .toast.show { opacity: 1; transform: translate(-50%, -80px) scale(1.2); }
+
+        /* 애니메이션용 둥둥 떠다니는 이펙트 */
+        @keyframes pop { 0% {transform: scale(1);} 50% {transform: scale(1.3);} 100% {transform: scale(1);} }
+        .pop-anim { animation: pop 0.3s ease-out; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <a href="game.html" class="logo">
+            <i class="fa-solid fa-gamepad"></i> DODO <span>맞고</span>
+        </a>
+        <button class="btn primary" onclick="startGame()">새 게임</button>
+    </div>
+
+    <div class="board">
+        <!-- AI 보드 -->
+        <div class="opponent-area" id="op-area">
+            <div class="score-board op">
+                <div class="score-title">🤖 봇 (타짜) <span id="op-go" style="color:#ef4444;font-size:0.8rem"></span></div>
+                <div class="score-item"><span>광</span><span id="op-s-kwang">0</span></div>
+                <div class="score-item"><span>열끝</span><span id="op-s-yul">0</span></div>
+                <div class="score-item"><span>띠</span><span id="op-s-tti">0</span></div>
+                <div class="score-item"><span>피</span><span id="op-s-pi">0</span></div>
+                <div class="score-total" id="op-total">0 점</div>
+            </div>
+            
+            <div class="eaten-cards" id="op-eaten" style="margin-left: 170px;">
+                <div class="eaten-group" id="op-e-kwang" style="width: 80px;"></div>
+                <div class="eaten-group" id="op-e-yul" style="width: 80px;"></div>
+                <div class="eaten-group" id="op-e-tti" style="width: 80px;"></div>
+                <div class="eaten-group" id="op-e-pi" style="width: 200px;"></div>
+            </div>
+            
+            <div class="hand-cards" id="op-hand"></div>
+        </div>
+
+        <!-- 바닥 보드 -->
+        <div class="field-area">
+            <div class="field-cards" id="field-cards"></div>
+            
+            <div class="deck-area" id="deck-area" onclick="drawDeckForUser()">
+                <div class="deck-card" style="top: 0px; left: 0px;"></div>
+                <div class="deck-card" style="top: -2px; left: -2px;"></div>
+                <div class="deck-card" style="top: -4px; left: -4px;"></div>
+                <div class="deck-card" style="top: -6px; left: -6px; border-color:#facc15"></div>
+            </div>
+        </div>
+
+        <!-- 플레이어 보드 -->
+        <div class="player-area" id="pl-area">
+            <div class="hand-cards" id="pl-hand"></div>
+            
+            <div class="eaten-cards" id="pl-eaten" style="margin-right: 170px;">
+                <div class="eaten-group" id="pl-e-kwang" style="width: 80px;"></div>
+                <div class="eaten-group" id="pl-e-yul" style="width: 80px;"></div>
+                <div class="eaten-group" id="pl-e-tti" style="width: 80px;"></div>
+                <div class="eaten-group" id="pl-e-pi" style="width: 200px;"></div>
+            </div>
+
+            <div class="score-board pl">
+                <div class="score-title">🙋‍♂️ 나 <span id="pl-go" style="color:#ef4444;font-size:0.8rem"></span></div>
+                <div class="score-item"><span>광</span><span id="pl-s-kwang">0</span></div>
+                <div class="score-item"><span>열끝</span><span id="pl-s-yul">0</span></div>
+                <div class="score-item"><span>띠</span><span id="pl-s-tti">0</span></div>
+                <div class="score-item"><span>피</span><span id="pl-s-pi">0</span></div>
+                <div class="score-total" id="pl-total">0 점</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 고스톱 선택 모달 -->
+    <div class="modal" id="gostop-modal">
+        <h2 id="gs-title">7점 달성!</h2>
+        <div class="btn-group">
+            <button class="btn-gs btn-go" onclick="declareGo()">GO!</button>
+            <button class="btn-gs btn-stop" onclick="declareStop()">STOP</button>
+        </div>
+    </div>
+
+    <!-- 결과 모달 -->
+    <div class="modal" id="result-modal">
+        <h2 id="result-title">승리!</h2>
+        <p id="result-desc" style="font-size: 1.5rem; margin-bottom: 20px; color: #fff;"></p>
+        <button class="btn-gs btn-go" onclick="startGame()">새 판 치기</button>
+    </div>
+
+    <div id="toast" class="toast">메시지</div>
+
+    <script>
+        // --- 1. 패 데이터 정의 ---
+        // month: 1~12, type: 'kwang', 'yul', 'tti', 'pi'
+        // flags: hong(홍단), cheong(청단), cho(초단), godori(고도리), ssang(쌍피), biKwang(비광)
+        const HWATU_DATA = [
+            {m:1, t:'kwang', n:'송학'}, {m:1, t:'tti', f:'hong'}, {m:1, t:'pi'}, {m:1, t:'pi'},
+            {m:2, t:'yul', f:'godori', n:'매조'}, {m:2, t:'tti', f:'hong'}, {m:2, t:'pi'}, {m:2, t:'pi'},
+            {m:3, t:'kwang', n:'벚꽃'}, {m:3, t:'tti', f:'hong'}, {m:3, t:'pi'}, {m:3, t:'pi'},
+            {m:4, t:'yul', f:'godori', n:'흑싸리'}, {m:4, t:'tti', f:'cho'}, {m:4, t:'pi'}, {m:4, t:'pi'},
+            {m:5, t:'yul', n:'난초'}, {m:5, t:'tti', f:'cho'}, {m:5, t:'pi'}, {m:5, t:'pi'},
+            {m:6, t:'yul', n:'모란'}, {m:6, t:'tti', f:'cheong'}, {m:6, t:'pi'}, {m:6, t:'pi'},
+            {m:7, t:'yul', n:'홍싸리'}, {m:7, t:'tti', f:'cho'}, {m:7, t:'pi'}, {m:7, t:'pi'},
+            {m:8, t:'kwang', n:'공산'}, {m:8, t:'yul', f:'godori'}, {m:8, t:'pi'}, {m:8, t:'pi'},
+            {m:9, t:'yul', f:'ssang', n:'국진'}, {m:9, t:'tti', f:'cheong'}, {m:9, t:'pi'}, {m:9, t:'pi'},
+            {m:10, t:'yul', n:'단풍'}, {m:10, t:'tti', f:'cheong'}, {m:10, t:'pi'}, {m:10, t:'pi'},
+            {m:11, t:'kwang', n:'오동'}, {m:11, t:'pi', f:'ssang'}, {m:11, t:'pi'}, {m:11, t:'pi'},
+            {m:12, t:'kwang', f:'biKwang', n:'비'}, {m:12, t:'yul'}, {m:12, t:'tti'}, {m:12, t:'pi', f:'ssang'}
+        ];
+
+        let deck = [];
+        let field = []; // 1~12월 배열 (바닥패)
+        let players = {
+            op: { hand: [], eaten: [], score: 0, goCount: 0 },
+            pl: { hand: [], eaten: [], score: 0, goCount: 0 }
+        };
+        let currentTurn = 'pl';
+        let turnState = 0; // 0: 손패 낼 차례, 1: 더미 깔 차례, 2: 처리 대기
+        let pendingCard = null; // 손에서 낸 카드
+        let isGameOver = false;
+        
+        let goStopCaller = null;
+
+        function createDeck() {
+            let d = HWATU_DATA.map((c, i) => ({...c, id: i}));
+            return d.sort(() => Math.random() - 0.5);
+        }
+
+        function getCardLabel(c) {
+            if(c.t === 'kwang') return '光';
+            if(c.t === 'yul') return c.f === 'ssang' ? '쌍피' : '열';
+            if(c.t === 'tti') return '띠';
+            if(c.t === 'pi') return c.f === 'ssang' ? '쌍피' : '피';
+            return '';
+        }
+        function getCardBadge(c) {
+            if(c.f === 'hong') return '<div class="h-badge badge-hong">홍단</div>';
+            if(c.f === 'cheong') return '<div class="h-badge badge-cheong">청단</div>';
+            if(c.f === 'cho') return '<div class="h-badge badge-cho">초단</div>';
+            if(c.f === 'godori') return '<div class="h-badge badge-godori">고도리</div>';
+            if(c.f === 'ssang') return '<div class="h-badge badge-ssang">쌍피</div>';
+            return '';
+        }
+
+        function createCardDOM(c, hidden=false) {
+            const div = document.createElement('div');
+            div.className = `hwatu type-${c.t} ${hidden ? 'hidden' : ''}`;
+            div.id = `c-${c.id}`;
+            if(!hidden) {
+                div.innerHTML = `
+                    <div class="h-month">${c.m}월</div>
+                    <div class="h-type">${getCardLabel(c)}</div>
+                    ${getCardBadge(c)}
+                `;
+            }
+            return div;
+        }
+
+        function startGame() {
+            document.getElementById('result-modal').style.display = 'none';
+            document.getElementById('gostop-modal').style.display = 'none';
+            
+            deck = createDeck();
+            field = Array.from({length: 13}, () => []);
+            players = {
+                op: { hand: [], eaten: [], score: 0, goCount: 0, prevScore: 0 },
+                pl: { hand: [], eaten: [], score: 0, goCount: 0, prevScore: 0 }
+            };
+            isGameOver = false;
+            turnState = 0;
+            currentTurn = 'pl';
+            goStopCaller = null;
+
+            // 분배: 바닥 8장, 각 10장
+            for(let i=0; i<8; i++) addFieldCard(deck.pop());
+            for(let i=0; i<10; i++) {
+                players.op.hand.push(deck.pop());
+                players.pl.hand.push(deck.pop());
+            }
+
+            // 손패 정렬 (월 순서)
+            players.pl.hand.sort((a,b) => a.m - b.m);
+            players.op.hand.sort((a,b) => a.m - b.m);
+
+            renderAll();
+        }
+
+        function addFieldCard(c) {
+            field[c.m].push(c);
+        }
+
+        function renderAll() {
+            // 바닥
+            const fEl = document.getElementById('field-cards');
+            fEl.innerHTML = '';
+            for(let m=1; m<=12; m++) {
+                if(field[m].length > 0) {
+                    const g = document.createElement('div');
+                    g.className = 'field-month-group';
+                    field[m].forEach(c => {
+                        const dom = createCardDOM(c);
+                        g.appendChild(dom);
+                    });
+                    fEl.appendChild(g);
+                }
+            }
+
+            // 플레이어 핸드 및 먹은 패
+            ['pl', 'op'].forEach(pid => {
+                const p = players[pid];
+                
+                // 손패
+                const hEl = document.getElementById(`${pid}-hand`);
+                hEl.innerHTML = '';
+                p.hand.forEach((c, idx) => {
+                    const dom = createCardDOM(c, pid === 'op'); // 봇 패는 숨김
+                    if(pid === 'pl' && turnState === 0 && !isGameOver) {
+                        dom.classList.add('playable');
+                        dom.onclick = () => playCard(idx);
+                    }
+                    hEl.appendChild(dom);
+                });
+
+                // 먹은 패
+                ['kwang', 'yul', 'tti', 'pi'].forEach(type => {
+                    const el = document.getElementById(`${pid}-e-${type}`);
+                    el.innerHTML = '';
+                    const eatenType = p.eaten.filter(c => c.t === type || (c.t==='yul' && c.f==='ssang' && type==='pi')); // 국진쌍피 임시 꼼수. 정식 로직 필요
+                    
+                    let left = 0;
+                    // 타입별 재분류
+                    let renderList = [];
+                    p.eaten.forEach(c => {
+                        let renderT = c.t;
+                        if(c.f === 'ssang') renderT = 'pi'; // 쌍피는 피 영역에 그림
+                        if(renderT === type) renderList.push(c);
+                    });
+                    
+                    renderList.forEach((c, i) => {
+                        const dom = createCardDOM(c);
+                        dom.style.left = `${left}px`;
+                        dom.style.zIndex = i;
+                        left += (type==='pi' ? 20 : 15);
+                        el.appendChild(dom);
+                    });
+                });
+
+                // 점수 계산 및 갱신
+                calcScore(pid);
+            });
+            
+            // 더미 클릭 제어
+            document.getElementById('deck-area').style.pointerEvents = (currentTurn === 'pl' && turnState === 1 && !isGameOver) ? 'all' : 'none';
+        }
+
+        function playCard(handIdx) {
+            if(currentTurn !== 'pl' || turnState !== 0 || isGameOver) return;
+            const c = players.pl.hand.splice(handIdx, 1)[0];
+            pendingCard = c;
+            
+            // 바닥에 내기
+            processCardToField(c, 'pl', () => {
+                turnState = 1;
+                renderAll();
+                showToast("가운데 화투 더미를 클릭하세요!");
+            });
+        }
+
+        function drawDeckForUser() {
+            if(currentTurn !== 'pl' || turnState !== 1 || isGameOver) return;
+            if(deck.length === 0) { checkGameOver(); return; }
+            
+            const c = deck.pop();
+            processCardToField(c, 'pl', () => {
+                resolveTurn('pl');
+            });
+        }
+
+        function processCardToField(c, pid, callback) {
+            addFieldCard(c);
+            renderAll();
+            
+            // 애니메이션 딜레이
+            setTimeout(() => {
+                callback();
+            }, 600);
+        }
+
+        function resolveTurn(pid) {
+            // 이번 턴에 낸 패(pendingCard)와 깐 패(더미)를 바탕으로 바닥에서 먹을 패를 수거
+            // 고스톱 먹기 로직은 쪽, 뻑, 따닥, 싹쓸이 등 복잡함.
+            // 여기서는 MVP 용으로 바닥에 짝수개(2,4)가 된 월의 패를 모두 먹는 간이 로직 구현.
+            let eatenThisTurn = [];
+            
+            for(let m=1; m<=12; m++) {
+                if(field[m].length === 2 || field[m].length === 4) { // 짝맞음 (뻑 제외 간이 처리)
+                    eatenThisTurn.push(...field[m]);
+                    field[m] = [];
+                }
+                else if(field[m].length === 3) {
+                    // 3장일 경우 하나를 내서 3장이 된건지, 원래 3장인 곳에 하나 내서 4장이 된건지 체크 필요.
+                    // 간이: 3장이면 뻑 났다고 치고 못 먹음
+                }
+            }
+            
+            if(eatenThisTurn.length > 0) {
+                players[pid].eaten.push(...eatenThisTurn);
+                const s = new Audio('data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBIAAAABAAEAQB8AAEAfAAABAAgAAABmYWN0BAAAAAAAAABkYXRhAAAAAA=='); // 묵음 오류방지
+                s.play().catch(e=>{});
+            }
+
+            calcScore(pid);
+            renderAll();
+
+            // 고/스톱 체크
+            if(players[pid].score >= 7 && players[pid].score > players[pid].prevScore) {
+                players[pid].prevScore = players[pid].score;
+                if(pid === 'pl') {
+                    goStopCaller = 'pl';
+                    document.getElementById('gostop-modal').style.display = 'block';
+                    return; // 대기
+                } else {
+                    // AI 고스톱 판단
+                    if(players.op.score >= 7) {
+                        if(Math.random() > 0.5) {
+                            showToast("🤖 봇: STOP!");
+                            endGame('op');
+                            return;
+                        } else {
+                            showToast("🤖 봇: GO!");
+                            players.op.goCount++;
+                        }
+                    }
+                }
+            }
+
+            finishTurn(pid);
+        }
+
+        function finishTurn(pid) {
+            if(deck.length === 0 || (players.pl.hand.length===0 && players.op.hand.length===0)) {
+                checkGameOver();
+                return;
+            }
+
+            currentTurn = pid === 'pl' ? 'op' : 'pl';
+            turnState = 0;
+            renderAll();
+
+            if(currentTurn === 'op') {
+                setTimeout(doAITurn, 1000);
+            }
+        }
+
+        function doAITurn() {
+            if(isGameOver) return;
+            const hand = players.op.hand;
+            if(hand.length === 0) return;
+
+            // 바닥에 맞을 패가 있는지 탐색 (간단한 AI)
+            let matchIdx = hand.findIndex(c => field[c.m].length > 0);
+            if(matchIdx === -1) matchIdx = Math.floor(Math.random() * hand.length);
+
+            const c = hand.splice(matchIdx, 1)[0];
+            processCardToField(c, 'op', () => {
+                const dc = deck.pop();
+                processCardToField(dc, 'op', () => {
+                    resolveTurn('op');
+                });
+            });
+        }
+
+        function declareGo() {
+            document.getElementById('gostop-modal').style.display = 'none';
+            players.pl.goCount++;
+            showToast("🔥 GO! (계속 진행합니다)");
+            finishTurn('pl');
+        }
+
+        function declareStop() {
+            document.getElementById('gostop-modal').style.display = 'none';
+            endGame('pl');
+        }
+
+        function calcScore(pid) {
+            const p = players[pid];
+            let kwang = 0, yul = 0, tti = 0, piCount = 0;
+            let hong = 0, cheong = 0, cho = 0, godori = 0;
+            let biKwang = false;
+
+            p.eaten.forEach(c => {
+                if(c.t === 'kwang') { kwang++; if(c.f === 'biKwang') biKwang=true; }
+                if(c.t === 'yul') yul++;
+                if(c.t === 'tti') tti++;
+                
+                if(c.f === 'ssang') piCount += 2;
+                else if(c.t === 'pi') piCount += 1;
+
+                if(c.f === 'hong') hong++;
+                if(c.f === 'cheong') cheong++;
+                if(c.f === 'cho') cho++;
+                if(c.f === 'godori') godori++;
+            });
+
+            // 점수 계산
+            let score = 0;
+
+            // 광
+            if(kwang === 5) score += 15;
+            else if(kwang === 4) score += 4;
+            else if(kwang === 3) score += (biKwang ? 2 : 3);
+
+            // 열끝
+            if(yul >= 5) score += (yul - 4);
+            if(godori === 3) score += 5; // 고도리
+
+            // 띠
+            if(tti >= 5) score += (tti - 4);
+            if(hong === 3) score += 3;
+            if(cheong === 3) score += 3;
+            if(cho === 3) score += 3;
+
+            // 피
+            if(piCount >= 10) score += (piCount - 9);
+
+            // 배수 연산 로직 생략 (원래는 피박, 광박, 흔들기, 고 횟수에 따른 배수 적용 필요)
+            // 간단히 고 횟수만 적용
+            if(score > 0) {
+                if(p.goCount === 1) score += 1;
+                else if(p.goCount === 2) score += 2;
+                else if(p.goCount >= 3) score *= Math.pow(2, p.goCount - 2);
+            }
+
+            p.score = score;
+
+            // UI 업데이트
+            document.getElementById(`${pid}-s-kwang`).textContent = kwang;
+            document.getElementById(`${pid}-s-yul`).textContent = yul;
+            document.getElementById(`${pid}-s-tti`).textContent = tti;
+            document.getElementById(`${pid}-s-pi`).textContent = piCount;
+            document.getElementById(`${pid}-total`).textContent = score + ' 점';
+            document.getElementById(`${pid}-go`).textContent = p.goCount > 0 ? `${p.goCount} GO` : '';
+        }
+
+        function checkGameOver() {
+            isGameOver = true;
+            // 게임 무효(나가리)
+            const modal = document.getElementById('result-modal');
+            document.getElementById('result-title').textContent = "무효 (나가리)";
+            document.getElementById('result-desc').textContent = "승자가 없습니다!";
+            modal.style.display = 'block';
+        }
+
+        function endGame(winnerPid) {
+            isGameOver = true;
+            const p = players[winnerPid];
+            const modal = document.getElementById('result-modal');
+            
+            // 점수에 따른 랭킹 스코어 환산 (예: 1점당 100점)
+            const finalScore = p.score * 100;
+
+            if(winnerPid === 'pl') {
+                document.getElementById('result-title').textContent = "🎉 승리! 🎉";
+                document.getElementById('result-desc').textContent = `${p.score}점으로 승리하셨습니다!\n(랭킹 +${finalScore}점)`;
+                if(window.submitGameScore) window.submitGameScore('hwatu', finalScore);
+            } else {
+                document.getElementById('result-title').textContent = "😢 패배";
+                document.getElementById('result-desc').textContent = `봇이 ${p.score}점으로 승리했습니다.`;
+            }
+
+            modal.style.display = 'block';
+        }
+
+        let toastTimeout;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        window.onload = startGame;
+
+    </script>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="firebase_score.js"></script>
+</body>
+</html>

@@ -220,6 +220,7 @@
         let stage = 0; // 0: Pre-flop, 1: Flop, 2: Turn, 3: River, 4: Showdown
         let dealerPos = 0;
         let isEvaluating = false;
+        let actedPlayers = 0;
 
         function initGame() {
             players = [
@@ -271,6 +272,7 @@
             pot = 0;
             currentBet = 0;
             stage = 0;
+            actedPlayers = 0;
             isEvaluating = false;
             
             dealerPos = (dealerPos + 1) % 4;
@@ -359,10 +361,14 @@
                 return;
             }
             
-            if(players[currentTurn].currentBet === currentBet && currentBet > 0 && Math.random()>0.1) {
-                let ready = true;
-                for(let p of active) if(p.currentBet < currentBet && p.money > 0) ready = false;
-                if(ready) { nextStage(); return; }
+            let ready = true;
+            for(let p of active) {
+                if(p.currentBet < currentBet && p.money > 0) ready = false;
+            }
+            
+            if(ready && actedPlayers >= active.length) {
+                nextStage();
+                return;
             }
 
             if(players[currentTurn].isAI) {
@@ -424,6 +430,7 @@
 
             document.getElementById(`action-${p.id}`).textContent = msg;
             
+            actedPlayers++;
             currentTurn = (currentTurn + 1) % 4;
             nextTurnLogic();
         }
@@ -460,6 +467,7 @@
         function nextStage() {
             players.forEach(p => p.currentBet = 0);
             currentBet = 0;
+            actedPlayers = 0;
             document.querySelectorAll('.player-action').forEach(el => el.textContent = '');
 
             stage++;
