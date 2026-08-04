@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DODO Poker | 텍사스 홀덤</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        body {
+            background: radial-gradient(circle at center, #1b5e20 0%, #0a3d14 50%, #031c07 100%); /* 카지노 다크그린 */
+            color: #fff;
+            font-family: 'Outfit', 'Noto Sans KR', sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* 헤더 */
+        .header {
+            padding: 15px 30px;
+            display: flex; justify-content: space-between; align-items: center;
+            background: rgba(0,0,0,0.6);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            z-index: 100;
+        }
+        .logo {
+            font-weight: 900; font-size: 1.5rem; color: #fff; text-decoration: none;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .logo span { background: linear-gradient(135deg, #facc15, #fb923c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .btn { background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-weight: bold; }
+        .btn:hover:not(:disabled) { background: rgba(255,255,255,0.2); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn.primary { background: linear-gradient(135deg, #eab308, #d97706); border: none; }
+        .btn.danger { background: linear-gradient(135deg, #ef4444, #b91c1c); border: none; }
+        .btn.success { background: linear-gradient(135deg, #10b981, #047857); border: none; }
+
+        /* 메인 테이블 */
+        .table-container {
+            flex: 1; position: relative; display: flex; justify-content: center; align-items: center; perspective: 1000px;
+        }
+        
+        /* 팟(Pot) 중앙 영역 */
+        .center-area {
+            position: absolute; display: flex; flex-direction: column; align-items: center; gap: 20px; z-index: 50;
+        }
+        .pot-display {
+            background: rgba(0,0,0,0.8); padding: 10px 30px; border-radius: 30px; border: 2px solid #facc15;
+            font-family: 'Orbitron', sans-serif; font-size: 1.5rem; font-weight: 900; color: #facc15;
+            box-shadow: 0 0 20px rgba(250,204,21,0.3); display: flex; align-items: center; gap: 10px;
+        }
+        .community-cards {
+            display: flex; gap: 10px; height: 120px; min-width: 440px; justify-content: center;
+        }
+
+        /* 카드 UI */
+        .card {
+            width: 80px; height: 120px; background: #fff; border-radius: 8px;
+            position: relative; box-shadow: 2px 5px 15px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; justify-content: space-between; padding: 5px;
+            font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 1.2rem;
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transform-origin: center; transform-style: preserve-3d;
+        }
+        .card.hidden {
+            background: repeating-linear-gradient(45deg, #7f1d1d, #7f1d1d 10px, #991b1b 10px, #991b1b 20px);
+            border: 2px solid #fff; color: transparent !important;
+        }
+        .card.hidden::after { content: ''; position: absolute; inset: 4px; border: 1px dashed rgba(255,255,255,0.5); border-radius: 4px; }
+        .card .top-left { text-align: left; line-height: 1; }
+        .card .bottom-right { text-align: right; line-height: 1; transform: rotate(180deg); }
+        .card .center-symbol { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2.5rem; opacity: 0.2; }
+        .card.red { color: #dc2626; }
+        .card.black { color: #171717; }
+        
+        .card.highlight { box-shadow: 0 0 20px #facc15, 0 0 0 3px #facc15; transform: translateY(-10px); }
+
+        /* 플레이어 영역 */
+        .player-area { position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+        .player-info {
+            background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 12px; font-weight: bold;
+            border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; align-items: center;
+            transition: 0.3s; min-width: 150px;
+        }
+        .player-info.active {
+            background: rgba(234, 179, 8, 0.2); border-color: #facc15; box-shadow: 0 0 15px rgba(234, 179, 8, 0.4); transform: scale(1.05);
+        }
+        .player-info.fold { opacity: 0.4; }
+        .player-name { font-size: 1.1rem; margin-bottom: 5px; }
+        .player-money { color: #4ade80; font-family: 'Orbitron', sans-serif; }
+        .player-bet { color: #facc15; font-size: 0.9rem; margin-top: 5px; background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 10px; }
+        .player-action { color: #38bdf8; font-size: 0.8rem; margin-top: 2px; font-weight: bold; }
+        
+        .hand { display: flex; gap: 5px; }
+
+        #player-0 { bottom: 20px; width: 100%; } /* 나 (Bottom) */
+        #player-1 { left: 40px; top: 50%; transform: translateY(-50%); } /* 봇 1 (Left) */
+        #player-2 { top: 20px; width: 100%; } /* 봇 2 (Top) */
+        #player-3 { right: 40px; top: 50%; transform: translateY(-50%); } /* 봇 3 (Right) */
+
+        /* 베팅 컨트롤 UI */
+        .controls {
+            position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); padding: 15px 25px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.2);
+            display: flex; gap: 15px; align-items: center; z-index: 100;
+            opacity: 0; pointer-events: none; transition: 0.3s;
+        }
+        .controls.show { opacity: 1; pointer-events: all; }
+        .raise-slider { width: 150px; }
+
+        /* 결과 알림 */
+        .toast {
+            position: absolute; top: 30%; left: 50%; transform: translate(-50%, 0);
+            background: rgba(0,0,0,0.9); color: #fff; padding: 15px 30px; border-radius: 30px; border: 1px solid #facc15;
+            font-weight: bold; font-size: 1.2rem; pointer-events: none; opacity: 0; transition: 0.3s; z-index: 200;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center;
+        }
+        .toast.show { opacity: 1; transform: translate(-50%, -20px); }
+
+        /* 현재 족보 표시기 (내 패) */
+        .hand-rank-display {
+            position: absolute; bottom: 15px; left: 20px; background: rgba(0,0,0,0.7);
+            padding: 10px 15px; border-radius: 8px; border-left: 4px solid #38bdf8;
+            font-weight: bold; font-size: 1.1rem; z-index: 100;
+        }
+    </style>
+</head>
+<body onload="initGame()">
+
+    <div class="header">
+        <a href="game.html" class="logo">
+            <i class="fa-solid fa-gamepad"></i> DODO <span>Poker</span>
+        </a>
+        <div style="display:flex; gap:10px;">
+            <button class="btn primary" onclick="startRound()"><i class="fa-solid fa-play"></i> 다음 라운드</button>
+        </div>
+    </div>
+
+    <div class="table-container">
+        
+        <div class="center-area">
+            <div class="pot-display"><i class="fa-solid fa-coins"></i> POT: $<span id="ui-pot">0</span></div>
+            <div class="community-cards" id="community-cards">
+                <!-- Flop, Turn, River -->
+            </div>
+        </div>
+
+        <!-- Players -->
+        <div id="player-0" class="player-area">
+            <div class="hand" id="hand-0"></div>
+            <div class="player-info" id="info-0">
+                <div class="player-name">🙋‍♂️ 나</div>
+                <div class="player-money">$<span id="money-0">10000</span></div>
+                <div class="player-bet" id="bet-0">Bet: $0</div>
+                <div class="player-action" id="action-0"></div>
+            </div>
+        </div>
+        <div id="player-1" class="player-area">
+            <div class="player-info" id="info-1">
+                <div class="player-name">🤖 봇 1 (콜링 스테이션)</div>
+                <div class="player-money">$<span id="money-1">10000</span></div>
+                <div class="player-bet" id="bet-1">Bet: $0</div>
+                <div class="player-action" id="action-1"></div>
+            </div>
+            <div class="hand" id="hand-1"></div>
+        </div>
+        <div id="player-2" class="player-area">
+            <div class="player-info" id="info-2">
+                <div class="player-name">🤖 봇 2 (타이트 어그레시브)</div>
+                <div class="player-money">$<span id="money-2">10000</span></div>
+                <div class="player-bet" id="bet-2">Bet: $0</div>
+                <div class="player-action" id="action-2"></div>
+            </div>
+            <div class="hand" id="hand-2"></div>
+        </div>
+        <div id="player-3" class="player-area">
+            <div class="player-info" id="info-3">
+                <div class="player-name">🤖 봇 3 (블러퍼)</div>
+                <div class="player-money">$<span id="money-3">10000</span></div>
+                <div class="player-bet" id="bet-3">Bet: $0</div>
+                <div class="player-action" id="action-3"></div>
+            </div>
+            <div class="hand" id="hand-3"></div>
+        </div>
+
+        <!-- 베팅 컨트롤 -->
+        <div class="controls" id="controls">
+            <button class="btn danger" onclick="userAction('fold')">Fold</button>
+            <button class="btn" onclick="userAction('check')">Check</button>
+            <button class="btn success" onclick="userAction('call')">Call <span id="ui-call-amount"></span></button>
+            <div style="border-left:1px solid rgba(255,255,255,0.2); padding-left:15px; display:flex; align-items:center; gap:10px;">
+                <input type="range" class="raise-slider" id="raise-slider" min="0" max="1000" step="10" oninput="updateRaiseLabel()">
+                <button class="btn primary" onclick="userAction('raise')">Raise $<span id="ui-raise-amount"></span></button>
+            </div>
+        </div>
+
+        <div class="hand-rank-display" id="hand-rank">내 족보: 대기중</div>
+    </div>
+
+    <div id="toast" class="toast">메시지</div>
+
+    <script>
+        const SUITS = ['♠', '♥', '♦', '♣'];
+        const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+        
+        let deck = [];
+        let community = [];
+        let pot = 0;
+        let currentBet = 0;
+        let players = [];
+        let activePlayers = [];
+        let currentTurn = 0;
+        let stage = 0; // 0: Pre-flop, 1: Flop, 2: Turn, 3: River, 4: Showdown
+        let dealerPos = 0;
+        let isEvaluating = false;
+
+        function initGame() {
+            players = [
+                { id: 0, name: '나', money: 10000, hand: [], currentBet: 0, folded: false, isAI: false, style: 'user' },
+                { id: 1, name: '봇 1', money: 10000, hand: [], currentBet: 0, folded: false, isAI: true, style: 'calling' },
+                { id: 2, name: '봇 2', money: 10000, hand: [], currentBet: 0, folded: false, isAI: true, style: 'tight' },
+                { id: 3, name: '봇 3', money: 10000, hand: [], currentBet: 0, folded: false, isAI: true, style: 'bluffer' }
+            ];
+            dealerPos = 3; 
+            startRound();
+        }
+
+        function createDeck() {
+            let newDeck = [];
+            let id = 0;
+            SUITS.forEach(suit => {
+                const color = (suit === '♥' || suit === '♦') ? 'red' : 'black';
+                RANKS.forEach((rank, index) => {
+                    newDeck.push({ id: id++, suit, rank, color, value: index + 2 });
+                });
+            });
+            return newDeck.sort(() => Math.random() - 0.5);
+        }
+
+        function createCardDOM(card, hidden = false) {
+            const el = document.createElement('div');
+            el.className = `card ${card.color} ${hidden ? 'hidden' : ''}`;
+            el.id = `card-${card.id}`;
+            
+            if (!hidden) {
+                el.innerHTML = `
+                    <div class="top-left">${card.rank}<br>${card.suit}</div>
+                    <div class="center-symbol">${card.suit}</div>
+                    <div class="bottom-right">${card.rank}<br>${card.suit}</div>
+                `;
+            }
+            return el;
+        }
+
+        function startRound() {
+            document.getElementById('community-cards').innerHTML = '';
+            document.querySelectorAll('.hand').forEach(el => el.innerHTML = '');
+            document.querySelectorAll('.player-action').forEach(el => el.textContent = '');
+            document.querySelectorAll('.player-info').forEach(el => el.classList.remove('fold', 'active'));
+            document.getElementById('hand-rank').textContent = '내 족보: 대기중';
+            
+            deck = createDeck();
+            community = [];
+            pot = 0;
+            currentBet = 0;
+            stage = 0;
+            isEvaluating = false;
+            
+            dealerPos = (dealerPos + 1) % 4;
+            
+            players.forEach(p => {
+                p.hand = [];
+                p.currentBet = 0;
+                if(p.money <= 0) p.folded = true; 
+                else p.folded = false;
+            });
+            activePlayers = players.filter(p => !p.folded);
+            
+            if(activePlayers.length < 2) {
+                showToast("게임 종료! 최종 우승자가 결정되었습니다.");
+                if(players[0].money > 0 && window.submitGameScore) {
+                    window.submitGameScore('poker', players[0].money);
+                }
+                return;
+            }
+
+            const sbPos = (dealerPos + 1) % 4;
+            const bbPos = (dealerPos + 2) % 4;
+            placeBet(sbPos, 10);
+            placeBet(bbPos, 20);
+            currentBet = 20;
+
+            for(let i=0; i<2; i++) {
+                players.forEach(p => {
+                    if(!p.folded) p.hand.push(deck.pop());
+                });
+            }
+
+            renderAll();
+            
+            currentTurn = (dealerPos + 3) % 4;
+            nextTurnLogic();
+        }
+
+        function renderAll() {
+            document.getElementById('ui-pot').textContent = pot;
+            
+            players.forEach(p => {
+                document.getElementById(`money-${p.id}`).textContent = p.money;
+                document.getElementById(`bet-${p.id}`).textContent = `Bet: $${p.currentBet}`;
+                
+                const infoEl = document.getElementById(`info-${p.id}`);
+                infoEl.className = `player-info ${p.folded ? 'fold' : ''} ${currentTurn === p.id && !isEvaluating ? 'active' : ''}`;
+                
+                const handEl = document.getElementById(`hand-${p.id}`);
+                handEl.innerHTML = '';
+                if(!p.folded && p.hand.length > 0) {
+                    p.hand.forEach(c => {
+                        handEl.appendChild(createCardDOM(c, p.isAI && stage < 4));
+                    });
+                }
+            });
+
+            if(!players[0].folded && stage >= 0) {
+                const eval = evaluateHand([...players[0].hand, ...community]);
+                document.getElementById('hand-rank').textContent = `내 족보: ${eval.name}`;
+            }
+        }
+
+        function placeBet(pId, amount) {
+            const p = players[pId];
+            const actualBet = Math.min(amount, p.money);
+            p.money -= actualBet;
+            p.currentBet += actualBet;
+            pot += actualBet;
+            return actualBet;
+        }
+
+        function nextTurnLogic() {
+            if(isEvaluating) return;
+            renderAll();
+            
+            const active = players.filter(p => !p.folded);
+            if(active.length === 1) {
+                endRoundWinner(active[0]);
+                return;
+            }
+
+            if(players[currentTurn].folded) {
+                currentTurn = (currentTurn + 1) % 4;
+                setTimeout(nextTurnLogic, 0);
+                return;
+            }
+            
+            if(players[currentTurn].currentBet === currentBet && currentBet > 0 && Math.random()>0.1) {
+                let ready = true;
+                for(let p of active) if(p.currentBet < currentBet && p.money > 0) ready = false;
+                if(ready) { nextStage(); return; }
+            }
+
+            if(players[currentTurn].isAI) {
+                setTimeout(() => doAITurn(players[currentTurn]), 1000);
+            } else {
+                showControls();
+            }
+        }
+
+        function showControls() {
+            const p = players[0];
+            const callAmount = currentBet - p.currentBet;
+            document.getElementById('controls').classList.add('show');
+            document.getElementById('ui-call-amount').textContent = callAmount > 0 ? `$${callAmount}` : '';
+            
+            const slider = document.getElementById('raise-slider');
+            slider.min = currentBet + 20; 
+            slider.max = p.money + p.currentBet; 
+            slider.value = slider.min;
+            updateRaiseLabel();
+            
+            const btnCheck = document.querySelector('.controls button:nth-child(2)');
+            const btnCall = document.querySelector('.controls button:nth-child(3)');
+            if(callAmount === 0) {
+                btnCheck.style.display = 'block'; btnCall.style.display = 'none';
+            } else {
+                btnCheck.style.display = 'none'; btnCall.style.display = 'block';
+            }
+        }
+
+        function updateRaiseLabel() {
+            document.getElementById('ui-raise-amount').textContent = document.getElementById('raise-slider').value;
+        }
+
+        function userAction(action) {
+            document.getElementById('controls').classList.remove('show');
+            const p = players[0];
+            executeAction(p, action, parseInt(document.getElementById('raise-slider').value));
+        }
+
+        function executeAction(p, action, raiseTo = 0) {
+            let msg = '';
+            const toCall = currentBet - p.currentBet;
+            
+            if(action === 'fold') {
+                p.folded = true;
+                msg = 'Fold';
+            } else if(action === 'check') {
+                msg = 'Check';
+            } else if(action === 'call') {
+                placeBet(p.id, toCall);
+                msg = 'Call';
+            } else if(action === 'raise') {
+                const add = raiseTo - p.currentBet;
+                placeBet(p.id, add);
+                currentBet = raiseTo;
+                msg = `Raise $${raiseTo}`;
+            }
+
+            document.getElementById(`action-${p.id}`).textContent = msg;
+            
+            currentTurn = (currentTurn + 1) % 4;
+            nextTurnLogic();
+        }
+
+        function doAITurn(p) {
+            const toCall = currentBet - p.currentBet;
+            let action = 'check';
+            let raiseTo = 0;
+
+            const eval = evaluateHand([...p.hand, ...community]);
+            const strength = eval.rank; 
+            const rand = Math.random();
+
+            if (p.style === 'calling') {
+                if (toCall > 0) action = 'call';
+            } else if (p.style === 'tight') {
+                if (strength > 1 || (strength === 1 && rand > 0.5)) {
+                    if (toCall > 0) action = 'call';
+                    if (rand > 0.8) { action = 'raise'; raiseTo = currentBet + 50; }
+                } else {
+                    if (toCall > 0) action = 'fold';
+                }
+            } else if (p.style === 'bluffer') {
+                if (rand > 0.6) { action = 'raise'; raiseTo = currentBet + 100; }
+                else if (toCall > 0) { action = (rand > 0.5) ? 'call' : 'fold'; }
+            }
+
+            if (action === 'call' && p.money < toCall) action = 'call'; 
+            if (action === 'raise' && p.money < (raiseTo - p.currentBet)) action = 'call';
+            
+            executeAction(p, action, raiseTo);
+        }
+
+        function nextStage() {
+            players.forEach(p => p.currentBet = 0);
+            currentBet = 0;
+            document.querySelectorAll('.player-action').forEach(el => el.textContent = '');
+
+            stage++;
+            const commEl = document.getElementById('community-cards');
+            
+            if(stage === 1) {
+                for(let i=0; i<3; i++) {
+                    const c = deck.pop(); community.push(c);
+                    commEl.appendChild(createCardDOM(c));
+                }
+            } else if(stage === 2 || stage === 3) {
+                const c = deck.pop(); community.push(c);
+                commEl.appendChild(createCardDOM(c));
+            } else if(stage === 4) {
+                showdown();
+                return;
+            }
+            
+            currentTurn = (dealerPos + 1) % 4;
+            nextTurnLogic();
+        }
+
+        function evaluateHand(cards) {
+            if(cards.length < 5) {
+                let best = cards.sort((a,b)=>b.value-a.value)[0];
+                let isPair = cards.length===2 && cards[0].value === cards[1].value;
+                return isPair ? {rank: 1, name: 'One Pair', score: cards[0].value*10000} : {rank: 0, name: 'High Card', score: best.value};
+            }
+            
+            cards.sort((a, b) => b.value - a.value);
+            let suits = { '♠': [], '♥': [], '♦': [], '♣': [] };
+            let values = {};
+            cards.forEach(c => {
+                suits[c.suit].push(c);
+                values[c.value] = (values[c.value] || []);
+                values[c.value].push(c);
+            });
+            
+            let flushCards = Object.values(suits).find(arr => arr.length >= 5);
+            
+            function getStraight(cardList) {
+                let uniqueVals = [...new Set(cardList.map(c => c.value))].sort((a, b) => b - a);
+                if (uniqueVals.includes(14)) uniqueVals.push(1); 
+                for (let i = 0; i <= uniqueVals.length - 5; i++) {
+                    if (uniqueVals[i] - uniqueVals[i+4] === 4) {
+                        let sv = uniqueVals[i];
+                        let res = [];
+                        for(let v = sv; v >= sv - 4; v--) {
+                            res.push(cardList.find(c => c.value === (v===1?14:v)));
+                        }
+                        return res;
+                    }
+                }
+                return null;
+            }
+            
+            let straightCards = getStraight(cards);
+            let straightFlushCards = flushCards ? getStraight(flushCards) : null;
+            
+            let groups = Object.values(values).sort((a, b) => {
+                if (a.length !== b.length) return b.length - a.length;
+                return b[0].value - a[0].value;
+            });
+
+            function calcScore(r, ...k) { let s = r * 100000000; k.forEach((val, i) => s += val * Math.pow(100, 3-i)); return s; }
+
+            if (straightFlushCards) return { rank: 8, name: straightFlushCards[0].value===14 ? 'Royal Flush':'Straight Flush', cards: straightFlushCards, score: calcScore(8, straightFlushCards[0].value) };
+            if (groups[0].length === 4) return { rank: 7, name: 'Four of a Kind', cards: groups[0], score: calcScore(7, groups[0][0].value, groups[1][0].value) };
+            if (groups[0].length === 3 && groups[1] && groups[1].length >= 2) return { rank: 6, name: 'Full House', cards: [...groups[0], ...groups[1].slice(0,2)], score: calcScore(6, groups[0][0].value, groups[1][0].value) };
+            if (flushCards) return { rank: 5, name: 'Flush', cards: flushCards.slice(0,5), score: calcScore(5, ...flushCards.slice(0,5).map(c=>c.value)) };
+            if (straightCards) return { rank: 4, name: 'Straight', cards: straightCards, score: calcScore(4, straightCards[0].value) };
+            if (groups[0].length === 3) return { rank: 3, name: 'Three of a Kind', cards: groups[0], score: calcScore(3, groups[0][0].value, ...cards.filter(c=>c.value!==groups[0][0].value).slice(0,2).map(c=>c.value)) };
+            if (groups[0].length === 2 && groups[1] && groups[1].length >= 2) return { rank: 2, name: 'Two Pair', cards: [...groups[0], ...groups[1].slice(0,2)], score: calcScore(2, groups[0][0].value, groups[1][0].value, cards.find(c=>c.value!==groups[0][0].value && c.value!==groups[1][0].value)?.value||0) };
+            if (groups[0].length === 2) return { rank: 1, name: 'One Pair', cards: groups[0], score: calcScore(1, groups[0][0].value, ...cards.filter(c=>c.value!==groups[0][0].value).slice(0,3).map(c=>c.value)) };
+            
+            return { rank: 0, name: 'High Card', cards: cards.slice(0,5), score: calcScore(0, ...cards.slice(0,5).map(c=>c.value)) };
+        }
+
+        function showdown() {
+            isEvaluating = true;
+            renderAll(); 
+
+            const active = players.filter(p => !p.folded);
+            active.forEach(p => {
+                p.eval = evaluateHand([...p.hand, ...community]);
+            });
+
+            active.sort((a, b) => b.eval.score - a.eval.score);
+            const winner = active[0];
+            
+            showToast(`🏆 ${winner.name} 승리! [${winner.eval.name}]로 $${pot} 획득!`);
+            
+            winner.money += pot;
+            
+            if(winner.id === 0 && window.submitGameScore) {
+                window.submitGameScore('poker', pot);
+            }
+
+            winner.eval.cards.forEach(c => {
+                const dom = document.getElementById(`card-${c.id}`);
+                if(dom) dom.classList.add('highlight');
+            });
+        }
+
+        function endRoundWinner(winner) {
+            isEvaluating = true;
+            showToast(`모두 Fold! 🏆 ${winner.name} 기권승! $${pot} 획득`);
+            winner.money += pot;
+            if(winner.id === 0 && window.submitGameScore) {
+                window.submitGameScore('poker', pot);
+            }
+        }
+
+        let toastTimeout;
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerHTML = msg;
+            toast.classList.add('show');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+    </script>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="firebase_score.js"></script>
+</body>
+</html>

@@ -29,7 +29,7 @@ window.submitGameScore = async function(gameId, score) {
         let gameName = gameId;
         const gameNames = {
             'baseball': '야구⚾', 'car': '레이싱🏎️', 'tetris': '테트리스🧱', 'rhythm': '리듬게임🎹',
-            'omok': '오목⚫⚪', 'baduk': '바둑☯️', 'janggi': '장기🏯', 'onecard': '원카드🃏', 'chess': '체스♟️', 'puzzle': '퍼즐🧩',
+            'omok': '오목⚫⚪', 'baduk': '바둑☯️', 'janggi': '장기🏯', 'onecard': '원카드🃏', 'poker': '포커💸', 'chess': '체스♟️', 'puzzle': '퍼즐🧩',
             'soccer': '축구⚽', 'balloon': '풍선🎈', 'brick': '벽돌깨기🟦'
         };
         if (gameNames[gameId]) gameName = gameNames[gameId];
