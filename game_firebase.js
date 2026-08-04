@@ -70,6 +70,9 @@ window.loadRanking = function(gameId, btnElement = null) {
             `;
             listEl.appendChild(row);
         });
+    }, error => {
+        console.error("Firebase Ranking Error: ", error);
+        listEl.innerHTML = '<div style="text-align:center; color:#ef4444; padding: 2rem;">Firebase 권한 오류이거나 데이터베이스가 활성화되지 않았습니다.<br>Firebase 콘솔에서 Realtime Database 규칙을 확인해주세요.</div>';
     });
 };
 

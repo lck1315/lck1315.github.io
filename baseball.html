@@ -223,27 +223,47 @@ grass.rotation.x = -Math.PI / 2;
 grass.receiveShadow = true;
 scene.add(grass);
 
-// 내야 흙 영역 (다이아몬드)
-const infieldGeo = new THREE.PlaneGeometry(39, 39);
-const infield = new THREE.Mesh(infieldGeo, new THREE.MeshLambertMaterial({ color: 0xcd853f })); // 밝은 흙색
-infield.rotation.x = -Math.PI / 2;
-infield.rotation.z = Math.PI / 4;
-infield.position.set(0, 0.01, -19.4);
-infield.receiveShadow = true;
-scene.add(infield);
+// 전체 내야 흙길 (다이아몬드)
+const dirtMatInfield = new THREE.MeshLambertMaterial({ color: 0xcd853f });
+const basePathGeo = new THREE.PlaneGeometry(28, 28);
+const basePath = new THREE.Mesh(basePathGeo, dirtMatInfield);
+basePath.rotation.x = -Math.PI / 2;
+basePath.rotation.z = Math.PI / 4;
+basePath.position.set(0, 0.01, -19.4);
+basePath.receiveShadow = true;
+scene.add(basePath);
+
+// 내야 잔디 (흙길 안쪽)
+const infieldGrassGeo = new THREE.PlaneGeometry(24, 24);
+const infieldGrass = new THREE.Mesh(infieldGrassGeo, grassMat);
+infieldGrass.rotation.x = -Math.PI / 2;
+infieldGrass.rotation.z = Math.PI / 4;
+infieldGrass.position.set(0, 0.015, -19.4);
+infieldGrass.receiveShadow = true;
+scene.add(infieldGrass);
 
 // 파울 라인 (홈 ~ 외야)
 const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-const leftLine = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 120), lineMat);
+const leftLine = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 100), lineMat);
 leftLine.rotation.x = -Math.PI / 2;
-leftLine.rotation.z = -Math.PI / 4;
-leftLine.position.set(-42, 0.02, -42);
+leftLine.rotation.z = Math.PI / 4;
+leftLine.position.set(-35.35, 0.02, -35.35);
 scene.add(leftLine);
-const rightLine = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 120), lineMat);
+const rightLine = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 100), lineMat);
 rightLine.rotation.x = -Math.PI / 2;
-rightLine.rotation.z = Math.PI / 4;
-rightLine.position.set(42, 0.02, -42);
+rightLine.rotation.z = -Math.PI / 4;
+rightLine.position.set(35.35, 0.02, -35.35);
 scene.add(rightLine);
+
+// 1, 2, 3루 베이스 라인 (흰선)
+const baseLineGeo = new THREE.PlaneGeometry(27.4, 27.4);
+const baseLineEdgesGeo = new THREE.EdgesGeometry(baseLineGeo);
+const baseLineMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
+const baseLines = new THREE.LineSegments(baseLineEdgesGeo, baseLineMat);
+baseLines.rotation.x = -Math.PI / 2;
+baseLines.rotation.z = Math.PI / 4;
+baseLines.position.set(0, 0.025, -19.4);
+scene.add(baseLines);
 
 // 흙 (마운드, 홈)
 const dirtMat = new THREE.MeshLambertMaterial({ color: 0xcd853f });
@@ -505,9 +525,15 @@ const batMat = new THREE.MeshPhysicalMaterial({color: 0x8B4513, roughness: 0.4, 
 const batGroup = new THREE.Group();
 batGroup.position.set(0, -0.45, 0); // 오른손 정중앙
 
-const bat = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.04, 0.9, 16), batMat);
+// 배트의 위쪽(배럴)은 굵게, 아래쪽(손잡이)은 얇게 수정
+const bat = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.025, 0.9, 16), batMat);
 bat.position.set(0, 0.45, 0); // 배트 기둥을 위로 올려 0,0,0이 손잡이가 되게 함
 batGroup.add(bat);
+
+// 배트 손잡이 끝(노브) 추가
+const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.05, 16), new THREE.MeshPhysicalMaterial({color: 0x111111}));
+knob.position.set(0, 0, 0);
+batGroup.add(knob);
 
 batGroup.rotation.x = Math.PI - 0.4; // 팔뚝 방향에서 등 뒤쪽으로 비스듬히 눕힘
 batGroup.rotation.z = 0.2; // 살짝 바깥쪽으로
@@ -904,8 +930,9 @@ function update3DAnimations() {
         batter.rArm.rotation.set(-1.0, 0.2, 0.6);
         batter.rArm.elbow.rotation.set(-2.2 + waggle, 0, 0);
         
-        batter.lArm.rotation.set(-1.2, 0.8, -0.4);
-        batter.lArm.elbow.rotation.set(-2.3 + waggle, 0.1, 0);
+        // 두 손으로 잡는 느낌을 위해 왼손을 오른손 쪽으로 밀착
+        batter.lArm.rotation.set(-1.0, 0.6, 0.2);
+        batter.lArm.elbow.rotation.set(-2.2 + waggle, 0, 0);
 
         if(batter.batGroup) batter.batGroup.rotation.set(Math.PI - 0.2 + waggle*0.5, 0.2, 0.2);
     } else if (G.ba === 'swing') {
@@ -920,7 +947,7 @@ function update3DAnimations() {
         
         // 2. 상체 꼬임 풀림 (골반보다 살짝 늦게 열리며 강한 회전력)
         const t_torso = t < 0.5 ? Math.pow(t / 0.5, 3) : 1.0 - 0.5 * Math.pow(1 - (t - 0.5) / 0.5, 2);
-        batter.torso.rotation.y = -Math.PI / 3 + (Math.PI * 0.9 * t_torso);
+        batter.torso.rotation.y = -0.2 + (Math.PI * 0.7 * t_torso);
         batter.torso.rotation.z = 0.1 * (1 - t_torso);
         batter.torso.rotation.x = 0.15 - (0.2 * t_torso);
         
@@ -939,8 +966,9 @@ function update3DAnimations() {
         batter.rArm.rotation.set(armX, 0.2 - (0.4 * t_torso), 0.6 - (1.2 * t_torso));
         batter.rArm.elbow.rotation.set(elbowX, 0, 0);
         
-        batter.lArm.rotation.set(armX, 0.8 - (1.0 * t_torso), -0.4 + (0.6 * t_torso));
-        batter.lArm.elbow.rotation.set(elbowX, 0.1 - (0.2 * t_torso), 0);
+        // 왼손 동기화
+        batter.lArm.rotation.set(armX, 0.6 - (0.8 * t_torso), 0.2 - (0.8 * t_torso));
+        batter.lArm.elbow.rotation.set(elbowX, 0, 0);
 
         // 손목 롤오버 (배트 각도)
         if(batter.batGroup) {
@@ -962,6 +990,11 @@ function update3DAnimations() {
             batter.batGroup.rotation.set(batX, batY, batZ);
         }
     }
+
+    // 타자 시선 처리: 항상 투수(-Z) 방향을 주시하도록 머리 회전 보정
+    const batterWorldRot = batter.rotation.y + batter.pelvis.rotation.y + batter.torso.rotation.y;
+    // -Z를 바라보려면 월드 Y 회전이 Math.PI 가 되어야 함
+    batter.head.rotation.y = Math.PI - batterWorldRot;
 
     // 공 궤적 연산
     if (G.bl.a) {
