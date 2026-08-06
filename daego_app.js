@@ -352,9 +352,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (isSigningUp) {
                             return; // 회원가입 중에는 강제 로그아웃 로직 우회
                         }
-                        // DB에 유저 문서가 없으면 강제 로그아웃
-                        alert("회원 공간에 등록되지 않은 사용자 계정입니다. 계정을 확인해주세요.");
-                        auth.signOut();
+                        // 기존 Dodo 계정 등으로 로그인했지만 대고계 회원이 아닌 경우 자동 가입 신청 처리
+                        db.collection('daego_users').doc(user.uid).set({
+                            nickname: user.displayName || "회원",
+                            role: "신입회원 🌱",
+                            isApproved: false,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        }).then(() => {
+                            alert("대고계 모임에 가입 신청이 접수되었습니다! 회장님의 승인을 기다려주세요. 🔐");
+                            auth.signOut();
+                        }).catch(e => {
+                            console.error(e);
+                            auth.signOut();
+                        });
                         return;
                     }
 
