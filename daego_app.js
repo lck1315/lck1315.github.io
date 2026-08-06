@@ -2783,9 +2783,26 @@ function initCardSliders(container) {
                         }
                     }).catch(err => console.error("내 프로필 로드 실패:", err));
             }
-            profileDropdown.classList.add('hidden');
+            if (typeof profileDropdown !== 'undefined' && profileDropdown) profileDropdown.classList.add('hidden');
         });
     }
+
+    const mobileManageProfileBtn = document.getElementById('mobile-manage-profile-btn');
+    if (mobileManageProfileBtn) {
+        mobileManageProfileBtn.addEventListener('click', () => {
+            if (currentUserInfo && currentUserInfo.uid) {
+                db.collection('daego_users').doc(currentUserInfo.uid).get()
+                    .then(doc => {
+                        if (doc.exists) {
+                            openFamilyEditModal(doc.id, doc.data());
+                        }
+                    }).catch(err => console.error("내 프로필 로드 실패:", err));
+            }
+            const mobileNav = document.getElementById('mobile-nav-dropdown');
+            if (mobileNav) mobileNav.classList.add('hidden');
+        });
+    }
+
 
     // 회원 관리 모달 로직 (마스터 전용)
     const adminApprovalModal = document.getElementById('admin-approval-modal');

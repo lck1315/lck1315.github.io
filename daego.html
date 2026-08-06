@@ -24,7 +24,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=1.0.49">
+    <link rel="stylesheet" href="style.css?v=1.0.56">
 </head>
 <body class="dark-theme">
     <!-- 스크롤 진행 바 -->
@@ -753,7 +753,7 @@
                                     <button id="btn-card-tts-toggle" onclick="toggleCardTTS()" style="background: rgba(0,206,201,0.15); color: #00cec9; border: 1px solid rgba(0,206,201,0.3); padding: 5px 12px; border-radius: 15px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.3s;">
                                         <i class="fa-solid fa-volume-high"></i> 음성 ON
                                     </button>
-                                    <button id="btn-card-tts-stop" onclick="if(window.speechSynthesis){ window.speechSynthesis.cancel(); }" style="background: rgba(232,67,147,0.15); color: #e84393; border: 1px solid rgba(232,67,147,0.3); padding: 5px 12px; border-radius: 15px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.3s;" title="읽어주기를 즉시 멈춥니다">
+                                    <button id="btn-card-tts-stop" onclick="if(window.speechSynthesis){ window.speechSynthesis.cancel(); }" style="background: rgba(232,67,147,0.15); color: #e84393; border: 1px solid rgba(232,67,147,0.3); padding: 5px 12px; border-radius: 15px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.3s;" title="읽어주기를 즉시 멈췄습니다">
                                         <i class="fa-solid fa-stop"></i> 멈춤
                                     </button>
                                     <button id="btn-card-auto-toggle" onclick="toggleCardAutoPlay()" style="background: rgba(253,203,110,0.15); color: #fdcb6e; border: 1px solid rgba(253,203,110,0.3); padding: 5px 12px; border-radius: 15px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.3s;">
@@ -899,6 +899,9 @@
  
                 <button type="submit" class="btn btn-primary" style="width:100%; padding:0.8rem; margin-top:4px; font-weight:700;"><i class="fa-solid fa-save"></i> 저장하기</button>
             </form>
+        </div>
+    </div>
+    
     <!-- 회원 관리 모달 (마스터 전용) -->
     <div id="admin-approval-modal" class="calendar-modal-overlay">
         <div class="calendar-modal-content glass-card" style="max-width: 600px; padding: 2rem;">
@@ -1056,7 +1059,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     
-    <script src="daego_app.js?v=1.0.49"></script>
+    <script src="daego_app.js?v=1.0.56"></script>
 
     <!-- 단어장 연동 스크립트 -->
     <script>

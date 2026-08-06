@@ -212,6 +212,31 @@ main {
     font-weight: 400;
 }
 
+/* Daego Header Logo Style */
+.daego-logo {
+    display: flex;
+    align-items: baseline;
+    text-decoration: none;
+    font-family: 'Outfit', 'Noto Sans KR', sans-serif;
+    letter-spacing: -1px;
+}
+
+.daego-logo .logo-dae, .daego-logo .logo-go, .daego-logo .logo-gye {
+    font-size: 1.8rem;
+    font-weight: 900;
+}
+
+.daego-logo .logo-dae { color: var(--primary-color); }
+.daego-logo .logo-go { color: var(--text-color); }
+.daego-logo .logo-gye { color: var(--secondary-color); }
+
+.daego-logo .logo-text {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-left: 2px;
+}
+
 /* Work Header Logo Style */
 .header-logo {
     display: flex;
