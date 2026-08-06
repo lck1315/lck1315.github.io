@@ -150,17 +150,17 @@
                     </div>
                     <div class="form-group">
                         <label for="signup-nickname"><i class="fa-solid fa-signature"></i> 호칭/이름</label>
-                        <input type="text" id="signup-nickname" placeholder="예: 첫째, 아빠, 엄마" required>
+                        <input type="text" id="signup-nickname" placeholder="예: 회장, 총무, 홍길동" required>
                     </div>
                     <div class="form-group">
                         <label for="signup-role"><i class="fa-solid fa-user-tag"></i> 역할 스티커 선택</label>
                         <select id="signup-role" style="width: 100%; padding: 0.8rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; color: var(--text-color);">
-                            <option value="엄마 👩">엄마 👩</option>
-                            <option value="첫째 👦">첫째 👦</option>
-                            <option value="둘째 👧">둘째 👧</option>
-                            <option value="막둥이 🐱">막둥이 🐱</option>
-                            <option value="친척 🤍">친척 🤍</option>
-                            <option value="손님 👤">손님 👤</option>
+                            <option value="총무 📝">총무 📝</option>
+                            <option value="임원 🎖️">임원 🎖️</option>
+                            <option value="우수회원 🌟">우수회원 🌟</option>
+                            <option value="일반회원 👤">일반회원 👤</option>
+                            <option value="신입회원 🌱">신입회원 🌱</option>
+                            <option value="게스트 👥">게스트 👥</option>
                         </select>
                     </div>
                     <button type="submit" class="btn btn-primary w-100">가입 완료 <i class="fa-solid fa-user-plus"></i></button>
@@ -497,10 +497,10 @@
                             <!-- 역할별 소식 필터 탭 -->
                             <div class="board-filter-buttons">
                                 <button class="board-filter-btn active" data-filter="all">전체</button>
-                                <button class="board-filter-btn" data-filter="아빠 👨">아빠</button>
-                                <button class="board-filter-btn" data-filter="엄마 👩">엄마</button>
-                                <button class="board-filter-btn" data-filter="첫째 👦">첫째</button>
-                                <button class="board-filter-btn" data-filter="막둥이 🐱">막둥이</button>
+                                <button class="board-filter-btn" data-filter="회장 👑">아빠</button>
+                                <button class="board-filter-btn" data-filter="총무 📝">엄마</button>
+                                <button class="board-filter-btn" data-filter="임원 🎖️">첫째</button>
+                                <button class="board-filter-btn" data-filter="일반회원 👤">막둥이</button>
                             </div>
                         </div>
                         <div id="board-posts-grid" class="board-posts-grid">
@@ -961,7 +961,7 @@
                 
                 <div class="form-group" style="margin-bottom: 1.2rem;">
                     <label for="edit-member-name" style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem;"><i class="fa-solid fa-signature"></i> 이름 (역할 포함)</label>
-                    <input type="text" id="edit-member-name" placeholder="예: 아빠 (DODO-Daddy)" required style="width: 100%; padding: 0.8rem 1rem; border-radius: 12px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color); font-family: inherit; font-size: 0.9rem;">
+                    <input type="text" id="edit-member-name" placeholder="예: 회장 (Daego-President)" required style="width: 100%; padding: 0.8rem 1rem; border-radius: 12px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color); font-family: inherit; font-size: 0.9rem;">
                 </div>
 
                 <div class="form-group" style="margin-bottom: 1.2rem;">
@@ -972,9 +972,9 @@
                 <div class="form-group" style="margin-bottom: 1.2rem;">
                     <label for="edit-member-icon" style="display: block; font-size: 0.85rem; font-weight: 700; margin-bottom: 0.5rem;"><i class="fa-solid fa-icons"></i> 대표 아이콘</label>
                     <select id="edit-member-icon" style="width: 100%; padding: 0.8rem 1rem; border-radius: 12px; border: 1px solid var(--input-border); background: var(--input-bg); color: var(--text-color); font-family: inherit; font-size: 0.9rem; box-sizing: border-box;">
-                        <option value="fa-user-tie|bg-blue">👨 아빠 (넥타이 / 블루 배경)</option>
-                        <option value="fa-spa|bg-pink">👩 엄마 (스파 리프 / 핑크 배경)</option>
-                        <option value="fa-graduation-cap|bg-orange">👦 첫째 (학사모 / 오렌지 배경)</option>
+                        <option value="fa-user-tie|bg-blue">👑 회장 (넥타이 / 블루 배경)</option>
+                        <option value="fa-spa|bg-pink">📝 총무 (펜 / 핑크 배경)</option>
+                        <option value="fa-graduation-cap|bg-orange">🎖️ 임원 (메달 / 오렌지 배경)</option>
                         <option value="fa-cat|bg-purple">🐱 막내/반려묘 (고양이 / 퍼플 배경)</option>
                         <option value="fa-child|bg-green">👶 아기 (아이 / 그린 배경)</option>
                         <option value="fa-user|bg-blue">👤 기타 (사용자 / 회색 배경)</option>

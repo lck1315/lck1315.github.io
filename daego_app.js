@@ -326,8 +326,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         const userData = doc.data();
                         
                         // 승인 체크 로직
-                        if (userData.role !== '아빠 👨' && userData.isApproved !== true) {
-                            alert("아빠(마스터)의 가입 승인을 기다리고 있습니다. 승인 후 다시 로그인해주세요. 🔐");
+                        if (userData.role !== '회장 👑' && userData.isApproved !== true) {
+                            alert("회장(마스터)의 가입 승인을 기다리고 있습니다. 승인 후 다시 로그인해주세요. 🔐");
                             auth.signOut();
                             return;
                         }
@@ -335,7 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         // 마스터 메뉴 제어
                         const adminBtn = document.getElementById('dropdown-admin-approval-btn');
                         const btnWriteNotice = document.getElementById('btn-write-notice');
-                        if (userData.role === '아빠 👨') {
+                        if (userData.role === '회장 👑') {
                             if (adminBtn) adminBtn.classList.remove('hidden');
                             if (btnWriteNotice) btnWriteNotice.classList.remove('hidden');
                         } else {
@@ -2486,7 +2486,7 @@ function initCardSliders(container) {
             : (document.getElementById('guestbook-author-input').value.trim() || "손님");
         const role = currentUserInfo 
             ? currentUserInfo.role 
-            : "손님 👤";
+            : "게스트 👥";
         const message = messageInput.value.trim();
         const selectedSticker = document.querySelector('input[name="sticker"]:checked').value;
 
@@ -2618,7 +2618,7 @@ function initCardSliders(container) {
     const defaultFamilyData = [
         {
             id: "daddy",
-            name: "아빠 (DODO-Daddy)",
+            name: "회장 (Daego-President)",
             role: "든든한 울타리 & IT 마스터",
             iconClass: "fa-user-tie",
             iconBg: "bg-blue",
@@ -2874,7 +2874,7 @@ function initCardSliders(container) {
 
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    const isMaster = data.role === '아빠 👨';
+                    const isMaster = data.role === '회장 👑';
                     const isApproved = data.isApproved === true;
                     
                     // Create list item UI
