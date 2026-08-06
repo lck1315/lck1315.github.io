@@ -313,13 +313,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (user) {
             toggleUIPanelLocks(true);
             
-            // 로그인 시 스마트 단어장 관련 요소 노출
-            const authElements = document.querySelectorAll('.auth-only-wordbook, .auth-only-calendar');
+            // 로그인 시 관련 요소 노출
+            const authElements = document.querySelectorAll('.auth-only-calendar');
             authElements.forEach(el => {
-                if (el.classList.contains('auth-only-wordbook')) {
+                if (el.classList.contains('auth-only-calendar')) {
                     el.classList.remove('hidden');
-                } else {
-                    el.style.display = '';
                 }
             });
 
@@ -445,11 +443,9 @@ document.addEventListener('DOMContentLoaded', () => {
             toggleUIPanelLocks(false);
             
             // 로그아웃 시 스마트 단어장 관련 요소 숨김
-            const authElements = document.querySelectorAll('.auth-only-wordbook, .auth-only-calendar');
+            const authElements = document.querySelectorAll('.auth-only-calendar');
             authElements.forEach(el => {
-                if (el.classList.contains('auth-only-wordbook')) {
-                    el.classList.add('hidden');
-                } else {
+                if (el.classList.contains('auth-only-calendar')) {
                     el.style.display = 'none';
                 }
             });
