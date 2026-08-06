@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 권한 검증 헬퍼
     function checkAuth() {
         if (!currentUserInfo) {
-            alert("가족 공간 로그인이 필요한 서비스입니다! 로그인해 주세요. 🔐");
+            alert("회원 공간 로그인이 필요한 서비스입니다! 로그인해 주세요. 🔐");
             showLoginScreen();
             authContainer.classList.remove('hidden');
             return false;
@@ -166,12 +166,12 @@ document.addEventListener('DOMContentLoaded', () => {
         auth.signInWithEmailAndPassword(email, password)
             .then(async (userCredential) => {
                 const user = userCredential.user;
-                // 가족 공간 유저인지 검증
+                // 회원 공간 유저인지 검증
                 try {
                     const doc = await db.collection('daego_users').doc(user.uid).get();
                     if (!doc.exists) {
                         await auth.signOut();
-                        showAuthError("가족 공간에 등록되지 않은 계정입니다.");
+                        showAuthError("회원 공간에 등록되지 않은 계정입니다.");
                         return;
                     }
                     loginForm.reset();
@@ -345,7 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         currentUserInfo = {
                             uid: user.uid,
-                            nickname: userData.nickname || user.displayName || "가족",
+                            nickname: userData.nickname || user.displayName || "회원",
                             role: userData.role || "기타 🤍"
                         };
                     } else {
@@ -353,7 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             return; // 회원가입 중에는 강제 로그아웃 로직 우회
                         }
                         // DB에 유저 문서가 없으면 강제 로그아웃
-                        alert("가족 공간에 등록되지 않은 사용자 계정입니다. 계정을 확인해주세요.");
+                        alert("회원 공간에 등록되지 않은 사용자 계정입니다. 계정을 확인해주세요.");
                         auth.signOut();
                         return;
                     }
@@ -397,7 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error("사용자 정보 로드 오류:", err);
                     currentUserInfo = {
                         uid: user.uid,
-                        nickname: user.displayName || "가족",
+                        nickname: user.displayName || "회원",
                         role: "기타 🤍"
                     };
                     headerUserName.textContent = currentUserInfo.nickname;
@@ -702,7 +702,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ----------------------------------------------------
-    // 4. 가족 프로필 카드 3D 뒤집기
+    // 4. 회원 프로필 카드 3D 뒤집기
     // ----------------------------------------------------
     const memberCards = document.querySelectorAll('.member-card-wrapper');
     memberCards.forEach(card => {
@@ -713,7 +713,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ----------------------------------------------------
-    // 5. 구글 스타일 가족 캘린더 엔진
+    // 5. 구글 스타일 회원 캘린더 엔진
     // ----------------------------------------------------
     let currentCalDate = new Date();
     const monthYearText = document.getElementById('calendar-month-year');
@@ -1387,8 +1387,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="glass-card login-prompt-card" style="position: relative; width: 90%; max-width: 450px; text-align: center; padding: 3rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; background: rgba(30, 30, 45, 0.75); backdrop-filter: blur(12px); box-shadow: 0 15px 50px rgba(0,0,0,0.5); z-index: 10;">
                             <i class="fa-solid fa-lock" style="font-size: 3.5rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
                             <h3 style="font-size: 1.4rem; font-weight: 800; margin: 0;">추억 갤러리는 로그인 후 이용 가능합니다 🔐</h3>
-                            <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 340px; line-height: 1.6; margin: 0;">DODO 가족의 소중한 여행 사진과 따뜻한 일상 모습은 가족 인증을 마친 멤버들에게만 안전하게 공개됩니다.</p>
-                            <button class="btn btn-primary" onclick="document.getElementById('auth-menu-btn').click();" style="padding: 0.8rem 2rem;"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
+                            <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 340px; line-height: 1.6; margin: 0;">대고계 회원의 소중한 여행 사진과 따뜻한 일상 모습은 회원 인증을 마친 멤버들에게만 안전하게 공개됩니다.</p>
+                            <button class="btn btn-primary" onclick="document.getElementById('auth-menu-btn').click();" style="padding: 0.8rem 2rem;"><i class="fa-solid fa-right-to-bracket"></i> 회원 로그인하기</button>
                         </div>
                     </div>
                 `;
@@ -1442,7 +1442,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>` : `<img src="${firstImg}" alt="${post.title}">`}
                 </div>
                 <div class="gallery-content" style="position: relative; padding-bottom: 3.5rem;">
-                    <span class="gallery-tag">${post.category === 'travel' ? '가족 여행 ✈️' : '소소한 일상 ☕'}</span>
+                    <span class="gallery-tag">${post.category === 'travel' ? '회원 여행 ✈️' : '소소한 일상 ☕'}</span>
                     <h3 class="gallery-item-title">${escapeHTML(post.title)}</h3>
                     <p class="gallery-item-desc">${escapeHTML(post.desc)}</p>
                     <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; font-weight: 600;">
@@ -1637,7 +1637,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ----------------------------------------------------
-    // 7. 사진 업로드형 가족 게시판 로직 (Canvas 압축 & 저장)
+    // 7. 사진 업로드형 회원 게시판 로직 (Canvas 압축 & 저장)
     // ----------------------------------------------------
     const boardForm = document.getElementById('board-form');
     const boardTitle = document.getElementById('board-title');
@@ -1741,9 +1741,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="glass-card login-prompt-card" style="position: relative; width: 90%; max-width: 450px; text-align: center; padding: 3rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; background: rgba(30, 30, 45, 0.75); backdrop-filter: blur(12px); box-shadow: 0 15px 50px rgba(0,0,0,0.5); z-index: 10;">
                             <i class="fa-solid fa-user-lock" style="font-size: 3.5rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
-                            <h3 style="font-size: 1.4rem; font-weight: 800; margin: 0;">가족 소식은 로그인 후 볼 수 있습니다 📝</h3>
+                            <h3 style="font-size: 1.4rem; font-weight: 800; margin: 0;">회원 소식은 로그인 후 볼 수 있습니다 📝</h3>
                             <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 340px; line-height: 1.6; margin: 0;">우리들만의 스마트 비밀 아지트 게시판입니다. 로그인하셔서 새로운 이야기와 소중한 안부를 등록해 보세요!</p>
-                            <button class="btn btn-primary" onclick="document.getElementById('auth-menu-btn').click();" style="padding: 0.8rem 2rem;"><i class="fa-solid fa-right-to-bracket"></i> 가족 로그인하기</button>
+                            <button class="btn btn-primary" onclick="document.getElementById('auth-menu-btn').click();" style="padding: 0.8rem 2rem;"><i class="fa-solid fa-right-to-bracket"></i> 회원 로그인하기</button>
                         </div>
                     </div>
                 `;
@@ -1752,7 +1752,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="glass-card login-prompt-card" style="grid-column: 1 / -1; width: 100%; text-align: center; padding: 4rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; border: 1px solid var(--card-border); border-radius: 20px;">
                         <i class="fa-solid fa-pen-to-square" style="font-size: 3.5rem; color: var(--primary-color); animation: floating 6s ease-in-out infinite;"></i>
                         <h3 style="font-size: 1.4rem; font-weight: 800; margin: 0;">아직 등록된 이야기가 없습니다 📝</h3>
-                        <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 340px; line-height: 1.6; margin: 0;">가장 먼저 소중한 가족 이야기를 등록해 보세요!</p>
+                        <p style="font-size: 0.95rem; color: var(--text-muted); max-width: 340px; line-height: 1.6; margin: 0;">가장 먼저 소중한 회원 이야기를 등록해 보세요!</p>
                     </div>
                 `;
             }
@@ -1808,7 +1808,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="post-body">
                     <div>
                         <div class="post-meta">
-                            <span class="post-author"><i class="fa-solid fa-user-pen"></i> ${escapeHTML(post.author)} (${post.role || '가족 🤍'})</span>
+                            <span class="post-author"><i class="fa-solid fa-user-pen"></i> ${escapeHTML(post.author)} (${post.role || '회원 🤍'})</span>
                             <span class="post-date"><i class="fa-regular fa-clock"></i> ${dateStr}</span>
                         </div>
                         <h4 class="post-title">${escapeHTML(post.title)}</h4>
@@ -2144,7 +2144,7 @@ function initCardSliders(container) {
                 events.forEach(evt => {
                     combinedTimelineData.push({
                         title: `달력 일정: ${evt.title}`,
-                        content: `${dateKey}에 예정된 DODO 가족의 일정입니다. 작성자: ${evt.author || '가족'}`,
+                        content: `${dateKey}에 예정된 대고계 회원의 일정입니다. 작성자: ${evt.author || '회원'}`,
                         date: new Date(dateKey + 'T00:00:00').getTime(),
                         type: 'calendar',
                         rawText: evt.title + ' ' + (evt.author || '')
@@ -2204,10 +2204,10 @@ function initCardSliders(container) {
                 day: '2-digit'
             });
 
-            // 기본값 설정 (가족 소식)
+            // 기본값 설정 (회원 소식)
             let iconClass = 'fa-heart-pulse';
             let bgClass = 'bg-blue';
-            let themeText = '가족 소식 🤍';
+            let themeText = '회원 소식 🤍';
 
             // AI 판단 분석 (키워드 매칭)
             const textToAnalyze = item.rawText.toLowerCase();
@@ -2223,7 +2223,7 @@ function initCardSliders(container) {
             } else if (petKeywords.some(kw => textToAnalyze.includes(kw))) {
                 iconClass = 'fa-cat';
                 bgClass = 'bg-purple';
-                themeText = '반려가족 도도 🐱';
+                themeText = '반려회원 도도 🐱';
             } else if (studyKeywords.some(kw => textToAnalyze.includes(kw))) {
                 iconClass = 'fa-graduation-cap';
                 bgClass = 'bg-blue';
@@ -2231,7 +2231,7 @@ function initCardSliders(container) {
             } else if (foodKeywords.some(kw => textToAnalyze.includes(kw))) {
                 iconClass = 'fa-utensils';
                 bgClass = 'bg-green';
-                themeText = '가족 만찬 🍽️';
+                themeText = '회원 만찬 🍽️';
             }
 
             const leftOrRightClass = index % 2 === 0 ? 'left-item' : 'right-item';
@@ -2313,7 +2313,7 @@ function initCardSliders(container) {
                 messages.push({
                     id: msgId,
                     author: data.author,
-                    role: data.role || "가족 🤍",
+                    role: data.role || "회원 🤍",
                     message: data.message,
                     sticker: data.sticker,
                     date: data.date,
@@ -2607,7 +2607,7 @@ function initCardSliders(container) {
 
 
     // ----------------------------------------------------
-    // 14. 가족 구성원 프로필 Firestore 연동 및 관리
+    // 14. 회원 구성원 프로필 Firestore 연동 및 관리
     // ----------------------------------------------------
     const familyGrid = document.getElementById('family-grid');
     const familyModal = document.getElementById('family-modal');
@@ -2652,7 +2652,7 @@ function initCardSliders(container) {
         {
             id: "dodo",
             name: "막둥이 도도 (DODO)",
-            role: "가족의 비타민 & 잠자는 냥이",
+            role: "회원의 비타민 & 잠자는 냥이",
             iconClass: "fa-cat",
             iconBg: "bg-purple",
             hobby: "캣타워 올라가기, 츄르 먹기",
@@ -2688,14 +2688,14 @@ function initCardSliders(container) {
                     batch.set(docRef, item);
                 });
                 batch.commit().then(() => {
-                    console.log("기본 가족 구성원 데이터 시딩 완료");
+                    console.log("기본 회원 구성원 데이터 시딩 완료");
                 }).catch(err => console.error("데이터 시딩 오류:", err));
                 return;
             }
 
             cachedFamilySnapshot = snapshot;
             renderFamilyCards(snapshot);
-        }, err => console.error("가족 구성원 정보 로드 에러:", err));
+        }, err => console.error("회원 구성원 정보 로드 에러:", err));
     }
 
     function createMemberCardHTML(id, data) {
@@ -2800,7 +2800,7 @@ function initCardSliders(container) {
                     } else {
                         openFamilyEditModal('daddy', defaultFamilyData[0]);
                     }
-                }).catch(err => console.error("가족 정보 로드 실패:", err));
+                }).catch(err => console.error("회원 정보 로드 실패:", err));
             profileDropdown.classList.add('hidden');
         });
     }
@@ -3053,7 +3053,7 @@ function initCardSliders(container) {
             }).then(() => {
                 familyModal.classList.remove('show');
             }).catch(err => {
-                console.error("가족 프로필 수정 에러:", err);
+                console.error("회원 프로필 수정 에러:", err);
                 alert("수정 정보를 데이터베이스에 저장하는 도중 오류가 발생했습니다.");
             });
         });
@@ -3445,7 +3445,7 @@ function initCardSliders(container) {
         heroImages.forEach((imgUrl, idx) => {
             const slide = document.createElement('div');
             slide.className = 'hero-slide';
-            slide.innerHTML = `<img src="${imgUrl}" alt="DODO 가족 배경 사진 ${idx+1}">`;
+            slide.innerHTML = `<img src="${imgUrl}" alt="대고계 회원 배경 사진 ${idx+1}">`;
             heroSliderTrack.appendChild(slide);
 
             const dot = document.createElement('div');
