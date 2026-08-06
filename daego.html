@@ -24,7 +24,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <link rel="stylesheet" href="style.css?v=1.0.57">
+    <link rel="stylesheet" href="style.css?v=1.0.58">
 </head>
 <body class="dark-theme">
     <!-- 스크롤 진행 바 -->
@@ -47,7 +47,7 @@
                 <a href="#board" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Board</a>
                 <a href="#timeline" class="nav-item"><i class="fa-solid fa-timeline"></i> Timeline</a>
                 <a href="#guestbook" class="nav-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
-                <a href="#wordbook" class="nav-item auth-only-wordbook hidden"><i class="fa-solid fa-spell-check"></i> Wordbook</a>
+
             </nav>
             
             <div class="header-actions" style="display: flex; gap: 10px; align-items: center;">
@@ -99,7 +99,7 @@
         <a href="#board" class="mobile-dropdown-item"><i class="fa-solid fa-clipboard-list"></i> Board</a>
         <a href="#timeline" class="mobile-dropdown-item"><i class="fa-solid fa-timeline"></i> Timeline</a>
         <a href="#guestbook" class="mobile-dropdown-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
-        <a href="#wordbook" class="mobile-dropdown-item auth-only-wordbook hidden"><i class="fa-solid fa-spell-check"></i> Wordbook</a>
+
     </div>
 
     <!-- 회원가입 & 로그인 인증 모달 컨테이너 -->
@@ -210,14 +210,14 @@
             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 2;"></div>
 
             <!-- 내용 (기존 텍스트) -->
-            <div class="container" style="position: relative; z-index: 3; text-align: center;">
-                <div class="hero-text-content" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-                    <span class="hero-badge" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(5px); color: #fff; border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 2px 10px rgba(0,0,0,0.1);"><i class="fa-solid fa-sparkles"></i> Welcome to Our Space</span>
-                    <h1 class="hero-title" style="color: #ffffff; text-shadow: 0 2px 10px rgba(0,0,0,0.5);">함께하는<br>대고계 동문들의 이야기</h1>
-                    <p class="hero-desc" style="color: rgba(255,255,255,0.9); text-shadow: 0 1px 5px rgba(0,0,0,0.5);">함께 모여 소중한 추억을 나눕니다. 일정 관리와 이야기 게시판, 방명록이 하나로 묶인 대고계 동문들의 스마트 아지트입니다.</p>
-                    <div class="hero-buttons">
-                        <a href="#gallery" class="btn btn-primary" style="box-shadow: 0 4px 15px rgba(0,0,0,0.3);">추억갤러리 구경하기 <i class="fa-solid fa-arrow-right"></i></a>
-                        <a href="#calendar" class="btn btn-secondary" style="background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); backdrop-filter: blur(5px);">동문 일정 보기</a>
+            <div class="container" style="position: relative; z-index: 3; text-align: center; height: 100%; display: flex; align-items: center; justify-content: center;">
+                <div class="hero-text-content" style="width: 100%; max-width: 800px; display: flex; flex-direction: column; align-items: center; padding-bottom: 2rem;">
+                    <span class="hero-glass-badge"><i class="fa-solid fa-sparkles" style="color: #fdcb6e;"></i> Welcome to Daego Space</span>
+                    <h1 class="hero-title-dynamic">함께하는<br>대고계 동문들의 이야기</h1>
+                    <p class="hero-desc" style="color: rgba(255,255,255,0.9); text-shadow: 0 2px 8px rgba(0,0,0,0.6); font-size: 1.15rem; line-height: 1.6; margin-top: 1rem; margin-bottom: 2.5rem; max-width: 650px;">함께 모여 소중한 추억을 나눕니다. 일정 관리와 이야기 게시판, 방명록이 하나로 묶인 대고계 동문들의 스마트 아지트입니다.</p>
+                    <div class="hero-buttons" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+                        <a href="#gallery" class="btn btn-hero-primary" style="padding: 1rem 2rem; font-size: 1.05rem; font-weight: 700; border-radius: 30px; display: flex; align-items: center; gap: 8px;">추억 갤러리 입장 <i class="fa-solid fa-arrow-right"></i></a>
+                        <a href="#calendar" class="btn btn-hero-secondary" style="padding: 1rem 2rem; font-size: 1.05rem; font-weight: 700; border-radius: 30px; display: flex; align-items: center; gap: 8px;"><i class="fa-regular fa-calendar-days"></i> 동문 일정 보기</a>
                     </div>
                 </div>
             </div>
@@ -585,177 +585,6 @@
             </div>
         </section>
         -->
-
-        <!-- 8. 단어장 연동 섹션 -->
-        <section id="wordbook" class="section auth-only-wordbook hidden">
-            <div class="container">
-                <div class="section-header">
-                    <h2 class="section-title">스마트 단어장 관리</h2>
-                    <p class="section-subtitle">M5Stick 기기와 실시간으로 연동되어 와이파이로 단어를 추가하고 삭제할 수 있습니다.</p>
-                </div>
-                <div class="board-wrapper">
-                    <!-- 1) 단어 추가 폼 -->
-                    <div class="board-form-container glass-card">
-                        <h3>새 단어 등록하기</h3>
-                        <div id="wordbook-form">
-                            <div class="form-group" style="margin-bottom: 1.5rem; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 12px; border: 1px solid var(--card-border);">
-                                <label style="display: block; font-weight: 700; margin-bottom: 10px; color: var(--primary-color);"><i class="fa-solid fa-satellite-dish"></i> 기기 연결 방식 선택</label>
-                                <div style="display: flex; gap: 15px;">
-                                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.9rem;">
-                                        <input type="radio" name="connection-mode" value="local" checked onchange="toggleConnectionMode()" style="accent-color: var(--primary-color);"> 📡 로컬 핫스팟 (직접)
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.9rem;">
-                                        <input type="radio" name="connection-mode" value="cloud" onchange="toggleConnectionMode()" style="accent-color: var(--primary-color);"> ☁️ 클라우드 (어디서나)
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                <label style="margin: 0; font-size: 0.85rem;"><i class="fa-solid fa-signal"></i> 기기 연결 상태</label>
-                                <span id="connection-status-badge" style="font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 12px; background: rgba(128, 128, 128, 0.2); color: var(--text-muted);"><i class="fa-solid fa-circle-question"></i> 대기중</span>
-                            </div>
-
-                            <div id="local-mode-container" class="form-group">
-                                <div style="display: flex; gap: 8px; margin-bottom: 1.5rem;">
-                                    <input type="text" id="device-ip" placeholder="예: 192.168.0.100 (또는 비워두세요)" style="flex: 1; padding: 0.8rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; color: var(--text-color);">
-                                    <button onclick="connectDevice()" class="btn btn-primary" style="white-space: nowrap; padding: 0 1.2rem;"><i class="fa-solid fa-link"></i> 연결</button>
-                                </div>
-                                
-                                <!-- IP 입력 없이 바로 와이파이 검색/설정할 수 있는 전용 패널 -->
-                                <div style="background: rgba(56, 189, 248, 0.08); border: 1px dashed rgba(56, 189, 248, 0.4); border-radius: 12px; padding: 1rem; text-align: center;">
-                                    <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--primary-color); margin-bottom: 0.5rem;"><i class="fa-solid fa-wifi"></i> 기기 와이파이 연결 (초기 설정)</h4>
-                                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">기기와 처음 연결하거나 새 와이파이로 변경하시나요?<br>IP 주소를 몰라도 아래 버튼을 눌러 주변 와이파이를 검색할 수 있습니다.</p>
-                                    <button onclick="openWifiScanner()" class="btn btn-secondary w-100" style="padding: 0.8rem; font-weight: 700;"><i class="fa-solid fa-magnifying-glass"></i> 주변 와이파이 목록 확인하기</button>
-                                </div>
-
-                                <!-- 와이파이 스캐너 패널 (기본 숨김) -->
-                                <div id="wifi-scanner-panel" style="display: none; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 12px; margin-top: 1rem; font-size: 0.9rem; border: 1px solid var(--primary-color);">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                        <h5 style="margin: 0; color: var(--primary-color); font-size: 1rem;"><i class="fa-solid fa-tower-broadcast"></i> 와이파이 검색 결과</h5>
-                                        <button onclick="closeWifiScanner()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.2rem;"><i class="fa-solid fa-xmark"></i></button>
-                                    </div>
-                                    <button id="btn-scan-wifi" onclick="scanDeviceWifi()" class="btn btn-primary w-100" style="padding: 0.8rem; margin-bottom: 12px; font-weight: 700;"><i class="fa-solid fa-rotate"></i> 와이파이 다시 검색</button>
-                                    <div id="wifi-scan-loader" style="display: none; text-align: center; margin-bottom: 10px; color: var(--primary-color); padding: 1rem 0;"><i class="fa-solid fa-spinner fa-spin fa-2x"></i><p style="margin-top: 10px; font-size: 0.85rem;">기기가 주변 와이파이를 스캔하고 있습니다...<br>(약 3~5초 소요)</p></div>
-                                    <ul id="device-network-list" style="list-style: none; padding: 0; margin: 0; max-height: 180px; overflow-y: auto; background: var(--input-bg); border-radius: 8px; margin-bottom: 10px;"></ul>
-                                    <div id="wifi-connect-form" style="display: none; flex-direction: column; gap: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1);">
-                                        <label style="font-size: 0.8rem; color: var(--text-muted);"><i class="fa-solid fa-network-wired"></i> 선택된 와이파이</label>
-                                        <input type="text" id="target-ssid" readonly style="padding: 0.8rem; border-radius: 8px; border: 1px solid var(--input-border); background: rgba(0,0,0,0.3); color: white; font-weight: 700;">
-                                        <label style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px;"><i class="fa-solid fa-lock"></i> 비밀번호</label>
-                                        <input type="password" id="target-password" placeholder="비밀번호를 정확히 입력하세요" style="padding: 0.8rem; border-radius: 8px; border: 1px solid var(--input-border); background: var(--input-bg); color: white;">
-                                        <button onclick="connectDeviceWifi()" class="btn btn-primary w-100" style="padding: 0.8rem; margin-top: 8px; background: var(--accent-gradient); border: none;"><i class="fa-solid fa-paper-plane"></i> 이 와이파이로 연결하기</button>
-                                    </div>
-                                    
-                                    <!-- 기기에 저장된 와이파이 목록 -->
-                                    <div style="margin-top: 15px; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 15px;">
-                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                            <h5 style="margin: 0; color: var(--primary-color); font-size: 0.95rem;"><i class="fa-solid fa-save"></i> 기기에 저장된 와이파이</h5>
-                                            <button onclick="loadDeviceSavedWifi()" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem;" title="새로고침"><i class="fa-solid fa-rotate"></i></button>
-                                        </div>
-                                        <ul id="device-saved-wifi-list" style="list-style: none; padding: 0; margin: 0; max-height: 150px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 8px; border: 1px solid var(--input-border);">
-                                            <li style="text-align:center; padding: 10px; color:var(--text-muted); font-size: 0.85rem;">로딩 대기 중...</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- 기기 연결 후 활성화되는 상세 설정 영역 -->
-                            <div id="device-settings-panel" style="display: none; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--card-border);">
-                                <h4 style="font-size: 1.1rem; margin-bottom: 1rem;"><i class="fa-solid fa-sliders"></i> 기기 상세 상태 및 설정</h4>
-                                
-                                <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 12px; margin-bottom: 1.5rem; font-size: 0.9rem;">
-                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                        <span style="color: var(--text-muted);">통신 상태</span>
-                                        <span id="detail-status" style="color: #00cec9; font-weight: 700;">온라인</span>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                        <span style="color: var(--text-muted);">현재 기기 IP</span>
-                                        <span id="detail-ip" style="font-weight: 600;">-</span>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                        <span style="color: var(--text-muted);">기기 연결 와이파이</span>
-                                        <span id="detail-ssid" style="font-weight: 600; color: var(--primary-color);">-</span>
-                                    </div>
-                                    <div style="display: flex; justify-content: space-between;">
-                                        <span style="color: var(--text-muted);">등록된 단어 수</span>
-                                        <span id="detail-word-count" style="font-weight: 600;">0개</span>
-                                    </div>
-                                </div>
-
-                                <!-- 기기 실시간 알림 영역 (인라인) -->
-                                <div style="margin-bottom: 1.5rem;">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                        <h5 style="margin: 0; font-size: 0.95rem; color: var(--primary-color); display: flex; align-items: center; gap: 8px;">
-                                            <i class="fa-solid fa-bell"></i> 기기 실시간 버튼 알림
-                                        </h5>
-                                        <button onclick="document.getElementById('m5-notification-list').innerHTML='';" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.8rem;"><i class="fa-solid fa-trash-can"></i> 지우기</button>
-                                    </div>
-                                    <ul id="m5-notification-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.1); border-radius: 8px; padding: 10px; border: 1px solid var(--input-border);">
-                                        <li style="text-align:center; padding: 10px; color:var(--text-muted); font-size: 0.85rem;">알림 대기 중...</li>
-                                    </ul>
-                                </div>
-
-                                <div class="device-advanced-settings" style="margin-bottom: 1.5rem;">
-                                    <h5 style="margin-bottom: 10px; font-size: 0.95rem; color: var(--primary-color);"><i class="fa-solid fa-gear"></i> 하드웨어 세부 설정</h5>
-                                    <div class="form-group" style="margin-bottom: 10px;">
-                                        <label style="font-size: 0.85rem;">화면 밝기</label>
-                                        <div style="display: flex; align-items: center; gap: 10px;">
-                                            <i class="fa-solid fa-sun" style="font-size: 0.8rem; color: var(--text-muted);"></i>
-                                            <input type="range" id="device-brightness" min="1" max="100" value="50" style="flex: 1; accent-color: var(--primary-color);">
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label style="font-size: 0.85rem;">단어 자동 넘김 간격</label>
-                                        <select id="device-speed" style="width: 100%; padding: 0.5rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 8px; color: var(--text-color);">
-                                            <option value="1000">1초 단위로 넘김</option>
-                                            <option value="3000" selected>3초 단위로 넘김 (기본)</option>
-                                            <option value="5000">5초 단위로 넘김</option>
-                                        </select>
-                                    </div>
-                                    <button onclick="saveDeviceSettings()" class="btn btn-secondary w-100" style="margin-top: 10px; padding: 0.6rem;"><i class="fa-solid fa-floppy-disk"></i> 설정 기기에 저장</button>
-                                </div>
-
-                                <h4 style="font-size: 1.1rem; margin-bottom: 1rem; padding-top: 1.5rem; border-top: 1px dashed var(--card-border);"><i class="fa-solid fa-pen"></i> 단어 추가</h4>
-                                <div class="form-group">
-                                    <textarea id="new-word-input" placeholder="사과/apple 처럼 입력하세요&#10;(엔터를 쳐서 여러 줄을 한 번에 추가할 수 있습니다)" rows="4" style="width: 100%; padding: 0.8rem; background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; color: var(--text-color); resize: vertical;"></textarea>
-                                </div>
-                                
-                                <div style="display: flex; gap: 10px; margin-top: 1rem;">
-                                    <button onclick="fetchWords()" class="btn btn-secondary w-100"><i class="fa-solid fa-rotate"></i> 새로고침</button>
-                                    <button onclick="addWord()" class="btn btn-primary w-100"><i class="fa-solid fa-plus"></i> 단어 추가</button>
-                                </div>
-                                <div style="margin-top: 10px;">
-                                    <button onclick="deleteAllWords()" class="btn btn-secondary w-100" style="color: #ff4757; border-color: rgba(255, 71, 87, 0.3); background: rgba(255, 71, 87, 0.05);"><i class="fa-solid fa-trash-can"></i> 모든 단어 전체 삭제</button>
-                                </div>
-                                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed rgba(255,255,255,0.1); text-align: center;">
-                                    <input type="file" id="bulk-upload-input" accept=".txt,.csv" style="display: none;" onchange="handleBulkUpload(event)">
-                                    <button onclick="document.getElementById('bulk-upload-input').click()" class="btn btn-secondary w-100" style="background: rgba(255,255,255,0.05); border: 1px dashed var(--input-border); color: var(--text-color);">
-                                        <i class="fa-solid fa-file-lines"></i> 텍스트 파일로 여러 단어 한 번에 추가
-                                    </button>
-                                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; margin-bottom: 0;">* 메모장에서 한 줄에 한 단어씩 작성 후 업로드하세요.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- 2) 단어 리스트 -->
-                    <div class="board-list-container">
-                        <div class="board-list-header-split" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                            <h3>현재 단어 목록 📚</h3>
-                            <button id="btn-card-mode-toggle" onclick="toggleCardMode()" style="display: none; background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: #fff; border: none; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 3px 10px rgba(108,92,231,0.3);">
-                                <i class="fa-solid fa-clone"></i> 카드 모드
-                            </button>
-                        </div>
-
-                        <!-- 카드 모드 UI (기본 숨김) -->
-                        <div id="word-card-mode-container" style="display: none; margin-top: 1rem;">
-                            <!-- 카드 모드 컨트롤 바 -->
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <button id="btn-card-tts-toggle" onclick="toggleCardTTS()" style="background: rgba(0,206,201,0.15); color: #00cec9; border: 1px solid rgba(0,206,201,0.3); padding: 5px 12px; border-radius: 15px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.3s;">
-                                        <i class="fa-solid fa-volume-high"></i> 음성 ON
-                                    </button>
-                                    <button id="btn-card-tts-stop" onclick="if(window.speechSynthesis){ window.speechSynthesis.cancel(); }" style="background: rgba(232,67,147,0.15); color: #e84393; border: 1px solid rgba(232,67,147,0.3); padding: 5px 12px; border-radius: 15px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.3s;" title="읽어주기를 즉시 멈췄습니다">
-                                        <i class="fa-solid fa-stop"></i> 멈춤
-                                    </button>
                                     <button id="btn-card-auto-toggle" onclick="toggleCardAutoPlay()" style="background: rgba(253,203,110,0.15); color: #fdcb6e; border: 1px solid rgba(253,203,110,0.3); padding: 5px 12px; border-radius: 15px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.3s;">
                                         <i class="fa-solid fa-play"></i> 자동 재생
                                     </button>
