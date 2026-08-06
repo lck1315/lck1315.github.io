@@ -13,7 +13,7 @@
     <!-- Open Graph (SNS 공유용) -->
     <meta property="og:title" content="DODO Family Space">
     <meta property="og:description" content="따뜻한 추억, 일정 관리 달력, 사진 게시판, 자동 타임라인이 함께하는 DODO 가족의 홈페이지에 놀러오세요!">
-    <meta property="og:image" content="./assets/dodo_hero.png">
+    <meta property="og:image" content="./assets/daego_hero.png">
     <meta property="og:type" content="website">
     
     <!-- Google Fonts -->
@@ -41,15 +41,12 @@
             <a href="#" class="logo">Daego<span>.alumni</span></a>
             <nav class="nav-links">
                 <a href="#hero" class="nav-item active"><i class="fa-solid fa-house"></i> Home</a>
-                <a href="#family" class="nav-item"><i class="fa-solid fa-users"></i> Family</a>
+                <a href="#family" class="nav-item"><i class="fa-solid fa-users"></i> Members</a>
                 <a href="#calendar" class="nav-item"><i class="fa-solid fa-calendar-days"></i> Calendar</a>
                 <a href="#gallery" class="nav-item"><i class="fa-solid fa-images"></i> Gallery</a>
                 <a href="#board" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Board</a>
                 <a href="#timeline" class="nav-item"><i class="fa-solid fa-timeline"></i> Timeline</a>
                 <a href="#guestbook" class="nav-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
-                <a href="work.html" target="_blank" class="nav-item"><i class="fa-solid fa-briefcase"></i> Work</a>
-                <a href="game.html" target="_blank" class="nav-item"><i class="fa-solid fa-gamepad"></i> Game</a>
-                <a href="index.html" class="nav-item"><i class="fa-solid fa-house-chimney-window"></i> DODO Family</a>
                 <a href="#wordbook" class="nav-item auth-only-wordbook hidden"><i class="fa-solid fa-spell-check"></i> Wordbook</a>
             </nav>
             
@@ -96,14 +93,12 @@
     <!-- 모바일 퀵 메뉴 드롭다운 -->
     <div id="mobile-nav-dropdown" class="mobile-nav-dropdown glass-card hidden" style="position: fixed; right: 20px; top: 75px; z-index: 999; width: 180px; padding: 0.8rem; display: flex; flex-direction: column; gap: 8px;">
         <a href="#hero" class="mobile-dropdown-item"><i class="fa-solid fa-house"></i> Home</a>
-        <a href="#family" class="mobile-dropdown-item"><i class="fa-solid fa-users"></i> Family</a>
+        <a href="#family" class="mobile-dropdown-item"><i class="fa-solid fa-users"></i> Members</a>
         <a href="#calendar" class="mobile-dropdown-item"><i class="fa-solid fa-calendar-days"></i> Calendar</a>
         <a href="#gallery" class="mobile-dropdown-item"><i class="fa-solid fa-images"></i> Gallery</a>
         <a href="#board" class="mobile-dropdown-item"><i class="fa-solid fa-clipboard-list"></i> Board</a>
         <a href="#timeline" class="mobile-dropdown-item"><i class="fa-solid fa-timeline"></i> Timeline</a>
         <a href="#guestbook" class="mobile-dropdown-item"><i class="fa-solid fa-book-open"></i> Guestbook</a>
-        <a href="work.html" target="_blank" class="mobile-dropdown-item"><i class="fa-solid fa-briefcase"></i> Work</a>
-        <a href="game.html" target="_blank" class="mobile-dropdown-item"><i class="fa-solid fa-gamepad"></i> Game</a>
         <a href="#wordbook" class="mobile-dropdown-item auth-only-wordbook hidden"><i class="fa-solid fa-spell-check"></i> Wordbook</a>
     </div>
 
@@ -197,8 +192,8 @@
                 <script>
                     (function() {
                         try {
-                            var cachedHeroJson = localStorage.getItem('dodo-hero-images-cache');
-                            var initialImg = "./assets/dodo_hero.png";
+                            var cachedHeroJson = localStorage.getItem('daego-hero-images-cache');
+                            var initialImg = "./assets/daego_hero.png";
                             if (cachedHeroJson) {
                                 var cachedArr = JSON.parse(cachedHeroJson);
                                 if (cachedArr && cachedArr.length > 0) {
@@ -259,12 +254,12 @@
             </div>
         </section>
 
-        <!-- 2. 가족 소개 섹션 -->
+        <!-- 2. 회원 구성 섹션 -->
         <section id="family" class="section">
             <div class="container">
                 <div class="section-header">
-                    <h2 class="section-title">가족 구성원 소개</h2>
-                    <p class="section-subtitle">DODO 패밀리의 든든하고 사랑스러운 멤버들을 소개합니다.</p>
+                    <h2 class="section-title">회원 구성</h2>
+                    <p class="section-subtitle">대고계 동문회의 든든한 회원들을 소개합니다.</p>
                 </div>
                 <div id="family-grid" class="family-grid">
                     <!-- JS 코드로 Firestore 데이터에 연동되어 프로필 카드가 실시간 빌드됩니다. -->
@@ -344,8 +339,22 @@
             <div class="container">
                 <div class="section-header">
                     <h2 class="section-title">추억 갤러리</h2>
-                    <p class="section-subtitle">가족이 함께 나누었던 소중한 발자취와 따뜻한 순간들입니다.</p>
+                    <p class="section-subtitle">동문들이 함께 나누었던 소중한 발자취와 따뜻한 순간들입니다.</p>
                 </div>
+                <style>
+                    /* 갤러리 최적화: 폼은 위로, 갤러리는 넓게 (1열 구성) */
+                    #gallery .gallery-wrapper {
+                        grid-template-columns: 1fr;
+                        gap: 2rem;
+                    }
+                    #gallery .gallery-form-container {
+                        position: relative;
+                        top: 0;
+                    }
+                    #gallery .gallery-grid {
+                        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                    }
+                </style>
                 
                 <div class="gallery-wrapper">
                     <!-- 1) 여행 갤러리 등록 폼 (왼쪽) -->
@@ -420,13 +429,15 @@
             </div>
         </section>
 
-        <!-- 5. 사진 업로드형 게시판 섹션 -->
+        <!-- 게시판, 타임라인, 방명록 비활성화 (사진 및 일정 최적화) -->
+        <!-- 
         <section id="board" class="section">
             <div class="container">
                 <div class="section-header">
                     <h2 class="section-title">가족 소식 게시판</h2>
                     <p class="section-subtitle">사진과 이야기를 올려 실시간으로 기록을 남기는 우리들만의 게시판입니다.</p>
                 </div>
+        -->
                 
                 <div class="board-wrapper">
                     <!-- 1) 게시글 작성 폼 (왼쪽) -->
@@ -582,6 +593,7 @@
                 </div>
             </div>
         </section>
+        -->
 
         <!-- 8. 단어장 연동 섹션 -->
         <section id="wordbook" class="section auth-only-wordbook hidden">
@@ -1045,7 +1057,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     
-    <script src="app.js?v=1.0.49"></script>
+    <script src="daego_app.js?v=1.0.49"></script>
 
     <!-- 단어장 연동 스크립트 -->
     <script>
