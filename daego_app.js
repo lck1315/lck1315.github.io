@@ -209,21 +209,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         isSigningUp = true;
-        auth.createUserWithEmailAndPassword(email, password)
-            .then((userCredential) => {
-                const user = userCredential.user;
-                const batch = db.batch();
-                
-                const userRef = db.collection('daego_users').doc(user.uid);
-                batch.set(userRef, {
-                    nickname: nickname,
-                    role: role,
-                    email: email,
-                    isApproved: false,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
-                return batch.commit();
+        db.collection('daego_users').limit(1).get()
+            .then(snapshot => {
+                const isFirstUser = snapshot.empty;
+                const finalRole = isFirstUser ? "회장 👑" : role;
+                const finalApproved = isFirstUser ? true : false;
+
+                return auth.createUserWithEmailAndPassword(email, password)
+                    .then((userCredential) => {
+                        const user = userCredential.user;
+                        const userRef = db.collection('daego_users').doc(user.uid);
+                        return userRef.set({
+                            nickname: nickname,
+                            role: finalRole,
+                            email: email,
+                            isApproved: finalApproved,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    });
             })
             .then(() => {
                 isSigningUp = false;
@@ -353,17 +356,29 @@ document.addEventListener('DOMContentLoaded', () => {
                             return; // 회원가입 중에는 강제 로그아웃 로직 우회
                         }
                         // 기존 Dodo 계정 등으로 로그인했지만 대고계 회원이 아닌 경우 자동 가입 신청 처리
-                        db.collection('daego_users').doc(user.uid).set({
-                            nickname: user.displayName || "회원",
-                            role: "신입회원 🌱",
-                            isApproved: false,
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                        }).then(() => {
-                            alert("대고계 모임에 가입 신청이 접수되었습니다! 회장님의 승인을 기다려주세요. 🔐");
-                            auth.signOut();
-                        }).catch(e => {
-                            console.error(e);
-                            auth.signOut();
+                        db.collection('daego_users').limit(1).get().then(snapshot => {
+                            const isFirstUser = snapshot.empty;
+                            const finalRole = isFirstUser ? "회장 👑" : "신입회원 🌱";
+                            const finalApproved = isFirstUser ? true : false;
+
+                            db.collection('daego_users').doc(user.uid).set({
+                                nickname: user.displayName || "회원",
+                                role: finalRole,
+                                isApproved: finalApproved,
+                                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                            }).then(() => {
+                                if (isFirstUser) {
+                                    alert("최초 가입자로서 대고계 회장(마스터)으로 지정되었습니다! 👑");
+                                    // 다시 로드하여 상태 반영
+                                    window.location.reload();
+                                } else {
+                                    alert("대고계 모임에 가입 신청이 접수되었습니다! 회장님의 승인을 기다려주세요. 🔐");
+                                    auth.signOut();
+                                }
+                            }).catch(e => {
+                                console.error(e);
+                                auth.signOut();
+                            });
                         });
                         return;
                     }
@@ -2625,52 +2640,7 @@ function initCardSliders(container) {
     const familyEditForm = document.getElementById('family-edit-form');
     const dropdownManageFamilyBtn = document.getElementById('dropdown-manage-family-btn');
 
-    const defaultFamilyData = [
-        {
-            id: "daddy",
-            name: "회장 (Daego-President)",
-            role: "든든한 울타리 & IT 마스터",
-            iconClass: "fa-user-tie",
-            iconBg: "bg-blue",
-            hobby: "캠핑, 전자기기 수집",
-            comment: "오늘보다 더 나은 내일을 위해!",
-            like: "진한 에스프레소",
-            order: 1
-        },
-        {
-            id: "mommy",
-            name: "엄마 (DODO-Mommy)",
-            role: "따뜻한 등대 & 요리 여왕",
-            iconClass: "fa-spa",
-            iconBg: "bg-pink",
-            hobby: "홈가드닝, 베이킹",
-            comment: "매 순간을 온전히 감사하며 사랑하기",
-            like: "로즈마리 향기",
-            order: 2
-        },
-        {
-            id: "junior",
-            name: "첫째 (DODO-Junior)",
-            role: "호기심 많은 모험가 & 그림 작가",
-            iconClass: "fa-graduation-cap",
-            iconBg: "bg-orange",
-            hobby: "드로잉, 자전거 라이딩",
-            comment: "세상은 신나는 탐험으로 가득 차 있어!",
-            like: "디지털 드로잉",
-            order: 3
-        },
-        {
-            id: "dodo",
-            name: "막둥이 도도 (DODO)",
-            role: "회원의 비타민 & 잠자는 냥이",
-            iconClass: "fa-cat",
-            iconBg: "bg-purple",
-            hobby: "캣타워 올라가기, 츄르 먹기",
-            comment: "야옹~ (츄르 더 줘라냥)",
-            like: "햇볕이 드는 따뜻한 바닥",
-            order: 4
-        }
-    ];
+    // defaultFamilyData removed
 
     let cachedFamilySnapshot = null;
 
@@ -2678,8 +2648,22 @@ function initCardSliders(container) {
         if (!familyGrid) return;
         familyGrid.innerHTML = '';
         
+        if (snapshot.empty) {
+            familyGrid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding: 2rem; color:var(--text-muted);">등록된 동문 회원이 없습니다.</p>';
+            return;
+        }
+
         snapshot.forEach(doc => {
             const data = doc.data();
+            // Map daego_users fields to card fields
+            data.name = data.nickname || "이름 없음";
+            data.cardDescription = data.description || data.role || "회원";
+            data.iconClass = data.iconClass || "fa-user";
+            data.iconBg = data.iconBg || "bg-blue";
+            data.hobby = data.hobby || "아직 작성되지 않음";
+            data.comment = data.comment || "반갑습니다!";
+            data.like = data.like || "아직 작성되지 않음";
+            
             const memberCard = createMemberCardHTML(doc.id, data);
             familyGrid.appendChild(memberCard);
         });
@@ -2688,31 +2672,20 @@ function initCardSliders(container) {
     }
 
     window.initFamilyMembers = function() {
-        const membersRef = db.collection('daego_family_members');
+        const usersRef = db.collection('daego_users');
 
-        membersRef.orderBy('order').onSnapshot(snapshot => {
-            if (snapshot.empty) {
-                const batch = db.batch();
-                defaultFamilyData.forEach(item => {
-                    const docRef = membersRef.doc(item.id);
-                    batch.set(docRef, item);
-                });
-                batch.commit().then(() => {
-                    console.log("기본 회원 구성원 데이터 시딩 완료");
-                }).catch(err => console.error("데이터 시딩 오류:", err));
-                return;
-            }
-
+        usersRef.where('isApproved', '==', true).onSnapshot(snapshot => {
             cachedFamilySnapshot = snapshot;
             renderFamilyCards(snapshot);
-        }, err => console.error("회원 구성원 정보 로드 에러:", err));
+        }, err => console.error("회원 정보 로드 에러:", err));
     }
 
     function createMemberCardHTML(id, data) {
         const wrapper = document.createElement('div');
         wrapper.className = 'member-card-wrapper';
         
-        const editBtnHTML = currentUserInfo 
+        const canEdit = currentUserInfo && (currentUserInfo.uid === id || currentUserInfo.role === '회장 👑');
+        const editBtnHTML = canEdit 
             ? `<div class="member-edit-btn" data-id="${id}" title="프로필 수정"><i class="fa-solid fa-pen-to-square"></i></div>` 
             : '';
 
@@ -2724,7 +2697,7 @@ function initCardSliders(container) {
                         <i class="fa-solid ${data.iconClass || 'fa-user-tie'}"></i>
                     </div>
                     <h3 class="member-name">${data.name || ''}</h3>
-                    <p class="member-role">${data.role || ''}</p>
+                    <p class="member-role">${data.cardDescription || ''}</p>
                     <span class="card-flip-hint">클릭해서 더 알아보기 <i class="fa-solid fa-rotate"></i></span>
                 </div>
                 <div class="card-back glass-card">
@@ -2764,8 +2737,8 @@ function initCardSliders(container) {
         if (!checkAuth()) return;
         
         document.getElementById('edit-member-id').value = id;
-        document.getElementById('edit-member-name').value = data.name || '';
-        document.getElementById('edit-member-role').value = data.role || '';
+        document.getElementById('edit-member-name').value = data.nickname || data.name || '';
+        document.getElementById('edit-member-role').value = data.description || data.role || '';
         document.getElementById('edit-member-hobby').value = data.hobby || '';
         document.getElementById('edit-member-comment').value = data.comment || '';
         document.getElementById('edit-member-like').value = data.like || '';
@@ -2802,15 +2775,14 @@ function initCardSliders(container) {
 
     if (dropdownManageFamilyBtn) {
         dropdownManageFamilyBtn.addEventListener('click', () => {
-            db.collection('daego_family_members').orderBy('order').limit(1).get()
-                .then(querySnapshot => {
-                    if (!querySnapshot.empty) {
-                        const doc = querySnapshot.docs[0];
-                        openFamilyEditModal(doc.id, doc.data());
-                    } else {
-                        openFamilyEditModal('daddy', defaultFamilyData[0]);
-                    }
-                }).catch(err => console.error("회원 정보 로드 실패:", err));
+            if (currentUserInfo && currentUserInfo.uid) {
+                db.collection('daego_users').doc(currentUserInfo.uid).get()
+                    .then(doc => {
+                        if (doc.exists) {
+                            openFamilyEditModal(doc.id, doc.data());
+                        }
+                    }).catch(err => console.error("내 프로필 로드 실패:", err));
+            }
             profileDropdown.classList.add('hidden');
         });
     }
@@ -3045,16 +3017,16 @@ function initCardSliders(container) {
 
             const id = document.getElementById('edit-member-id').value;
             const name = document.getElementById('edit-member-name').value.trim();
-            const role = document.getElementById('edit-member-role').value.trim();
+            const description = document.getElementById('edit-member-role').value.trim();
             const iconVal = document.getElementById('edit-member-icon').value;
             const [iconClass, iconBg] = iconVal.split('|');
             const hobby = document.getElementById('edit-member-hobby').value.trim();
             const comment = document.getElementById('edit-member-comment').value.trim();
             const like = document.getElementById('edit-member-like').value.trim();
 
-            db.collection('daego_family_members').doc(id).update({
-                name,
-                role,
+            db.collection('daego_users').doc(id).update({
+                nickname: name,
+                description,
                 iconClass,
                 iconBg,
                 hobby,
