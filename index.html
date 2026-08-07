@@ -827,6 +827,16 @@
                     <label>할 일 / 일정 제목</label>
                     <input type="text" id="event-title-input" placeholder="일정 제목 (예: 아빠 생신, 가족 캠핑)" required>
                 </div>
+                <div class="form-group" style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label>시작 날짜</label>
+                        <input type="text" id="event-start-date-display" readonly style="background: rgba(255,255,255,0.05); color: var(--text-color); cursor: not-allowed; border: 1px solid var(--input-border); border-radius: 8px; padding: 0.8rem; width: 100%;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label>종료 날짜 (선택)</label>
+                        <input type="date" id="event-end-date-input" style="background: var(--input-bg); color: var(--text-color); border: 1px solid var(--input-border); border-radius: 8px; padding: 0.8rem; width: 100%;">
+                    </div>
+                </div>
                 <div class="form-group">
                     <label>일정 색상 분류</label>
                     <select id="event-color-select" style="background: var(--input-bg); color: var(--text-color); padding: 0.8rem; border: 1px solid var(--input-border); border-radius: 8px; width: 100%; font-family: inherit;">
@@ -1046,7 +1056,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     
-    <script src="app.js?v=1.0.49"></script>
+    <script src="app.js?v=1.0.50"></script>
 
     <!-- 단어장 연동 스크립트 -->
     <script>

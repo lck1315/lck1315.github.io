@@ -823,7 +823,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (familyEvents[dateStr]) combinedEvents = combinedEvents.concat(familyEvents[dateStr]);
         if (googleEvents[dateStr]) combinedEvents = combinedEvents.concat(googleEvents[dateStr]);
 
-        combinedEvents.forEach(evt => {
+        const maxDisplay = 3;
+        const displayEvents = combinedEvents.slice(0, maxDisplay);
+        
+        displayEvents.forEach(evt => {
             const itemDiv = document.createElement('div');
             itemDiv.className = 'schedule-item';
             
@@ -831,12 +834,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 itemDiv.style.cssText = `font-size: 0.75rem; padding: 4px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: ${evt.color || '#4285F4'}40; color: ${evt.color || '#4285F4'}; cursor: default; border-left: 3px solid ${evt.color || '#4285F4'};`;
                 itemDiv.innerHTML = `<i class="fa-brands fa-google"></i> ${escapeHTML(evt.title)}`;
             } else {
-                itemDiv.style.cssText = `font-size: 0.75rem; padding: 4px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgba(0, 206, 201, 0.2); color: #00cec9;`;
+                const color = evt.color || '#00cec9';
+                itemDiv.style.cssText = `font-size: 0.75rem; padding: 4px; border-radius: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: ${color}40; color: ${color}; border-left: 3px solid ${color};`;
                 itemDiv.innerText = evt.title;
             }
             itemDiv.title = evt.title;
             dayCell.appendChild(itemDiv);
         });
+
+        if (combinedEvents.length > maxDisplay) {
+            const moreDiv = document.createElement('div');
+            moreDiv.style.cssText = "font-size: 0.7rem; color: var(--text-muted); font-weight: bold; text-align: center; padding-top: 2px;";
+            moreDiv.innerText = `+ ${combinedEvents.length - maxDisplay}개 더보기`;
+            dayCell.appendChild(moreDiv);
+        }
 
         dayCell.addEventListener('click', (e) => {
             // Prevent modal if clicked specifically on an item if needed, but original behavior opens modal for the date
@@ -876,7 +887,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function openEventModal(dateStr) {
         activeSelectedDateStr = dateStr;
         const parts = dateStr.split('-');
-        modalDateTitle.textContent = `${parts[0]}년 ${parts[1]}월 ${parts[2]}일 일정 🗓️`;
+        if (typeof modalDateTitle !== 'undefined' && modalDateTitle) {
+            modalDateTitle.textContent = `${parts[0]}년 ${parts[1]}월 ${parts[2]}일 일정 🗓️`;
+        }
+        
+        const startDateDisplay = document.getElementById('event-start-date-display');
+        const endDateInput = document.getElementById('event-end-date-input');
+        if (startDateDisplay) startDateDisplay.value = dateStr;
+        if (endDateInput) endDateInput.value = '';
         
         renderModalEventList();
         calendarModal.classList.add('show');
@@ -944,30 +962,53 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    eventForm.addEventListener('submit', (e) => {
+    eventForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!checkAuth()) return;
         const title = eventTitleInput.value.trim();
         const color = eventColorSelect.value;
+        const endDateStr = document.getElementById('event-end-date-input').value;
 
         if (!title) return;
 
-        const currentEvents = familyEvents[activeSelectedDateStr] || [];
-        const newEvents = [...currentEvents, { 
+        let datesToSave = [activeSelectedDateStr];
+        if (endDateStr) {
+            const startD = new Date(activeSelectedDateStr);
+            const endD = new Date(endDateStr);
+            if (endD > startD) {
+                let currD = new Date(startD);
+                datesToSave = [];
+                while (currD <= endD) {
+                    const y = currD.getFullYear();
+                    const m = String(currD.getMonth() + 1).padStart(2, '0');
+                    const d = String(currD.getDate()).padStart(2, '0');
+                    datesToSave.push(`${y}-${m}-${d}`);
+                    currD.setDate(currD.getDate() + 1);
+                }
+            }
+        }
+
+        const newEventObj = { 
             title, 
             color,
             uid: currentUserInfo.uid,
             author: currentUserInfo.nickname
-        }];
+        };
 
-        db.collection('events').doc(activeSelectedDateStr).set({
-            events: newEvents
-        }).then(() => {
+        try {
+            for (let dStr of datesToSave) {
+                const currentEvents = familyEvents[dStr] || [];
+                const newEvents = [...currentEvents, newEventObj];
+                await db.collection('events').doc(dStr).set({
+                    events: newEvents
+                });
+            }
             eventTitleInput.value = ''; 
-        }).catch(err => {
+            document.getElementById('event-end-date-input').value = '';
+        } catch (err) {
             console.error("Error adding event: ", err);
             alert("일정 저장에 실패했습니다. ⚠️");
-        });
+        }
     });
 
     function deleteEvent(index) {
