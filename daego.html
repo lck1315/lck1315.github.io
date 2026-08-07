@@ -199,11 +199,6 @@
                         }
                     })();
                 </script>
-                
-                <!-- 로그인 상태 시 배경 사진 관리 버튼 노출 -->
-                <div id="hero-img-edit-trigger" class="hero-edit-badge hidden" style="position: absolute; bottom: 20px; right: 20px; z-index: 10;">
-                    <i class="fa-solid fa-images"></i> 배경 사진 관리
-                </div>
             </div>
             
             <!-- 오버레이 효과 (글자가 잘 보이도록 어둡게 처리) -->
@@ -227,6 +222,11 @@
                 <div class="mouse-icon" style="border-color: rgba(255,255,255,0.6);">
                     <div class="wheel" style="background: #fff;"></div>
                 </div>
+            </div>
+
+            <!-- 로그인 상태 시 배경 사진 관리 버튼 노출 (상위 z-index 배치) -->
+            <div id="hero-img-edit-trigger" class="hero-edit-badge hidden" style="position: absolute; bottom: 20px; right: 20px; z-index: 20; cursor: pointer;">
+                <i class="fa-solid fa-images"></i> 배경 사진 관리
             </div>
         </section>
 
